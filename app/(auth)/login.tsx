@@ -2,19 +2,45 @@ import React from 'react';
 import {
   View,
   Text,
+  TextStyle,
+  Image,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
-import { useAuthStore } from '@stores/auth.store';
 import { SvgProps } from 'react-native-svg';
 import KakaoTalkIcon from '@assets/KakaoTalk.svg';
 import EmailIcon from '@assets/Emaillogin.svg';
 import GoogleIcon from '@assets/Google.svg';
 import AppleIcon from '@assets/Apple.svg';
+
+// ─── 그라디언트 텍스트 (웹: CSS clip, 네이티브: 단색 fallback) ──────────────
+const GradientText = ({ children, style }: { children: string; style?: TextStyle }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <Text
+        style={[
+          style,
+          {
+            background: 'linear-gradient(to right, #9810FA, #E60076)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            overflow: 'visible',
+            paddingBottom: 6,
+          } as any,
+        ]}
+      >
+        {children}
+      </Text>
+    );
+  }
+  return <Text style={[style, { color: '#9810FA' }]}>{children}</Text>;
+};
 
 // ─── 로그인 버튼 공통 컴포넌트 ────────────────────────────────────────────
 type LoginButtonProps = {
@@ -54,7 +80,6 @@ const LoginButton = ({
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { setUser, setAuthenticated } = useAuthStore();
 
   const handleSocial = async (provider: 'kakao' | 'google' | 'apple') => {
     try {
@@ -78,19 +103,16 @@ export default function LoginScreen() {
     >
       {/* 히어로 영역 */}
       <View style={styles.hero}>
-        {/* 아이콘 박스 */}
-        <LinearGradient
-          colors={['#AD46FF', '#F6339A']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.iconBox}
-        >
-          <Text style={styles.iconEmoji}>✨</Text>
-        </LinearGradient>
+        {/* 앱 이름 + 슬로건 (로고 위) */}
+        <GradientText style={styles.appName}>Vibly</GradientText>
+        <Text style={styles.appSlogan}>감성 기반 장소 추천</Text>
 
-        {/* 앱 이름 */}
-        <Text style={styles.appName}>Vibly</Text>
-        <Text style={styles.appSlogan}>감정 기반 장소 추천</Text>
+        {/* 로고 이미지 */}
+        <Image
+          source={require('@assets/Logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
 
         {/* 환영 문구 */}
         <Text style={styles.welcomeTitle}>환영합니다</Text>
@@ -158,44 +180,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing['2xl'],
   },
-  iconBox: {
-    width: 128,
-    height: 128,
-    borderRadius: BorderRadius['3xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing['2xl'],
-    shadowColor: '#AD46FF',
-    shadowOffset: { width: 0, height: 25 },
-    shadowOpacity: 0.4,
-    shadowRadius: 50,
-    elevation: 20,
-  },
-  iconEmoji: {
-    fontSize: 60,
-  },
   appName: {
-    fontSize: FontSize['5xl'],
-    fontWeight: FontWeight.extrabold,
-    color: '#7C3AED',
+    fontSize: FontSize['4xl'],   // 40 → 32
+    fontWeight: FontWeight.bold,
+    lineHeight: 44,
     marginBottom: Spacing.xs,
   },
   appSlogan: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.base,     // 16 → 14
     color: '#6A7282',
-    marginBottom: Spacing['3xl'],
+    marginBottom: Spacing.xl,
+  },
+  logo: {
+    width: 112,
+    height: 112,
+    marginBottom: Spacing.xl,
   },
   welcomeTitle: {
-    fontSize: FontSize['2xl'],
+    fontSize: FontSize.xl,       // 24 → 20
     fontWeight: FontWeight.bold,
     color: '#101828',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   welcomeDesc: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.base,     // 16 → 14
     color: '#4A5565',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
 
   // 버튼 영역
@@ -204,7 +215,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   loginBtn: {
-    height: 56,
+    height: 52,
     borderRadius: BorderRadius.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -216,7 +227,7 @@ const styles = StyleSheet.create({
     left: Spacing['3xl'],
   },
   loginBtnText: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.base,     // 16 → 14
     fontWeight: FontWeight.bold,
   },
 

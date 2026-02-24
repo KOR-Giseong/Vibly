@@ -20,10 +20,14 @@ export function useMoodSearch() {
     onSettled: () => setSearching(false),
   });
 
+  // 위치 권한 없을 때 서울 시청 기본값 사용
+  const DEFAULT_COORDS = { lat: 37.5665, lng: 126.9780 };
+
   const search = useCallback(
     (query: string, coords?: { lat: number; lng: number }) => {
       if (rateLimitRemaining <= 0) return;
-      mutation.mutate({ query, ...coords });
+      const location = coords ?? DEFAULT_COORDS;
+      mutation.mutate({ query, ...location });
     },
     [mutation, rateLimitRemaining],
   );

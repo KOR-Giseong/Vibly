@@ -37,6 +37,7 @@ export interface Place {
   id: string;
   name: string;
   category: PlaceCategory;
+  categoryLabel?: string;   // 한글 카테고리 (카카오 API에서 제공)
   address: string;
   lat: number;
   lng: number;
@@ -47,6 +48,7 @@ export interface Place {
   imageUrl?: string;
   tags: string[];
   isBookmarked?: boolean;
+  isSponsored?: boolean;
 }
 
 export interface PlaceDetail extends Place {

@@ -28,6 +28,7 @@ apiClient.interceptors.response.use(
       original._retry = true;
       try {
         const refreshToken = await storage.getItem('refreshToken');
+        if (!refreshToken) throw new Error('no_refresh_token');
         const { data } = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
         await storage.setItem('accessToken', data.accessToken);
         original.headers.Authorization = `Bearer ${data.accessToken}`;

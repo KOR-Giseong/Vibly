@@ -1,209 +1,293 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, Sparkles, MapPin, Star, ChevronRight } from 'lucide-react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow, MOODS } from '@constants/theme';
+import { Bell, Sparkles, X } from 'lucide-react-native';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useAuthStore } from '@stores/auth.store';
 import { useMoodStore } from '@stores/mood.store';
 import { useMoodSearch } from '@hooks/useMoodSearch';
+import { useLocation } from '@hooks/useLocation';
+import { MoodSelector } from '@components/features/mood/MoodSelector';
+import { RateLimitBanner } from '@components/features/mood/RateLimitBanner';
+import { AIBanner } from '@components/features/ai/AIBanner';
+import { NearbyPlaceList } from '@components/features/place/NearbyPlaceList';
 import ScreenTransition from '@components/ScreenTransition';
-
-const MOCK_NEARBY = [
-  { id: '1', name: '블루보틀 성수', category: '카페', vibe: '아늑한', distance: '350m', rating: 4.8 },
-  { id: '2', name: '피크닉 한강공원', category: '공원', vibe: '평화로운', distance: '1.2km', rating: 4.6 },
-  { id: '3', name: '앤트러사이트 합정', category: '카페', vibe: '감성적', distance: '800m', rating: 4.7 },
-];
+import type { Mood } from '@/types';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
   const { user } = useAuthStore();
-  const { selectedMood, setSelectedMood, rateLimitRemaining, searchResult } = useMoodStore();
-  const { search, isLoading } = useMoodSearch();
+  const { selectedMood, setSelectedMood, rateLimitRemaining } = useMoodStore();
+  const { search } = useMoodSearch();
+  const { coords } = useLocation();
 
-  const [activeSearch, setActiveSearch] = useState(false);
-
-  const handleMoodSelect = async (mood: typeof MOODS[number]) => {
-    setSelectedMood(mood);
-    setActiveSearch(true);
-    await search(mood.label);
-  };
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiQuery, setAiQuery] = useState('');
 
   const displayName = user?.name?.split(' ')[0] ?? '게스트';
 
+  // 기분 카드 선택 → 검색 후 검색 화면으로 이동
+  const handleMoodSelect = (mood: Mood) => {
+    setSelectedMood(mood);
+    search(mood.label, coords ?? undefined);
+    router.push('/(tabs)/search');
+  };
+
+  // AI 모달에서 검색 실행
+  const handleAISearch = () => {
+    if (!aiQuery.trim()) return;
+    search(aiQuery.trim(), coords ?? undefined);
+    setShowAIModal(false);
+    setAiQuery('');
+    router.push('/(tabs)/search');
+  };
+
   return (
     <ScreenTransition>
-    <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>안녕하세요 {displayName}님 ✨</Text>
-            <Text style={styles.subGreeting}>오늘은 어떤 기분이신가요?</Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push('/notifications')} style={styles.bellBtn}>
-            <Bell size={22} color={Colors.gray[700]} />
-            <View style={styles.bellBadge} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Rate Limit Warning */}
-        {rateLimitRemaining <= 5 && (
-          <View style={[styles.rateLimitCard, { backgroundColor: rateLimitRemaining <= 2 ? '#FEF2F2' : '#FFFBEB' }]}>
-            <Text style={styles.rateLimitText}>
-              {rateLimitRemaining <= 2
-                ? `⚠️ AI 검색 횟수가 ${rateLimitRemaining}번 남았어요`
-                : `💛 AI 검색 횟수 ${rateLimitRemaining}번 남음`}
-            </Text>
-          </View>
-        )}
-
-        {/* Mood Selector */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>지금 기분을 선택해보세요</Text>
-          <View style={styles.moodGrid}>
-            {MOODS.map((mood) => {
-              const isActive = selectedMood?.value === mood.value;
-              return (
-                <TouchableOpacity
-                  key={mood.value}
-                  style={[styles.moodItem, isActive && styles.moodItemActive]}
-                  onPress={() => handleMoodSelect(mood)}
-                  activeOpacity={0.8}
-                >
-                  {isActive && (
-                    <LinearGradient
-                      colors={mood.gradient}
-                      style={StyleSheet.absoluteFill}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                  )}
-                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-                  <Text style={[styles.moodLabel, isActive && styles.moodLabelActive]}>{mood.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* AI Result Card */}
-        {isLoading && (
-          <View style={styles.aiCard}>
-            <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-            <Sparkles size={20} color={Colors.white} />
-            <Text style={styles.aiText}>AI가 장소를 찾고 있어요...</Text>
-          </View>
-        )}
-        {searchResult && !isLoading && (
-          <TouchableOpacity onPress={() => router.push('/search')} style={styles.aiCard} activeOpacity={0.9}>
-            <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-            <View style={{ flex: 1 }}>
-              <View style={styles.aiRow}>
-                <Sparkles size={18} color={Colors.white} />
-                <Text style={styles.aiLabel}>AI 추천 결과</Text>
+      <LinearGradient colors={Gradients.background} style={styles.flex}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 헤더 */}
+          <View style={styles.header}>
+            <View>
+              <View style={styles.greetingRow}>
+                <Text style={styles.greeting}>안녕하세요 {displayName}님 </Text>
+                <Image
+                  source={require('@assets/Staricon.png')}
+                  style={styles.starIcon}
+                  resizeMode="contain"
+                />
               </View>
-              <Text style={styles.aiSummary} numberOfLines={2}>{searchResult.summary}</Text>
+              <Text style={styles.subGreeting}>오늘 기분이 어떠세요?</Text>
             </View>
-            <ChevronRight size={20} color={Colors.white} />
-          </TouchableOpacity>
-        )}
-
-        {/* Nearby Places */}
-        <View style={styles.section}>
-          <View style={styles.sectionRow}>
-            <Text style={styles.sectionTitle}>근처 추천 장소</Text>
-            <TouchableOpacity onPress={() => router.push('/map')}>
-              <Text style={styles.seeAll}>지도로 보기</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/notifications')}
+              style={styles.bellBtn}
+            >
+              <Bell size={22} color={Colors.gray[700]} />
             </TouchableOpacity>
           </View>
-          {MOCK_NEARBY.map((place) => (
-            <TouchableOpacity
-              key={place.id}
-              style={styles.placeCard}
-              onPress={() => router.push(`/place/${place.id}`)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.placeImg}>
-                <Text style={{ fontSize: 28 }}>🏠</Text>
-              </View>
-              <View style={styles.placeInfo}>
-                <Text style={styles.placeName}>{place.name}</Text>
-                <Text style={styles.placeCategory}>{place.category}</Text>
-                <View style={styles.placeMeta}>
-                  <View style={styles.vibeTag}><Text style={styles.vibeTagText}>{place.vibe}</Text></View>
-                  <View style={styles.distRow}>
-                    <MapPin size={12} color={Colors.gray[400]} />
-                    <Text style={styles.distText}>{place.distance}</Text>
-                  </View>
-                  <View style={styles.distRow}>
-                    <Star size={12} color="#FACC15" fill="#FACC15" />
-                    <Text style={styles.distText}>{place.rating}</Text>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </LinearGradient>
+
+          {/* 검색 횟수 안내 */}
+          <View style={styles.block}>
+            <RateLimitBanner remaining={rateLimitRemaining} />
+          </View>
+
+          {/* 기분 선택 */}
+          <View style={styles.block}>
+            <Text style={styles.sectionTitle}>지금 기분</Text>
+            <MoodSelector selectedMood={selectedMood} onSelect={handleMoodSelect} />
+          </View>
+
+          {/* AI 추천 배너 */}
+          <View style={styles.block}>
+            <AIBanner onPress={() => setShowAIModal(true)} />
+          </View>
+
+          {/* 주변 추천 장소 */}
+          <View style={styles.block}>
+            <NearbyPlaceList coords={coords} />
+          </View>
+        </ScrollView>
+      </LinearGradient>
+
+      {/* AI 텍스트 입력 모달 */}
+      <Modal
+        visible={showAIModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAIModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowAIModal(false)}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKAV}
+          >
+            <Pressable style={styles.modalCard}>
+              {/* 닫기 버튼 */}
+              <TouchableOpacity
+                style={styles.modalClose}
+                onPress={() => setShowAIModal(false)}
+              >
+                <X size={18} color={Colors.gray[500]} />
+              </TouchableOpacity>
+
+              {/* 아이콘 + 제목 */}
+              <LinearGradient
+                colors={['#9810FA', '#E60076']}
+                style={styles.modalIconWrap}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Sparkles size={22} color={Colors.white} />
+              </LinearGradient>
+
+              <Text style={styles.modalTitle}>AI에게 물어보기</Text>
+              <Text style={styles.modalDesc}>
+                지금 기분이나 원하는 분위기를{'\n'}자유롭게 말해보세요
+              </Text>
+
+              {/* 입력창 */}
+              <TextInput
+                style={styles.modalInput}
+                placeholder="예) 오늘 너무 지쳐서 조용히 쉬고 싶어요"
+                placeholderTextColor={Colors.gray[400]}
+                value={aiQuery}
+                onChangeText={setAiQuery}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                autoFocus
+                returnKeyType="search"
+                onSubmitEditing={handleAISearch}
+              />
+
+              {/* 검색 버튼 */}
+              <TouchableOpacity
+                onPress={handleAISearch}
+                disabled={!aiQuery.trim()}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={aiQuery.trim() ? ['#9810FA', '#E60076'] : [Colors.gray[200], Colors.gray[200]]}
+                  style={styles.modalBtn}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Sparkles size={16} color={aiQuery.trim() ? Colors.white : Colors.gray[400]} />
+                  <Text style={[styles.modalBtnText, !aiQuery.trim() && styles.modalBtnTextDisabled]}>
+                    장소 찾기
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </ScreenTransition>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: Spacing['2xl'], paddingBottom: Spacing['4xl'] },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing['3xl'] },
-  greeting: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.gray[900] },
-  subGreeting: { fontSize: FontSize.sm, color: Colors.gray[500], marginTop: 2 },
-  bellBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...Shadow.sm },
-  bellBadge: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
-  rateLimitCard: { borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: Spacing.lg },
-  rateLimitText: { fontSize: FontSize.sm, color: Colors.gray[700] },
-  section: { marginBottom: Spacing['2xl'] },
-  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.gray[900], marginBottom: Spacing.lg },
-  seeAll: { fontSize: FontSize.sm, color: Colors.primary[600], fontWeight: FontWeight.medium },
-  moodGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  moodItem: {
-    width: '30.5%', paddingVertical: Spacing.lg, borderRadius: BorderRadius.xl,
-    alignItems: 'center', backgroundColor: Colors.white, overflow: 'hidden',
+  flex: { flex: 1 },
+  scroll: {
+    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing['4xl'],
+    gap: Spacing['2xl'],
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  starIcon: { width: 24, height: 24, marginTop: -2 },
+  greeting: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  subGreeting: {
+    fontSize: FontSize.sm,
+    color: Colors.gray[500],
+    marginTop: 2,
+  },
+  bellBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...Shadow.sm,
   },
-  moodItemActive: {},
-  moodEmoji: { fontSize: 28, marginBottom: Spacing.xs },
-  moodLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.medium, color: Colors.gray[600] },
-  moodLabelActive: { color: Colors.white },
-  aiCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    borderRadius: BorderRadius['2xl'], padding: Spacing.xl, overflow: 'hidden',
-    marginBottom: Spacing['2xl'], ...Shadow.lg,
+  block: { gap: Spacing.lg },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.text.primary,
   },
-  aiRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: 4 },
-  aiLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.medium, color: 'rgba(255,255,255,0.8)' },
-  aiText: { fontSize: FontSize.base, color: Colors.white },
-  aiSummary: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, color: Colors.white },
-  placeCard: {
-    flexDirection: 'row', backgroundColor: Colors.white, borderRadius: BorderRadius['2xl'],
-    padding: Spacing.lg, marginBottom: Spacing.md, ...Shadow.sm,
+  // ── 모달 ─────────────────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
   },
-  placeImg: {
-    width: 72, height: 72, borderRadius: BorderRadius.xl, backgroundColor: Colors.gray[100],
-    alignItems: 'center', justifyContent: 'center', marginRight: Spacing.lg,
+  modalKAV: {
+    width: '100%',
   },
-  placeInfo: { flex: 1 },
-  placeName: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.gray[900] },
-  placeCategory: { fontSize: FontSize.sm, color: Colors.gray[500], marginBottom: Spacing.sm },
-  placeMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  vibeTag: { backgroundColor: Colors.primary[100], borderRadius: BorderRadius.full, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
-  vibeTagText: { fontSize: FontSize.xs, color: Colors.primary[700], fontWeight: FontWeight.medium },
-  distRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  distText: { fontSize: FontSize.xs, color: Colors.gray[500] },
+  modalCard: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: Spacing['2xl'],
+    paddingBottom: Spacing['4xl'],
+    gap: Spacing.md,
+  },
+  modalClose: {
+    alignSelf: 'flex-end',
+    padding: 4,
+  },
+  modalIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  modalTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+    textAlign: 'center',
+  },
+  modalDesc: {
+    fontSize: FontSize.sm,
+    color: Colors.gray[500],
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalInput: {
+    borderWidth: 1.5,
+    borderColor: Colors.gray[200],
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    fontSize: FontSize.sm,
+    color: Colors.gray[900],
+    minHeight: 88,
+    marginTop: 4,
+    backgroundColor: Colors.gray[50],
+  },
+  modalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: BorderRadius.full,
+    paddingVertical: 14,
+    marginTop: 4,
+  },
+  modalBtnText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
+    color: Colors.white,
+  },
+  modalBtnTextDisabled: {
+    color: Colors.gray[400],
+  },
 });
+

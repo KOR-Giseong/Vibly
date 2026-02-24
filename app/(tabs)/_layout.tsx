@@ -1,32 +1,29 @@
 import { Tabs, Redirect } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Home, Search, Bookmark, User } from 'lucide-react-native';
 import { useAuthStore } from '@stores/auth.store';
-import { Colors, Gradients } from '@constants/theme';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '@constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type TabIconProps = { name: string; focused: boolean };
+// 피그마: 활성 #9810FA / 비활성 #6A7282
+const TAB_ACTIVE_COLOR   = '#9810FA';
+const TAB_INACTIVE_COLOR = '#6A7282';
 
-function TabIcon({ name, focused }: TabIconProps) {
-  const icons: Record<string, typeof Home> = { Home, Search, Bookmark, User };
-  const Icon = icons[name];
-  return (
-    <View style={styles.iconWrap}>
-      {focused && (
-        <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      )}
-      <Icon size={22} color={focused ? Colors.white : Colors.gray[400]} strokeWidth={focused ? 2.5 : 2} />
-    </View>
-  );
-}
+type IconComponent = typeof Home;
+
+const ICON_MAP: Record<string, IconComponent> = {
+  Home,
+  Search,
+  Bookmark,
+  User,
+};
 
 const TABS = [
   { name: 'index',    label: '홈',     icon: 'Home'     },
   { name: 'search',   label: '검색',   icon: 'Search'   },
   { name: 'bookmark', label: '저장',   icon: 'Bookmark' },
   { name: 'profile',  label: '프로필', icon: 'User'     },
-];
+] as const;
 
 export default function TabsLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -41,39 +38,56 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          height: 60 + insets.bottom,
+          height: 64 + insets.bottom,
           paddingBottom: insets.bottom,
+          paddingHorizontal: 20,
           backgroundColor: Colors.white,
           borderTopColor: Colors.gray[100],
           borderTopWidth: 1,
         },
-        tabBarActiveTintColor: Colors.primary[600],
-        tabBarInactiveTintColor: Colors.gray[400],
+        tabBarActiveTintColor:   TAB_ACTIVE_COLOR,
+        tabBarInactiveTintColor: TAB_INACTIVE_COLOR,
         tabBarLabelStyle: styles.label,
+        tabBarIconStyle: styles.iconStyle,
       }}
     >
-      {TABS.map(({ name, label, icon }) => (
-        <Tabs.Screen
-          key={name}
-          name={name}
-          options={{
-            title: label,
-            tabBarIcon: ({ focused }) => <TabIcon name={icon} focused={focused} />,
-          }}
-        />
-      ))}
+      {TABS.map(({ name, label, icon }) => {
+        const Icon = ICON_MAP[icon];
+        return (
+          <Tabs.Screen
+            key={name}
+            name={name}
+            options={{
+              title: label,
+              tabBarIcon: ({ focused }) => (
+                <View style={styles.iconWrap}>
+                  <Icon
+                    size={24}
+                    color={focused ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR}
+                    strokeWidth={focused ? 2.5 : 1.8}
+                  />
+                </View>
+              ),
+            }}
+          />
+        );
+      })}
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    width: 24,
+    height: 24,
   },
-  label: { fontSize: 10, fontWeight: '600', marginTop: 2 },
+  iconStyle: {
+    marginBottom: -4,
+  },
+  label: {
+    fontSize: 12,
+    marginTop: 4,
+  },
 });

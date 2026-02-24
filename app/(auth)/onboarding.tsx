@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   useWindowDimensions,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -76,13 +77,48 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
+  // 애니메이션 값
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const translateYAnim = useRef(new Animated.Value(0)).current;
+
   const isLast = currentIndex === SLIDES.length - 1;
+
+  // 슬라이드 전환 애니메이션: 페이드아웃+위로 → 인덱스 변경 → 아래서 페이드인
+  const animateTransition = (onMidpoint: () => void) => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: -20,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onMidpoint();
+      translateYAnim.setValue(24);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateYAnim, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  };
 
   const handleNext = () => {
     if (!isLast) {
-      setCurrentIndex(currentIndex + 1);
+      animateTransition(() => setCurrentIndex(prev => prev + 1));
     } else {
-      router.replace('/(auth)/login');
+      animateTransition(() => router.replace('/(auth)/login'));
     }
   };
 
@@ -92,8 +128,18 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 현재 슬라이드만 렌더링 */}
-      <SlideItem item={SLIDES[currentIndex]} />
+      {/* 슬라이드 (애니메이션 적용) */}
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: translateYAnim }],
+          },
+        ]}
+      >
+        <SlideItem item={SLIDES[currentIndex]} />
+      </Animated.View>
 
       {/* 건너뛰기 - 오른쪽 상단 */}
       {!isLast && (

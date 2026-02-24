@@ -10,6 +10,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow,
 import { useAuthStore } from '@stores/auth.store';
 import { useMoodStore } from '@stores/mood.store';
 import { useMoodSearch } from '@hooks/useMoodSearch';
+import ScreenTransition from '@components/ScreenTransition';
 
 const MOCK_NEARBY = [
   { id: '1', name: '블루보틀 성수', category: '카페', vibe: '아늑한', distance: '350m', rating: 4.8 },
@@ -35,6 +36,7 @@ export default function HomeScreen() {
   const displayName = user?.name?.split(' ')[0] ?? '게스트';
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg }]}
@@ -152,6 +154,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

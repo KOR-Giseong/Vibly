@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Calendar, TrendingUp } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
+import ScreenTransition from '@components/ScreenTransition';
 
 type Period = 'weekly' | 'monthly';
 
@@ -43,6 +44,7 @@ export default function VibeReportScreen() {
   const [period, setPeriod] = useState<Period>('weekly');
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -154,6 +156,7 @@ export default function VibeReportScreen() {
         ))}
       </ScrollView>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

@@ -19,6 +19,7 @@ import KakaoTalkIcon from '@assets/KakaoTalk.svg';
 import EmailIcon from '@assets/Emaillogin.svg';
 import GoogleIcon from '@assets/Google.svg';
 import AppleIcon from '@assets/Apple.svg';
+import ScreenTransition from '@components/ScreenTransition';
 
 // ─── 그라디언트 텍스트 (웹: CSS clip, 네이티브: MaskedView) ─────────────────
 const GRADIENT_COLORS: [string, string] = ['#9810FA', '#E60076'];
@@ -102,6 +103,7 @@ export default function LoginScreen() {
   };
 
   return (
+    <ScreenTransition>
     <LinearGradient
       colors={['#FAF5FF', '#FDF2F8', '#EFF6FF']}
       start={{ x: 0, y: 0 }}
@@ -171,6 +173,7 @@ export default function LoginScreen() {
         </Text>
       </View>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

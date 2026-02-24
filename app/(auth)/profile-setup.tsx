@@ -10,6 +10,7 @@ import { Sparkles, CheckCircle, XCircle } from 'lucide-react-native';
 import { authService } from '@services/auth.service';
 import { useAuthStore } from '@stores/auth.store';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
+import ScreenTransition from '@components/ScreenTransition';
 
 // ─── 선택 가능한 분위기 ───────────────────────────────────────────────────────
 const VIBES = [
@@ -76,8 +77,9 @@ export default function ProfileSetupScreen() {
     setLoading(true);
     try {
       const updatedUser = await authService.updateProfile(nickname.trim(), selectedVibes);
+      // (auth)/_layout의 redirect 경쟁 방지: 내비게이션 먼저, store 업데이트는 직후
+      router.replace('/welcome');
       setUser(updatedUser);
-      router.replace('/(tabs)');
     } catch {
       setError('저장에 실패했어요. 다시 시도해주세요.');
     } finally {
@@ -94,6 +96,7 @@ export default function ProfileSetupScreen() {
     Colors.gray[200];
 
   return (
+    <ScreenTransition>
     <LinearGradient
       colors={['#FAF5FF', '#FDF2F8', '#EFF6FF']}
       start={{ x: 0, y: 0 }}
@@ -239,6 +242,7 @@ export default function ProfileSetupScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

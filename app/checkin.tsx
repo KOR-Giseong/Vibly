@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Camera, MapPin } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow, MOODS } from '@constants/theme';
+import ScreenTransition from '@components/ScreenTransition';
 
 export default function CheckInScreen() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function CheckInScreen() {
   const canSubmit = !!selectedMood;
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView
@@ -105,6 +107,7 @@ export default function CheckInScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

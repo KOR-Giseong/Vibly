@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Search, Navigation, MapPin } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
+import ScreenTransition from '@components/ScreenTransition';
 
 const NEARBY_PINS = [
   { id: '1', name: '블루보틀 성수', vibe: '아늑한', emoji: '☕', x: '30%', y: '40%' },
@@ -20,6 +21,7 @@ export default function MapScreen() {
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
+    <ScreenTransition>
     <View style={{ flex: 1, backgroundColor: Colors.gray[100] }}>
       {/* Mock Map */}
       <View style={styles.map}>
@@ -96,6 +98,7 @@ export default function MapScreen() {
         </ScrollView>
       </View>
     </View>
+    </ScreenTransition>
   );
 }
 

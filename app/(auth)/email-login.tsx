@@ -23,6 +23,7 @@ import { useSocialAuth } from '@hooks/useSocialAuth';
 import KakaoTalkIcon from '@assets/KakaoTalk.svg';
 import GoogleIcon from '@assets/Google.svg';
 import AppleIcon from '@assets/Apple.svg';
+import ScreenTransition from '@components/ScreenTransition';
 
 type Mode = 'login' | 'signup';
 
@@ -141,6 +142,7 @@ export default function EmailLoginScreen() {
 
 
   return (
+    <ScreenTransition>
     <LinearGradient
       colors={['#FAF5FF', '#FDF2F8', '#EFF6FF']}
       start={{ x: 0, y: 0 }}
@@ -314,6 +316,7 @@ export default function EmailLoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

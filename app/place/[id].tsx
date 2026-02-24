@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Share2, Heart, MapPin, Clock, Phone, Star, Users, Navigation } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
+import ScreenTransition from '@components/ScreenTransition';
 
 const MOCK_PLACE = {
   id: '1',
@@ -41,6 +42,7 @@ export default function PlaceDetailScreen() {
   const place = MOCK_PLACE;
 
   return (
+    <ScreenTransition>
     <View style={{ flex: 1, backgroundColor: Colors.white }}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 100 }} showsVerticalScrollIndicator={false}>
         {/* Hero Image */}
@@ -156,6 +158,7 @@ export default function PlaceDetailScreen() {
         </TouchableOpacity>
       </View>
     </View>
+    </ScreenTransition>
   );
 }
 

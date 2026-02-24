@@ -38,13 +38,14 @@ function RootLayoutNav() {
         <Stack.Screen name="auth" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="place/[id]" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="map" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="welcome" />
+        <Stack.Screen name="place/[id]" />
+        <Stack.Screen name="map" />
         <Stack.Screen name="checkin" options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="vibe-report" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="vibe-report" />
         <Stack.Screen name="subscription" options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="settings" />
       </Stack>
     </>
   );

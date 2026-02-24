@@ -9,6 +9,7 @@ import {
 } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useAuth } from '@hooks/useAuth';
+import ScreenTransition from '@components/ScreenTransition';
 
 const MENU_ITEMS = [
   { icon: MapPin,    label: '내 체크인',     route: '/checkin'       },
@@ -30,6 +31,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.lg, paddingBottom: insets.bottom + 80 }]}
@@ -102,6 +104,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

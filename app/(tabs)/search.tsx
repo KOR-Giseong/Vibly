@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Filter, List, Grid, MapPin, Star } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useMoodStore } from '@stores/mood.store';
+import ScreenTransition from '@components/ScreenTransition';
 
 type ViewMode = 'list' | 'grid';
 
@@ -31,6 +32,7 @@ export default function SearchScreen() {
   const mood = selectedMood?.label ?? '기분';
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
@@ -136,6 +138,7 @@ export default function SearchScreen() {
         />
       )}
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

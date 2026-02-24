@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Grid, List, Bookmark, MapPin, Star } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
+import ScreenTransition from '@components/ScreenTransition';
 
 type ViewMode = 'grid' | 'list';
 
@@ -30,6 +31,7 @@ export default function BookmarkScreen() {
     : MOCK_BOOKMARKS.filter(b => b.category === activeCategory);
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + Spacing.lg }]}>
@@ -131,6 +133,7 @@ export default function BookmarkScreen() {
         />
       )}
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

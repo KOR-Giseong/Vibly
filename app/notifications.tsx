@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Sparkles, Heart, MapPin, Gift } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
+import ScreenTransition from '@components/ScreenTransition';
 
 type NotifType = 'recommend' | 'like' | 'nearby' | 'promo' | 'report';
 
@@ -39,6 +40,7 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -74,6 +76,7 @@ export default function NotificationsScreen() {
         }}
       />
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

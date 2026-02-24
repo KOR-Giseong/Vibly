@@ -15,6 +15,7 @@ import { SvgProps } from 'react-native-svg';
 import TwinkleIcon from '@assets/Twinkle.svg';
 import PositionPointIcon from '@assets/Position Point.svg';
 import LoveIcon from '@assets/Love.svg';
+import ScreenTransition from '@components/ScreenTransition';
 
 // ─── 슬라이드 데이터 ────────────────────────────────────────────────────────
 const SLIDES: {
@@ -127,6 +128,7 @@ export default function OnboardingScreen() {
   };
 
   return (
+    <ScreenTransition>
     <View style={styles.container}>
       {/* 슬라이드 (애니메이션 적용) */}
       <Animated.View
@@ -174,6 +176,7 @@ export default function OnboardingScreen() {
         </TouchableOpacity>
       </View>
     </View>
+    </ScreenTransition>
   );
 }
 

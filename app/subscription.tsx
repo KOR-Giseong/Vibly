@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Crown, Check, Shield, Zap, BarChart2, Tag, Brain, Ban } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow, SUBSCRIPTION_PLANS } from '@constants/theme';
+import ScreenTransition from '@components/ScreenTransition';
 
 type Plan = 'monthly' | 'yearly';
 
@@ -25,6 +26,7 @@ export default function SubscriptionScreen() {
   const currentPlan = SUBSCRIPTION_PLANS[plan];
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
@@ -106,6 +108,7 @@ export default function SubscriptionScreen() {
         </TouchableOpacity>
       </View>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

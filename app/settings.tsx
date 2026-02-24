@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, ChevronRight, Bell, MapPin, Shield, HelpCircle, Info } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useAuth } from '@hooks/useAuth';
+import ScreenTransition from '@components/ScreenTransition';
 
 const SECTIONS = [
   {
@@ -35,6 +36,7 @@ export default function SettingsScreen() {
     setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
+    <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -100,6 +102,7 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
     </LinearGradient>
+    </ScreenTransition>
   );
 }
 

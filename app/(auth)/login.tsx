@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
 import { SvgProps } from 'react-native-svg';
 import KakaoTalkIcon from '@assets/KakaoTalk.svg';
@@ -18,7 +19,9 @@ import EmailIcon from '@assets/Emaillogin.svg';
 import GoogleIcon from '@assets/Google.svg';
 import AppleIcon from '@assets/Apple.svg';
 
-// ─── 그라디언트 텍스트 (웹: CSS clip, 네이티브: 단색 fallback) ──────────────
+// ─── 그라디언트 텍스트 (웹: CSS clip, 네이티브: MaskedView) ─────────────────
+const GRADIENT_COLORS: [string, string] = ['#9810FA', '#E60076'];
+
 const GradientText = ({ children, style }: { children: string; style?: TextStyle }) => {
   if (Platform.OS === 'web') {
     return (
@@ -39,7 +42,18 @@ const GradientText = ({ children, style }: { children: string; style?: TextStyle
       </Text>
     );
   }
-  return <Text style={[style, { color: '#9810FA' }]}>{children}</Text>;
+
+  return (
+    <MaskedView maskElement={<Text style={style}>{children}</Text>}>
+      <LinearGradient
+        colors={GRADIENT_COLORS}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <Text style={[style, { opacity: 0 }]}>{children}</Text>
+      </LinearGradient>
+    </MaskedView>
+  );
 };
 
 // ─── 로그인 버튼 공통 컴포넌트 ────────────────────────────────────────────

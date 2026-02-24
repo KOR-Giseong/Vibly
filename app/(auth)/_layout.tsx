@@ -2,9 +2,9 @@ import { Stack, Redirect } from 'expo-router';
 import { useAuthStore } from '@stores/auth.store';
 
 export default function AuthLayout() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
 
-  if (isAuthenticated) {
+  if (isAuthenticated && user?.isProfileComplete) {
     return <Redirect href="/(tabs)" />;
   }
 
@@ -13,6 +13,7 @@ export default function AuthLayout() {
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="login" />
       <Stack.Screen name="email-login" />
+      <Stack.Screen name="profile-setup" />
     </Stack>
   );
 }

@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.vibly.app"
+      "bundleIdentifier": "com.vibly.mobile"
     },
     "android": {
       "package": "com.vibly.app",
@@ -46,7 +46,8 @@
           "icon": "./assets/icon.png",
           "color": "#7C3AED"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

@@ -19,6 +19,7 @@ import BackIcon from '@assets/Back-icon.svg';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
 import { authService } from '@services/auth.service';
 import { useAuthStore } from '@stores/auth.store';
+import { useSocialAuth } from '@hooks/useSocialAuth';
 import KakaoTalkIcon from '@assets/KakaoTalk.svg';
 import GoogleIcon from '@assets/Google.svg';
 import AppleIcon from '@assets/Apple.svg';
@@ -100,6 +101,7 @@ export default function EmailLoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { setUser } = useAuthStore();
+  const { signInWithKakao, signInWithGoogle, signInWithApple } = useSocialAuth();
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -129,7 +131,7 @@ export default function EmailLoginScreen() {
       }
       const user = await authService.getMe();
       setUser(user);
-      router.replace('/(tabs)');
+      router.replace(user.isProfileComplete ? '/(tabs)' : '/(auth)/profile-setup');
     } catch (e: any) {
       setError(e?.response?.data?.message ?? '요청에 실패했어요. 다시 시도해주세요.');
     } finally {
@@ -137,10 +139,6 @@ export default function EmailLoginScreen() {
     }
   };
 
-  const handleSocial = (provider: 'kakao' | 'google' | 'apple') => {
-    // TODO: 각 OAuth SDK 연동
-    console.log('social login:', provider);
-  };
 
   return (
     <LinearGradient
@@ -293,14 +291,14 @@ export default function EmailLoginScreen() {
             <SocialButton
               icon={KakaoTalkIcon}
               label="카카오로 계속하기"
-              onPress={() => handleSocial('kakao')}
+              onPress={signInWithKakao}
               backgroundColor="#FEE500"
               textColor="#101828"
             />
             <SocialButton
               icon={GoogleIcon}
               label="Google로 계속하기"
-              onPress={() => handleSocial('google')}
+              onPress={signInWithGoogle}
               backgroundColor={Colors.white}
               textColor="#101828"
               borderColor="#E5E7EB"
@@ -308,7 +306,7 @@ export default function EmailLoginScreen() {
             <SocialButton
               icon={AppleIcon}
               label="Apple로 계속하기"
-              onPress={() => handleSocial('apple')}
+              onPress={signInWithApple}
               backgroundColor="#000000"
               textColor={Colors.white}
             />

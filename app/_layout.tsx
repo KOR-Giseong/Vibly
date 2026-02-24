@@ -35,6 +35,7 @@ function RootLayoutNav() {
     <>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Screen name="auth" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="place/[id]" options={{ animation: 'slide_from_right' }} />

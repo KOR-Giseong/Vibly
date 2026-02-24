@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
+import { useSocialAuth } from '@hooks/useSocialAuth';
 import { SvgProps } from 'react-native-svg';
 import KakaoTalkIcon from '@assets/KakaoTalk.svg';
 import EmailIcon from '@assets/Emaillogin.svg';
@@ -94,15 +95,7 @@ const LoginButton = ({
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
-  const handleSocial = async (provider: 'kakao' | 'google' | 'apple') => {
-    try {
-      // TODO: 각 OAuth SDK 연동
-      console.log('social login:', provider);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const { signInWithKakao, signInWithGoogle, signInWithApple } = useSocialAuth();
 
   const handleEmail = () => {
     router.push('/(auth)/email-login');
@@ -140,7 +133,7 @@ export default function LoginScreen() {
         <LoginButton
           icon={KakaoTalkIcon}
           label="카카오로 시작하기"
-          onPress={() => handleSocial('kakao')}
+          onPress={signInWithKakao}
           backgroundColor="#FEE500"
           textColor="#101828"
         />
@@ -155,7 +148,7 @@ export default function LoginScreen() {
         <LoginButton
           icon={GoogleIcon}
           label="Google로 시작하기"
-          onPress={() => handleSocial('google')}
+          onPress={signInWithGoogle}
           backgroundColor={Colors.white}
           textColor="#101828"
           borderColor="#E5E7EB"
@@ -163,7 +156,7 @@ export default function LoginScreen() {
         <LoginButton
           icon={AppleIcon}
           label="Apple로 시작하기"
-          onPress={() => handleSocial('apple')}
+          onPress={signInWithApple}
           backgroundColor="#000000"
           textColor={Colors.white}
         />

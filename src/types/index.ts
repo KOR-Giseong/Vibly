@@ -8,6 +8,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  nickname?: string;
+  preferredVibes?: string[];
+  isProfileComplete: boolean;
   avatarUrl?: string;
   status: UserStatus;
   isPremium: boolean;

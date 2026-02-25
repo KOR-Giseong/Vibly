@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, Share, Linking, Platform, ActivityIndicator,
-  Modal, TextInput, KeyboardAvoidingView, useWindowDimensions,
+  Modal, TextInput, KeyboardAvoidingView, useWindowDimensions, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -254,13 +254,49 @@ export default function PlaceDetailScreen() {
   const handleNavigate = () => {
     if (!place) return;
     const label = encodeURIComponent(place.name);
-    const url =
+    const { lat, lng } = place;
+
+    const kakaoAppUrl =
       Platform.OS === 'ios'
-        ? `maps://app?daddr=${place.lat},${place.lng}`
-        : `geo:${place.lat},${place.lng}?q=${place.lat},${place.lng}(${label})`;
-    Linking.openURL(url).catch(() => {
-      Linking.openURL(`https://map.kakao.com/?q=${label}`);
-    });
+        ? `kakaomap://look?p=${lat},${lng}`
+        : `kakaomap://look?p=${lat},${lng}`;
+
+    const naverAppUrl =
+      Platform.OS === 'ios'
+        ? `nmap://navigation?dlat=${lat}&dlng=${lng}&dname=${label}&appname=com.vibly.app`
+        : `nmap://navigation?dlat=${lat}&dlng=${lng}&dname=${label}&appname=com.vibly.app`;
+
+    const kakaoWebUrl = `https://map.kakao.com/link/to/${label},${lat},${lng}`;
+
+    const nativeUrl =
+      Platform.OS === 'ios'
+        ? `maps://?daddr=${lat},${lng}`
+        : `geo:${lat},${lng}?q=${lat},${lng}(${label})`;
+
+    Alert.alert('길찾기', '사용할 앱을 선택하세요', [
+      {
+        text: '카카오맵',
+        onPress: () =>
+          Linking.openURL(kakaoAppUrl).catch(() =>
+            Linking.openURL(kakaoWebUrl),
+          ),
+      },
+      {
+        text: '네이버 지도',
+        onPress: () =>
+          Linking.openURL(naverAppUrl).catch(() =>
+            Linking.openURL(kakaoWebUrl),
+          ),
+      },
+      {
+        text: Platform.OS === 'ios' ? '애플 지도' : '구글 지도',
+        onPress: () =>
+          Linking.openURL(nativeUrl).catch(() =>
+            Linking.openURL(kakaoWebUrl),
+          ),
+      },
+      { text: '취소', style: 'cancel' },
+    ]);
   };
 
   // ── 체크인 ──────────────────────────────────────────────────────────────

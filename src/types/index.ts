@@ -53,6 +53,7 @@ export interface Place {
   tags: string[];
   isBookmarked?: boolean;
   isSponsored?: boolean;
+  savedAt?: string;  // 북마크 저장 시각
 }
 
 export interface PlaceReview {

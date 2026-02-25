@@ -47,7 +47,7 @@ export const placeService = {
   },
 
   async getBookmarks(): Promise<Place[]> {
-    const { data } = await apiClient.get<Place[]>('/users/me/bookmarks');
+    const { data } = await apiClient.get<Place[]>('/places/bookmarks');
     return data;
   },
 

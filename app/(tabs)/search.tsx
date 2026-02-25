@@ -10,8 +10,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Search, Check } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useMoodStore } from '@stores/mood.store';
-import { useMoodSearch } from '@hooks/useMoodSearch';
-import { useLocation } from '@hooks/useLocation';
 import { SearchResultCard } from '@components/features/place/SearchResultCard';
 import ScreenTransition from '@components/ScreenTransition';
 import SearchSettingIcon from '@assets/searchsetting.svg';
@@ -57,8 +55,6 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
 
   const { selectedMood, searchResult, isSearching } = useMoodStore();
-  const { search } = useMoodSearch();
-  const { coords } = useLocation();
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [sortBy, setSortBy] = useState<SortType>('recommended');
@@ -66,16 +62,24 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
 
   const rawPlaces = searchResult?.places ?? [];
-  const places = useMemo(() => sortPlaces(rawPlaces as Place[], sortBy), [rawPlaces, sortBy]);
+
+  // 검색 결과 내 이름/태그 로컬 필터링 (AI 호출 없음)
+  const places = useMemo(() => {
+    const filtered = query.trim()
+      ? (rawPlaces as Place[]).filter((p) => {
+          const q = query.trim().toLowerCase();
+          return (
+            p.name.toLowerCase().includes(q) ||
+            p.tags.some((t) => t.toLowerCase().includes(q))
+          );
+        })
+      : (rawPlaces as Place[]);
+    return sortPlaces(filtered, sortBy);
+  }, [rawPlaces, query, sortBy]);
 
   const moodLabel = selectedMood?.emoji
     ? `${selectedMood.emoji} ${selectedMood.label}`
-    : '기분';
-
-  const handleSearch = () => {
-    if (!query.trim()) return;
-    search(query.trim(), coords ?? undefined);
-  };
+    : searchResult?.summary ?? searchResult?.query ?? '기분';
 
   const handlePressPlace = (place: Place) => {
     router.push(`/place/${place.id}`);
@@ -102,11 +106,10 @@ export default function SearchScreen() {
             <Search size={16} color={Colors.gray[400]} />
             <TextInput
               style={styles.searchInput}
-              placeholder="기분이나 장소를 입력해보세요"
+              placeholder="장소 이름이나 분위기로 필터링"
               placeholderTextColor={Colors.gray[400]}
               value={query}
               onChangeText={setQuery}
-              onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
           </View>

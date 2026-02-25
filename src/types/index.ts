@@ -42,13 +42,25 @@ export interface Place {
   lat: number;
   lng: number;
   vibeScore?: number;
+  // Vibly 평점 (우리 DB의 리뷰 기반)
   rating: number;
   reviewCount: number;
+  // Google Places 평점 (Google API 기반)
+  googleRating?: number;
+  googleReviewCount?: number;
   distance?: string;
   imageUrl?: string;
   tags: string[];
   isBookmarked?: boolean;
   isSponsored?: boolean;
+}
+
+export interface PlaceReview {
+  id: string;
+  user: { id: string; name: string };
+  rating: number;
+  body: string;
+  createdAt: string;
 }
 
 export interface PlaceDetail extends Place {
@@ -57,6 +69,9 @@ export interface PlaceDetail extends Place {
   description?: string;
   aiReasons?: AIReason[];
   emotionMatch?: EmotionMatch;
+  reviews?: PlaceReview[];       // Vibly 리뷰 (우리 DB)
+  myCheckInCount?: number;
+  myReview?: PlaceReview | null;
 }
 
 // ─── Mood / AI ───────────────────────────────────────────────────────────────
@@ -69,8 +84,8 @@ export interface Mood {
 
 export interface AISearchResult {
   query: string;
-  analysisText: string;
-  tags: string[];
+  summary: string;
+  keywords: string[];
   places: Place[];
 }
 
@@ -80,11 +95,7 @@ export interface AIReason {
   description: string;
 }
 
-export interface EmotionMatch {
-  happy: number;
-  peaceful: number;
-  cozy: number;
-}
+export type EmotionMatch = { label: string; value: number }[];
 
 // ─── Notification ────────────────────────────────────────────────────────────
 

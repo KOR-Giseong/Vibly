@@ -34,7 +34,12 @@ export function PlaceCard({ place, onPress }: PlaceCardProps) {
         <View style={styles.footer}>
           <MapPin size={12} color={Colors.text.muted} />
           <Text style={styles.distance}>{place.distance ?? '-'}</Text>
-          <Text style={styles.rating}>★ {place.rating.toFixed(1)}</Text>
+          {/* Google 평점 우선, 없으면 Vibly 평점 */}
+          {(place.googleRating ?? 0) > 0 ? (
+            <Text style={styles.rating}>⭐ {place.googleRating!.toFixed(1)}</Text>
+          ) : (place.rating ?? 0) > 0 ? (
+            <Text style={styles.rating}>★ {place.rating.toFixed(1)}</Text>
+          ) : null}
         </View>
       </View>
     </TouchableOpacity>
@@ -88,5 +93,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.text.secondary,
     fontWeight: FontWeight.medium,
+  },
+  ratingEmpty: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[400],
   },
 });

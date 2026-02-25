@@ -10,12 +10,16 @@ export function useMoodSearch() {
   const mutation = useMutation({
     mutationFn: moodService.search,
     onMutate: () => {
+      setSearchResult(null); // 이전 결과 초기화 (구 결과가 잠깐 보이는 현상 방지)
       setSearching(true);
       decrementRateLimit();
     },
     onSuccess: (result) => {
       setSearchResult(result);
       analytics.track('SEARCH', { query: result.query, resultCount: result.places.length });
+    },
+    onError: () => {
+      setSearchResult(null);
     },
     onSettled: () => setSearching(false),
   });

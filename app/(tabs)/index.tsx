@@ -26,7 +26,7 @@ export default function HomeScreen() {
   const { user } = useAuthStore();
   const { selectedMood, setSelectedMood, rateLimitRemaining } = useMoodStore();
   const { search } = useMoodSearch();
-  const { coords } = useLocation();
+  const { coords, status: locationStatus } = useLocation();
 
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiQuery, setAiQuery] = useState('');
@@ -95,7 +95,7 @@ export default function HomeScreen() {
 
           {/* 주변 추천 장소 */}
           <View style={styles.block}>
-            <NearbyPlaceList coords={coords} />
+            <NearbyPlaceList coords={coords} locationStatus={locationStatus} />
           </View>
         </ScrollView>
       </LinearGradient>

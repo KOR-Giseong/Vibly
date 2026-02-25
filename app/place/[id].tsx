@@ -1,204 +1,884 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Image, Share, Linking, Platform, ActivityIndicator,
+  Modal, TextInput, KeyboardAvoidingView, useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, Heart, MapPin, Clock, Phone, Star, Users, Navigation } from 'lucide-react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowLeft, MapPin, Clock, Phone, Star, Users,
+  Navigation, Heart, MessageSquare, X,
+} from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
+import { placeService } from '@services/place.service';
+import ShareIcon from '@assets/Share.svg';
+import ThumsIcon from '@assets/Thums.svg';
+import type { PlaceDetail, PlaceReview } from '@/types';
 
-const MOCK_PLACE = {
-  id: '1',
-  name: '블루보틀 성수',
-  category: '카페',
-  rating: 4.8,
-  reviewCount: 127,
-  vibeScore: 95,
-  vibes: ['아늑한', '감성적', '조용한'],
-  address: '서울 성동구 성수일로 8-20',
-  hours: '오전 8:00 - 오후 9:00 · 영업중',
-  phone: '02-1234-5678',
-  description: '성수동 특유의 빈티지 감성과 스페셜티 커피가 조화롭게 어우러진 공간입니다. 넓은 창문으로 들어오는 자연광이 아늑한 분위기를 만들어줍니다.',
-  emotions: [
-    { label: '아늑함', value: 92 },
-    { label: '행복함', value: 88 },
-    { label: '평화로움', value: 85 },
-  ],
-  reasons: [
-    { emoji: '☕', title: '완벽한 스페셜티 커피', desc: 'AI가 분석한 리뷰에서 커피 품질에 대한 극찬이 가장 많았어요' },
-    { emoji: '🌿', title: '힐링되는 인테리어', desc: '자연광과 그린 인테리어가 감성적인 분위기를 연출해요' },
-    { emoji: '🔇', title: '조용한 분위기', desc: '작업하기 좋은 잔잔한 BGM과 적당한 소음 수준을 유지해요' },
-  ],
-};
+const IMAGE_HEIGHT = 320;
 
+// ─── 감정 바 항목 ─────────────────────────────────────────────────────────────
+function EmotionBar({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={styles.vibeBarRow}>
+      <Text style={styles.vibeBarLabel}>{label}</Text>
+      <View style={styles.vibeBarTrack}>
+        <View style={[styles.vibeBarFill, { width: `${value}%` as `${number}%` }]} />
+      </View>
+      <Text style={styles.vibeBarValue}>{value}%</Text>
+    </View>
+  );
+}
+
+// ─── 추천 이유 카드 ────────────────────────────────────────────────────────────
+function ReasonCard({ icon, title, description }: { icon: string; title: string; description: string }) {
+  return (
+    <View style={styles.reasonCard}>
+      <LinearGradient
+        colors={['#f3e8ff', '#fce7f3']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.reasonIcon}
+      >
+        <Text style={{ fontSize: 22 }}>{icon}</Text>
+      </LinearGradient>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.reasonTitle}>{title}</Text>
+        <Text style={styles.reasonDesc}>{description}</Text>
+      </View>
+      <ThumsIcon width={20} height={20} />
+    </View>
+  );
+}
+
+// ─── 장소 정보 행 ─────────────────────────────────────────────────────────────
+function InfoRow({
+  Icon, label, value,
+}: {
+  Icon: React.ComponentType<{ size: number; color: string }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.infoCard}>
+      <View style={styles.infoIconWrap}>
+        <Icon size={18} color={Colors.primary[600]} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={styles.infoValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+// ─── 이름 익명화 ──────────────────────────────────────────────────────────────
+function anonymizeName(name: string): string {
+  if (name.length <= 2) return name[0] + '*';
+  return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
+}
+
+// ─── 별점 선택 ────────────────────────────────────────────────────────────────
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <View style={styles.starPicker}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <TouchableOpacity key={n} onPress={() => onChange(n)} activeOpacity={0.7}>
+          <Star
+            size={32}
+            color="#FACC15"
+            fill={n <= value ? '#FACC15' : 'transparent'}
+          />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+// ─── 리뷰 작성 모달 ────────────────────────────────────────────────────────────
+function ReviewModal({
+  visible,
+  onClose,
+  onSubmit,
+  isPending,
+  initialRating = 5,
+  initialBody = '',
+  isEdit = false,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (rating: number, body: string) => void;
+  isPending: boolean;
+  initialRating?: number;
+  initialBody?: string;
+  isEdit?: boolean;
+}) {
+  const insets = useSafeAreaInsets();
+  const [rating, setRating] = useState(initialRating);
+  const [body, setBody] = useState(initialBody);
+
+  // visible이 열릴 때마다 초기값 동기화
+  useEffect(() => {
+    if (visible) {
+      setRating(initialRating);
+      setBody(initialBody);
+    }
+  }, [visible, initialRating, initialBody]);
+
+  const handleSubmit = () => {
+    if (!body.trim()) return;
+    onSubmit(rating, body.trim());
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
+        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + Spacing.lg }]}>
+          <View style={styles.modalHandle} />
+
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{isEdit ? '리뷰 수정' : '리뷰 작성'}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <X size={22} color={Colors.gray[600]} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>별점을 선택해주세요</Text>
+          <StarPicker value={rating} onChange={setRating} />
+
+          <Text style={styles.modalSubtitle}>리뷰를 작성해주세요</Text>
+          <TextInput
+            style={styles.reviewInput}
+            placeholder="이 장소에 대한 솔직한 후기를 남겨주세요"
+            placeholderTextColor={Colors.gray[400]}
+            multiline
+            numberOfLines={4}
+            value={body}
+            onChangeText={setBody}
+            textAlignVertical="top"
+          />
+
+          <TouchableOpacity
+            style={[styles.submitBtn, (!body.trim() || isPending) && { opacity: 0.5 }]}
+            onPress={handleSubmit}
+            disabled={!body.trim() || isPending}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={Gradients.primary}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            />
+            <Text style={styles.submitBtnText}>
+              {isPending ? '제출 중...' : isEdit ? '수정 완료' : '리뷰 등록'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── 바이브 태그 색상 ──────────────────────────────────────────────────────────
+const VIBE_COLORS = [
+  { bg: '#f3e8ff', text: '#8200db' },
+  { bg: '#fce7f3', text: '#c6005c' },
+  { bg: '#dbeafe', text: '#1447e6' },
+];
+
+// ─── 메인 화면 ────────────────────────────────────────────────────────────────
 export default function PlaceDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [liked, setLiked] = useState(false);
+  const queryClient = useQueryClient();
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
-  const place = MOCK_PLACE;
+  // ── 데이터 패치 ────────────────────────────────────────────────────────
+  const { data: place, isLoading, isError } = useQuery<PlaceDetail>({
+    queryKey: ['place', id],
+    queryFn: () => placeService.getById(id),
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (place?.isBookmarked !== undefined) {
+      setIsBookmarked(place.isBookmarked);
+    }
+  }, [place?.isBookmarked]);
+
+  // ── 즐겨찾기 토글 ──────────────────────────────────────────────────────
+  const bookmarkMutation = useMutation({
+    mutationFn: () => placeService.toggleBookmark(id),
+    onMutate: () => setIsBookmarked((prev) => !prev),
+    onError: () => setIsBookmarked((prev) => !prev),
+    onSuccess: (data) => {
+      setIsBookmarked(data.isBookmarked);
+      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+    },
+  });
+
+  // ── 리뷰 작성 ──────────────────────────────────────────────────────────
+  const reviewMutation = useMutation({
+    mutationFn: ({ rating, body }: { rating: number; body: string }) =>
+      placeService.addReview(id, rating, body),
+    onSuccess: () => {
+      setReviewModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['place', id] });
+    },
+  });
+
+  // ── 공유 ────────────────────────────────────────────────────────────────
+  const handleShare = async () => {
+    if (!place) return;
+    try {
+      await Share.share({
+        message: `${place.name} - vibly에서 발견한 장소예요!\n📍 ${place.address}`,
+        title: place.name,
+      });
+    } catch {}
+  };
+
+  // ── 길찾기 ──────────────────────────────────────────────────────────────
+  const handleNavigate = () => {
+    if (!place) return;
+    const label = encodeURIComponent(place.name);
+    const url =
+      Platform.OS === 'ios'
+        ? `maps://app?daddr=${place.lat},${place.lng}`
+        : `geo:${place.lat},${place.lng}?q=${place.lat},${place.lng}(${label})`;
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://map.kakao.com/?q=${label}`);
+    });
+  };
+
+  // ── 체크인 ──────────────────────────────────────────────────────────────
+  const handleCheckin = () => {
+    router.push({ pathname: '/checkin', params: { placeId: id } });
+  };
+
+  // ── 로딩 / 오류 상태 ──────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={Colors.primary[600]} />
+      </View>
+    );
+  }
+
+  if (isError || !place) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>장소를 불러오지 못했어요</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: Spacing.lg }}>
+          <Text style={{ color: Colors.primary[600], fontSize: FontSize.base }}>돌아가기</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const emotions = place.emotionMatch ?? [];
+
+  const vibeScore = place.vibeScore ?? emotions[0]?.value ?? 72;
 
   return (
     <ScreenTransition>
-    <View style={{ flex: 1, backgroundColor: Colors.white }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 100 }} showsVerticalScrollIndicator={false}>
-        {/* Hero Image */}
-        <View style={styles.hero}>
-          <LinearGradient colors={['#7C3AED', '#DB2777']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }} />
-          <Text style={styles.heroEmoji}>🏠</Text>
-          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.heroOverlay} />
-        </View>
-
-        {/* Floating Buttons */}
-        <View style={[styles.floatBtns, { top: insets.top + Spacing.md }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.floatBtn}>
-            <ArrowLeft size={20} color={Colors.white} />
-          </TouchableOpacity>
-          <View style={styles.floatRight}>
-            <TouchableOpacity style={styles.floatBtn}>
-              <Share2 size={20} color={Colors.white} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.floatBtn} onPress={() => setLiked(!liked)}>
-              <Heart size={20} color={liked ? '#EF4444' : Colors.white} fill={liked ? '#EF4444' : 'transparent'} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Title */}
-          <View style={styles.titleRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.placeName}>{place.name}</Text>
-              <Text style={styles.placeCategory}>{place.category}</Text>
-            </View>
-            <View style={styles.ratingWrap}>
-              <Star size={14} color="#FACC15" fill="#FACC15" />
-              <Text style={styles.ratingText}>{place.rating}</Text>
-            </View>
+      {/* 배경색을 그라데이션 끝색으로 채워 하단 흰 여백 방지 */}
+      <View style={styles.root}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── 히어로 이미지 ─────────────────────────────────────────── */}
+          <View style={{ height: IMAGE_HEIGHT }}>
+            {place.imageUrl ? (
+              <Image
+                source={{ uri: place.imageUrl }}
+                style={{ width, height: IMAGE_HEIGHT }}
+                resizeMode="cover"
+              />
+            ) : (
+              <LinearGradient
+                colors={Gradients.primary}
+                style={{ width, height: IMAGE_HEIGHT, alignItems: 'center', justifyContent: 'center' }}
+                start={{ x: 0, y: 1 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.heroEmoji}>🏠</Text>
+              </LinearGradient>
+            )}
+            {/* 상단 어둠 오버레이 */}
+            <LinearGradient
+              colors={['rgba(0,0,0,0.35)', 'transparent']}
+              style={[StyleSheet.absoluteFill, { height: IMAGE_HEIGHT * 0.45 }]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+            />
           </View>
 
-          {/* Vibe Tags */}
-          <View style={styles.vibesRow}>
-            {place.vibes.map((v) => (
-              <View key={v} style={styles.vibeTag}>
-                <Text style={styles.vibeTagText}>{v}</Text>
+          {/* ── 플로팅 버튼 ───────────────────────────────────────────── */}
+          <View style={[styles.floatRow, { top: insets.top + 12 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.floatBtn}>
+              <ArrowLeft size={20} color={Colors.gray[800]} />
+            </TouchableOpacity>
+            <View style={styles.floatRight}>
+              <TouchableOpacity onPress={handleShare} style={styles.floatBtn}>
+                <ShareIcon width={20} height={20} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => bookmarkMutation.mutate()}
+                style={[styles.floatBtn, isBookmarked && styles.floatBtnActive]}
+                disabled={bookmarkMutation.isPending}
+              >
+                <Heart
+                  size={20}
+                  color={isBookmarked ? '#e60076' : Colors.gray[700]}
+                  fill={isBookmarked ? '#e60076' : 'transparent'}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ── 콘텐츠 시트 ──────────────────────────────────────────── */}
+          <LinearGradient
+            colors={['#faf5ff', '#fdf2f8', '#eff6ff']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.contentSheet}
+          >
+            {/* 장소명 + 평점 */}
+            <View style={styles.placeHeader}>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={styles.placeName}>{place.name}</Text>
+                <Text style={styles.placeCategory}>
+                  {place.category} · {place.address.split(' ').slice(1, 3).join(' ')}
+                </Text>
               </View>
-            ))}
-          </View>
-
-          {/* AI Vibe Score */}
-          <View style={styles.scoreCard}>
-            <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.scoreLabel}>AI 바이브 스코어</Text>
-              {place.emotions.map((e) => (
-                <View key={e.label} style={styles.emotionRow}>
-                  <Text style={styles.emotionLabel}>{e.label}</Text>
-                  <View style={styles.emotionBar}>
-                    <View style={[styles.emotionFill, { width: `${e.value}%` }]} />
+              <View style={{ gap: 6, alignItems: 'flex-end' }}>
+                {/* Google 평점 */}
+                {(place.googleRating ?? 0) > 0 && (
+                  <View style={styles.ratingBadge}>
+                    <Star size={14} color="#FACC15" fill="#FACC15" />
+                    <View>
+                      <Text style={styles.ratingText}>{place.googleRating!.toFixed(1)}</Text>
+                      <Text style={styles.ratingLabel}>
+                        구글{place.googleReviewCount ? ` ${place.googleReviewCount.toLocaleString()}개` : ''}
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={styles.emotionValue}>{e.value}%</Text>
+                )}
+                {/* Vibly 평점 - 항상 표시 */}
+                <View style={[styles.ratingBadge, styles.viblyRatingBadge]}>
+                  {place.rating > 0 ? (
+                    <>
+                      <Star size={12} color="#9810fa" fill="#9810fa" />
+                      <View>
+                        <Text style={[styles.ratingText, { fontSize: 13, color: '#9810fa' }]}>
+                          {place.rating.toFixed(1)}
+                        </Text>
+                        <Text style={styles.ratingLabel}>vibly</Text>
+                      </View>
+                    </>
+                  ) : (
+                    <View>
+                      <Text style={[styles.ratingLabel, { color: Colors.gray[400] }]}>vibly</Text>
+                      <Text style={[styles.ratingEmpty, { fontSize: 11 }]}>평점 없음</Text>
+                    </View>
+                  )}
                 </View>
-              ))}
-            </View>
-            <Text style={styles.bigScore}>{place.vibeScore}</Text>
-          </View>
-
-          {/* Reasons */}
-          <Text style={styles.sectionTitle}>추천 이유</Text>
-          {place.reasons.map((r) => (
-            <View key={r.title} style={styles.reasonCard}>
-              <View style={styles.reasonIcon}>
-                <Text style={{ fontSize: 20 }}>{r.emoji}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reasonTitle}>{r.title}</Text>
-                <Text style={styles.reasonDesc}>{r.desc}</Text>
               </View>
             </View>
-          ))}
 
-          {/* Social Proof */}
-          <View style={styles.socialProof}>
-            <Users size={16} color={Colors.primary[600]} />
-            <Text style={styles.socialText}>{place.reviewCount}명이 방문했어요</Text>
-          </View>
+            {/* 내 방문 횟수 */}
+            {(place.myCheckInCount ?? 0) > 0 && (
+              <View style={styles.myVisitBadge}>
+                <Text style={styles.myVisitText}>📍 내가 {place.myCheckInCount}번 방문한 곳</Text>
+              </View>
+            )}
 
-          {/* Info Cards */}
-          <Text style={styles.sectionTitle}>장소 정보</Text>
-          {[
-            { icon: MapPin,  text: place.address },
-            { icon: Clock,   text: place.hours   },
-            { icon: Phone,   text: place.phone    },
-          ].map(({ icon: Icon, text }) => (
-            <View key={text} style={styles.infoCard}>
-              <Icon size={16} color={Colors.primary[600]} />
-              <Text style={styles.infoText}>{text}</Text>
+            {/* 바이브 태그 */}
+            {place.tags.length > 0 && (
+              <View style={styles.vibeTags}>
+                {place.tags.map((tag, i) => {
+                  const c = VIBE_COLORS[i % VIBE_COLORS.length];
+                  return (
+                    <View key={tag} style={[styles.vibeTag, { backgroundColor: c.bg }]}>
+                      <Text style={[styles.vibeTagText, { color: c.text }]}>{tag}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* AI 바이브 분석 카드 */}
+            {emotions.length > 0 && (
+              <LinearGradient
+                colors={['#9810fa', '#e60076']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.vibeCard}
+              >
+                <Text style={styles.vibeCardTitle}>✨  AI 바이브 분석</Text>
+                <View style={styles.vibeScoreRow}>
+                  <Text style={styles.vibeScoreBig}>{vibeScore}</Text>
+                  <Text style={styles.vibeScoreUnit}>/ 100점</Text>
+                </View>
+                <Text style={styles.vibeMatchText}>
+                  {'당신의 감정과 '}
+                  <Text style={{ fontWeight: FontWeight.bold }}>{vibeScore}%</Text>
+                  {' 일치해요'}
+                </Text>
+                <View style={styles.vibeBars}>
+                  {emotions.map((e) => (
+                    <EmotionBar key={e.label} label={e.label} value={e.value} />
+                  ))}
+                </View>
+              </LinearGradient>
+            )}
+
+            {/* 추천 이유 */}
+            {place.aiReasons && place.aiReasons.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>추천 이유</Text>
+                {place.aiReasons.map((r) => (
+                  <ReasonCard key={r.title} icon={r.icon} title={r.title} description={r.description} />
+                ))}
+              </View>
+            )}
+
+            {/* 방문자 통계 - Vibly 리뷰가 있을 때만 표시 */}
+            {place.reviewCount > 0 && (
+              <View style={styles.visitorBanner}>
+                <Users size={16} color="#1c398e" />
+                <Text style={styles.visitorText}>
+                  <Text style={{ fontWeight: FontWeight.bold }}>{place.reviewCount}명</Text>
+                  {'이 이 장소를 당신과 비슷한 감정으로 방문했어요'}
+                </Text>
+              </View>
+            )}
+
+            {/* 장소 정보 */}
+            <View style={styles.section}>
+              <InfoRow Icon={MapPin} label="주소" value={place.address} />
+              {place.hours && <InfoRow Icon={Clock} label="영업시간" value={place.hours} />}
+              {place.phone && <InfoRow Icon={Phone} label="전화번호" value={place.phone} />}
             </View>
-          ))}
 
-          {/* Description */}
-          <Text style={styles.description}>{place.description}</Text>
-        </View>
-      </ScrollView>
+            {/* 소개 */}
+            {place.description && (
+              <View style={styles.descCard}>
+                <Text style={styles.sectionTitle}>소개</Text>
+                <Text style={styles.descText}>{place.description}</Text>
+              </View>
+            )}
 
-      {/* Action Buttons */}
-      <View style={[styles.actions, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <TouchableOpacity style={styles.navBtn} activeOpacity={0.85}>
-          <Navigation size={18} color={Colors.primary[600]} />
-          <Text style={styles.navBtnText}>길찾기</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.checkinBtn} onPress={() => router.push('/checkin')} activeOpacity={0.85}>
-          <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-          <Text style={styles.checkinBtnText}>체크인</Text>
-        </TouchableOpacity>
+            {/* 리뷰 */}
+            <View style={styles.reviewCard}>
+              <View style={styles.reviewTitleRow}>
+                <MessageSquare size={16} color={Colors.primary[600]} />
+                <Text style={styles.sectionTitle}>리뷰</Text>
+              </View>
+
+              {/* Google 평점 요약 */}
+              {(place.googleRating ?? 0) > 0 && (
+                <View style={styles.googleRatingRow}>
+                  <View style={styles.googleRatingLeft}>
+                    <Text style={styles.googleRatingBig}>{place.googleRating!.toFixed(1)}</Text>
+                    <View style={{ flexDirection: 'row', gap: 2 }}>
+                      {[1,2,3,4,5].map((n) => (
+                        <Star
+                          key={n}
+                          size={14}
+                          color="#FACC15"
+                          fill={n <= Math.round(place.googleRating!) ? '#FACC15' : 'transparent'}
+                        />
+                      ))}
+                    </View>
+                    <Text style={styles.googleRatingCount}>
+                      Google · {(place.googleReviewCount ?? 0).toLocaleString()}개 리뷰
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* 구분선 */}
+              {(place.googleRating ?? 0) > 0 && <View style={styles.reviewDivider} />}
+
+              {/* 바이블리 리뷰 */}
+              <View style={styles.reviewHeader}>
+                <Text style={styles.reviewSubTitle}>바이블리 리뷰</Text>
+                <TouchableOpacity
+                  style={styles.writeReviewBtn}
+                  onPress={() => setReviewModalOpen(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.writeReviewBtnText}>
+                    {place.myReview ? '수정하기' : '작성하기'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {place.reviews && place.reviews.length > 0 ? (
+                <>
+                  {place.reviews.map((review: PlaceReview) => (
+                    <View key={review.id} style={styles.reviewItem}>
+                      <View style={styles.reviewItemHeader}>
+                        <Text style={styles.reviewAuthor}>{anonymizeName(review.user.name)}</Text>
+                        <View style={{ flexDirection: 'row', gap: 2 }}>
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              size={12}
+                              color="#FACC15"
+                              fill={n <= review.rating ? '#FACC15' : 'transparent'}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                      <Text style={styles.reviewBody} numberOfLines={3}>
+                        {review.body}
+                      </Text>
+                      <Text style={styles.reviewDate}>
+                        {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+                      </Text>
+                    </View>
+                  ))}
+
+                  {place.reviewCount > place.reviews.length && (
+                    <TouchableOpacity
+                      style={styles.moreReviewsBtn}
+                      onPress={() => router.push({ pathname: '/place/reviews', params: { placeId: id, placeName: place.name } })}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.moreReviewsText}>
+                        리뷰 {place.reviewCount - place.reviews.length}개 더 보기
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.reviewEmpty}>아직 바이블리 리뷰가 없어요. 첫 리뷰를 남겨보세요!</Text>
+              )}
+            </View>
+          </LinearGradient>
+        </ScrollView>
+
+        {/* ── 하단 버튼 ─────────────────────────────────────────────── */}
+        <LinearGradient
+          colors={['transparent', 'rgba(250,245,255,0.92)', '#faf5ff', '#eff6ff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={[styles.bottomBar, { paddingBottom: insets.bottom + Spacing.md }]}
+        >
+          <TouchableOpacity style={styles.navBtn} onPress={handleNavigate} activeOpacity={0.85}>
+            <Navigation size={16} color={Colors.primary[600]} />
+            <Text style={styles.navBtnText}>길찾기</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.checkinBtn} onPress={handleCheckin} activeOpacity={0.85}>
+            <LinearGradient
+              colors={Gradients.primary}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            />
+            <Text style={styles.checkinBtnText}>체크인</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+
+        {/* ── 리뷰 작성 모달 ──────────────────────────────────────── */}
+        <ReviewModal
+          visible={reviewModalOpen}
+          onClose={() => setReviewModalOpen(false)}
+          onSubmit={(rating, body) => reviewMutation.mutate({ rating, body })}
+          isPending={reviewMutation.isPending}
+          isEdit={!!place.myReview}
+          initialRating={place.myReview?.rating ?? 5}
+          initialBody={place.myReview?.body ?? ''}
+        />
       </View>
-    </View>
     </ScreenTransition>
   );
 }
 
+// ─── 스타일 ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  hero: { height: 300, alignItems: 'center', justifyContent: 'center' },
+  // 배경: 그라데이션 끝색(#eff6ff)으로 흰 여백 방지
+  root: { flex: 1, backgroundColor: '#eff6ff' },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.white },
+  errorText: { color: Colors.gray[500], fontSize: FontSize.base },
   heroEmoji: { fontSize: 80 },
-  heroOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 100 },
-  floatBtns: { position: 'absolute', left: Spacing['2xl'], right: Spacing['2xl'], flexDirection: 'row', justifyContent: 'space-between' },
-  floatBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' },
+
+  // 플로팅 버튼
+  floatRow: {
+    position: 'absolute',
+    left: Spacing['2xl'],
+    right: Spacing['2xl'],
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  floatBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    alignItems: 'center', justifyContent: 'center',
+    ...Shadow.sm,
+  },
+  floatBtnActive: { backgroundColor: 'rgba(255,255,255,0.95)' },
   floatRight: { flexDirection: 'row', gap: Spacing.sm },
-  content: { backgroundColor: Colors.white, borderTopLeftRadius: BorderRadius['3xl'], borderTopRightRadius: BorderRadius['3xl'], marginTop: -32, padding: Spacing['2xl'] },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: Spacing.md },
-  placeName: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.gray[900] },
-  placeCategory: { fontSize: FontSize.sm, color: Colors.gray[500], marginTop: 2 },
-  ratingWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBEB', borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, gap: 4 },
-  ratingText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: '#92400E' },
-  vibesRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing['2xl'] },
-  vibeTag: { backgroundColor: Colors.primary[100], borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
-  vibeTagText: { fontSize: FontSize.xs, color: Colors.primary[700], fontWeight: FontWeight.medium },
-  scoreCard: { flexDirection: 'row', alignItems: 'center', borderRadius: BorderRadius['2xl'], padding: Spacing.xl, overflow: 'hidden', marginBottom: Spacing['2xl'], ...Shadow.lg },
-  scoreLabel: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.8)', marginBottom: Spacing.md },
-  emotionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs },
-  emotionLabel: { fontSize: FontSize.xs, color: Colors.white, width: 48 },
-  emotionBar: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 3 },
-  emotionFill: { height: '100%', backgroundColor: Colors.white, borderRadius: 3 },
-  emotionValue: { fontSize: FontSize.xs, color: Colors.white, width: 32, textAlign: 'right' },
-  bigScore: { fontSize: 48, fontWeight: FontWeight.extrabold, color: Colors.white },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.gray[900], marginBottom: Spacing.lg, marginTop: Spacing.sm },
-  reasonCard: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: Colors.gray[50], borderRadius: BorderRadius.xl, padding: Spacing.lg, marginBottom: Spacing.md, gap: Spacing.md },
-  reasonIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary[100], alignItems: 'center', justifyContent: 'center' },
-  reasonTitle: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, color: Colors.gray[900], marginBottom: 4 },
-  reasonDesc: { fontSize: FontSize.sm, color: Colors.gray[500], lineHeight: 20 },
-  socialProof: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.primary[50], borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: Spacing.lg },
-  socialText: { fontSize: FontSize.sm, color: Colors.primary[700], fontWeight: FontWeight.medium },
-  infoCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: Colors.gray[50], borderRadius: BorderRadius.xl, padding: Spacing.lg, marginBottom: Spacing.sm },
-  infoText: { flex: 1, fontSize: FontSize.base, color: Colors.gray[700] },
-  description: { fontSize: FontSize.base, color: Colors.gray[600], lineHeight: 24, marginTop: Spacing.lg },
-  actions: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', paddingHorizontal: Spacing['2xl'], paddingTop: Spacing.lg, backgroundColor: Colors.white, gap: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.gray[100] },
-  navBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, borderRadius: BorderRadius['2xl'], borderWidth: 1.5, borderColor: Colors.primary[300], paddingVertical: Spacing.lg },
-  navBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.primary[600] },
-  checkinBtn: { flex: 2, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius['2xl'], paddingVertical: Spacing.lg, overflow: 'hidden' },
-  checkinBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.white },
+
+  // 콘텐츠 시트
+  contentSheet: {
+    borderTopLeftRadius: BorderRadius['3xl'],
+    borderTopRightRadius: BorderRadius['3xl'],
+    marginTop: -32,
+    padding: Spacing['2xl'],
+    gap: Spacing['2xl'],
+  },
+
+  // 장소 헤더
+  placeHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  placeName: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, color: '#101828' },
+  placeCategory: { fontSize: FontSize.base, color: '#4a5565', lineHeight: 20 },
+  ratingBadge: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    gap: 4,
+    ...Shadow.sm,
+  },
+  viblyRatingBadge: {
+    backgroundColor: '#faf5ff',
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
+  },
+  ratingText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#101828' },
+  ratingLabel: { fontSize: 10, color: Colors.gray[400], marginTop: 1 },
+  ratingEmpty: { fontSize: FontSize.xs, color: Colors.gray[400] },
+
+  // Google 평점 요약
+  googleRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.lg,
+    gap: Spacing.lg,
+  },
+  googleRatingLeft: { alignItems: 'center', gap: 4 },
+  googleRatingBig: { fontSize: 36, fontWeight: FontWeight.bold, color: '#101828', lineHeight: 40 },
+  googleRatingCount: { fontSize: FontSize.xs, color: Colors.gray[500], marginTop: 2 },
+
+  // 리뷰 구분선 및 서브타이틀
+  reviewDivider: { height: 1, backgroundColor: Colors.gray[100], marginVertical: Spacing.xs },
+  reviewSubTitle: { fontSize: FontSize.base, fontWeight: FontWeight.bold, color: '#101828' },
+
+  // 바이브 태그
+  vibeTags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  vibeTag: { borderRadius: BorderRadius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
+  vibeTagText: { fontSize: FontSize.base, fontWeight: FontWeight.medium },
+
+  // AI 바이브 분석 카드
+  vibeCard: { borderRadius: BorderRadius['2xl'], padding: Spacing['2xl'], gap: Spacing.lg, ...Shadow.lg },
+  vibeCardTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.white },
+  vibeScoreRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.sm },
+  vibeScoreBig: { fontSize: FontSize['5xl'], fontWeight: FontWeight.bold, color: Colors.white, lineHeight: 48 },
+  vibeScoreUnit: { fontSize: FontSize.lg, color: 'rgba(255,255,255,0.9)', marginBottom: 6 },
+  vibeMatchText: { fontSize: FontSize.base, color: 'rgba(255,255,255,0.9)', lineHeight: 20 },
+  vibeBars: { gap: Spacing.md },
+  vibeBarRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  vibeBarLabel: { width: 36, fontSize: FontSize.xs, color: Colors.white },
+  vibeBarTrack: {
+    flex: 1, height: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: BorderRadius.full,
+    overflow: 'hidden',
+  },
+  vibeBarFill: { height: '100%', backgroundColor: Colors.white, borderRadius: BorderRadius.full },
+  vibeBarValue: { width: 32, fontSize: FontSize.xs, color: Colors.white, textAlign: 'right' },
+
+  // 섹션
+  section: { gap: Spacing.md },
+  sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#101828', marginBottom: Spacing.xs },
+
+  // 추천 이유 카드
+  reasonCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    gap: Spacing.lg,
+  },
+  reasonIcon: { width: 48, height: 48, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center' },
+  reasonTitle: { fontSize: FontSize.base, fontWeight: FontWeight.bold, color: '#101828', marginBottom: 2 },
+  reasonDesc: { fontSize: FontSize.xs, color: '#4a5565', lineHeight: 16 },
+
+  // 내 방문 횟수 배지
+  myVisitBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primary[50],
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
+  },
+  myVisitText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.primary[700],
+  },
+
+  // 방문자 통계 배너
+  visitorBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 2,
+    borderColor: '#bedbff',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
+  },
+  visitorText: { flex: 1, fontSize: FontSize.base, color: '#1c398e', lineHeight: 20 },
+
+  // 장소 정보
+  infoCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    gap: Spacing.lg,
+  },
+  infoIconWrap: {
+    width: 40, height: 40, borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary[50],
+    alignItems: 'center', justifyContent: 'center',
+  },
+  infoLabel: { fontSize: FontSize.xs, color: '#4a5565', marginBottom: 2 },
+  infoValue: { fontSize: FontSize.md, fontWeight: FontWeight.medium, color: '#101828' },
+
+  // 소개
+  descCard: { backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: BorderRadius.lg, padding: Spacing.xl },
+  descText: { fontSize: FontSize.base, color: '#364153', lineHeight: 23 },
+
+  // 리뷰 카드
+  reviewCard: {
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    gap: Spacing.lg,
+  },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reviewTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  writeReviewBtn: {
+    backgroundColor: Colors.primary[600],
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+  },
+  writeReviewBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.white },
+  reviewItem: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  reviewItemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reviewAuthor: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: '#101828' },
+  reviewBody: { fontSize: FontSize.base, color: '#4a5565', lineHeight: 22 },
+  reviewDate: { fontSize: FontSize.xs, color: Colors.gray[400] },
+  reviewEmpty: { fontSize: FontSize.sm, color: Colors.gray[400] },
+  moreReviewsBtn: {
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray[100],
+    marginTop: Spacing.xs,
+  },
+  moreReviewsText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.primary[600],
+  },
+
+  // 하단 버튼바
+  bottomBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: Spacing['2xl'],
+    paddingTop: 40,
+    gap: Spacing.md,
+  },
+  navBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm,
+    borderRadius: BorderRadius['2xl'],
+    borderWidth: 1.5,
+    borderColor: Colors.primary[300],
+    paddingVertical: Spacing.lg,
+    height: 56,
+  },
+  navBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.primary[600] },
+  checkinBtn: {
+    flex: 2, alignItems: 'center', justifyContent: 'center',
+    borderRadius: BorderRadius['2xl'],
+    overflow: 'hidden',
+    height: 56,
+  },
+  checkinBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.white },
+
+  // 리뷰 작성 모달
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalSheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: BorderRadius['3xl'],
+    borderTopRightRadius: BorderRadius['3xl'],
+    padding: Spacing['2xl'],
+    gap: Spacing.lg,
+  },
+  modalHandle: {
+    width: 40, height: 4,
+    backgroundColor: Colors.gray[200],
+    borderRadius: BorderRadius.full,
+    alignSelf: 'center',
+    marginBottom: Spacing.xs,
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  modalTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: '#101828' },
+  modalSubtitle: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: '#4a5565' },
+  starPicker: { flexDirection: 'row', gap: Spacing.md, justifyContent: 'center' },
+  reviewInput: {
+    backgroundColor: Colors.gray[50],
+    borderWidth: 1.5,
+    borderColor: Colors.gray[200],
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    fontSize: FontSize.base,
+    color: '#101828',
+    minHeight: 120,
+  },
+  submitBtn: {
+    height: 56,
+    borderRadius: BorderRadius['2xl'],
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.white },
 });

@@ -54,7 +54,7 @@ const SlideItem = ({ item }: { item: typeof SLIDES[number] }) => (
   >
     <View style={styles.slideContent}>
       <View style={styles.iconWrap}>
-        <item.icon width={64} height={64} />
+        <item.icon width={72} height={72} />
       </View>
       <Text style={styles.slideTitle}>{item.title}</Text>
       <Text style={styles.slideDesc}>{item.desc}</Text>
@@ -132,6 +132,7 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       {/* 슬라이드 (애니메이션 적용) */}
       <Animated.View
+        renderToHardwareTextureAndroid
         style={[
           StyleSheet.absoluteFill,
           {
@@ -195,10 +196,11 @@ const styles = StyleSheet.create({
     width: 128,
     height: 128,
     borderRadius: BorderRadius['3xl'],
-    backgroundColor: '#FFFFFF66',
+    backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing['3xl'],
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,

@@ -62,7 +62,15 @@ export default function SearchScreen() {
   const [sortBy, setSortBy] = useState<SortType>('recommended');
   const [showSort, setShowSort] = useState(false);
 
-  const { data, isFetching } = useQuery({
+  // 주변 장소 (검색어 없을 때 기본으로 표시)
+  const { data: nearbyData, isLoading: nearbyLoading } = useQuery({
+    queryKey: ['nearby-search', coords.lat, coords.lng],
+    queryFn: () =>
+      placeService.getNearby({ lat: coords.lat, lng: coords.lng, radius: 3000, limit: 30 }),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: searchData, isFetching: searchFetching } = useQuery({
     queryKey: ['search', submittedQuery, coords.lat, coords.lng],
     queryFn: () =>
       placeService.search({
@@ -75,7 +83,10 @@ export default function SearchScreen() {
     staleTime: 1000 * 60 * 2,
   });
 
-  const rawPlaces: Place[] = data?.data ?? [];
+  const isFetching = searchFetching || nearbyLoading;
+  const rawPlaces: Place[] = submittedQuery.trim()
+    ? (searchData?.data ?? [])
+    : (nearbyData?.data ?? []);
   const places = sortPlaces(rawPlaces, sortBy);
 
   const handleSubmit = useCallback(() => {
@@ -130,10 +141,13 @@ export default function SearchScreen() {
         </View>
 
         {/* 결과 카운트 + 뷰 토글 */}
-        {hasSearched && !isFetching && (
+        {!isFetching && places.length > 0 && (
           <View style={styles.resultRow}>
             <Text style={styles.countText}>
-              <Text style={styles.countHighlight}>{places.length}개</Text>의 장소를 찾았어요
+              {hasSearched
+                ? <><Text style={styles.countHighlight}>{places.length}개</Text>의 장소를 찾았어요</>
+                : <><Text style={styles.countHighlight}>{places.length}개</Text>의 주변 장소</>
+              }
             </Text>
             <View style={styles.toggleWrap}>
               <TouchableOpacity
@@ -160,21 +174,14 @@ export default function SearchScreen() {
           </View>
         )}
 
-        {/* 초기 상태 */}
-        {!hasSearched && !isFetching && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyTitle}>어디로 갈까요?</Text>
-            <Text style={styles.emptyDesc}>카페, 볼링장, 노래방, 공원 등{'\n'}원하는 장소를 검색해보세요</Text>
-          </View>
-        )}
+
 
         {/* 결과 없음 */}
-        {hasSearched && !isFetching && places.length === 0 && (
+        {!isFetching && places.length === 0 && (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>😅</Text>
-            <Text style={styles.emptyTitle}>검색 결과가 없어요</Text>
-            <Text style={styles.emptyDesc}>다른 키워드로 검색해보세요</Text>
+            <Text style={styles.emptyIcon}>{hasSearched ? '😅' : '📍'}</Text>
+            <Text style={styles.emptyTitle}>{hasSearched ? '검색 결과가 없어요' : '주변 장소를 불러오는 중'}</Text>
+            <Text style={styles.emptyDesc}>{hasSearched ? '다른 키워드로 검색해보세요' : '잠시 후 다시 시도해보세요'}</Text>
           </View>
         )}
 
@@ -314,6 +321,24 @@ const styles = StyleSheet.create({
   listItemWrap: { alignSelf: 'stretch' },
   gridRow: { gap: Spacing.sm },
   gridItemWrap: { flex: 1 },
+
+  nearbyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: Spacing['2xl'],
+    marginBottom: Spacing.sm,
+  },
+  nearbyTitle: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[800],
+  },
+  nearbyCount: {
+    fontSize: FontSize.sm,
+    color: Colors.primary[600],
+    fontWeight: FontWeight.semibold,
+  },
 
   sortOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sortSheet: {

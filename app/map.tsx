@@ -1,145 +1,675 @@
-import React, { useState } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput,
+  View, Text, StyleSheet, TouchableOpacity, TextInput,
+  Image, ActivityIndicator, useWindowDimensions, FlatList,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle, withSpring, useSharedValue,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Search, Navigation, MapPin } from 'lucide-react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Search, Navigation, MapPin, Star, X } from 'lucide-react-native';
+import {
+  Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow,
+} from '@constants/theme';
+import { placeService } from '@services/place.service';
+import { useLocation } from '@hooks/useLocation';
 import ScreenTransition from '@components/ScreenTransition';
+import MapContainer, { type MapHandle } from '@components/features/map/MapContainer';
+import type { Place } from '@/types';
 
-const NEARBY_PINS = [
-  { id: '1', name: '블루보틀 성수', vibe: '아늑한', emoji: '☕', x: '30%', y: '40%' },
-  { id: '2', name: '피크닉 한강', vibe: '평화로운', emoji: '🌿', x: '60%', y: '60%' },
-  { id: '3', name: '앤트러사이트', vibe: '감성적', emoji: '🎸', x: '50%', y: '25%' },
-];
+// ─── Category constants ───────────────────────────────────────────────────────
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  '카페':    '☕',
+  '레스토랑': '🍽️',
+  '바':      '🍷',
+  '공원':    '🌿',
+  '문화공간': '🎨',
+  '서점':    '📚',
+  '기타':    '📍',
+};
+
+const CATEGORY_COLOR: Record<string, string> = {
+  '카페':    '#9810FA',
+  '레스토랑': '#F97316',
+  '바':      '#EC4899',
+  '공원':    '#22C55E',
+  '문화공간': '#3B82F6',
+  '서점':    '#14B8A6',
+  '기타':    '#9CA3AF',
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const { coords, status: locationStatus, canAskAgain, requestPermission, openSettings } = useLocation();
+
+  // 위치가 확정될 때까지 nearby 쿼리 비활성화
+  const locationReady = locationStatus === 'granted' || locationStatus === 'denied';
+
+  const mapRef = useRef<MapHandle>(null);
+
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<string | null>(null);
+  const [submittedQuery, setSubmittedQuery] = useState('');
+  const [showList, setShowList] = useState(false);
+
+  // Animated bottom card
+  const cardY = useSharedValue(240);
+  const cardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: cardY.value }],
+  }));
+
+  // Animated place list sheet
+  const listSheetY = useSharedValue(600);
+  const listSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: listSheetY.value }],
+  }));
+
+  // ── Data ──────────────────────────────────────────────────────────────────────
+
+  const { data: nearbyData, isLoading: nearbyLoading } = useQuery({
+    queryKey: ['nearby-map', coords.lat, coords.lng],
+    queryFn: () =>
+      placeService.getNearby({ lat: coords.lat, lng: coords.lng, radius: 2000, limit: 40 }),
+    enabled: locationReady,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: searchData, isFetching: searchLoading } = useQuery({
+    queryKey: ['map-search', submittedQuery, coords.lat, coords.lng],
+    queryFn: () =>
+      placeService.search({ query: submittedQuery, lat: coords.lat, lng: coords.lng, limit: 40 }),
+    enabled: submittedQuery.trim().length > 0,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const places: Place[] = submittedQuery
+    ? (searchData?.data ?? [])
+    : (nearbyData?.data ?? []);
+
+  const isLoading = nearbyLoading || searchLoading;
+
+  // ── Handlers ──────────────────────────────────────────────────────────────────
+
+  const showCard = useCallback(() => {
+    cardY.value = withSpring(0, { damping: 20, stiffness: 220 });
+  }, [cardY]);
+
+  const hideCard = useCallback((onDone?: () => void) => {
+    cardY.value = withSpring(240, { damping: 20, stiffness: 220 });
+    setTimeout(() => onDone?.(), 280);
+  }, [cardY]);
+
+  const handleMarkerPress = useCallback((place: Place) => {
+    setSelectedPlace(place);
+    showCard();
+    mapRef.current?.animateTo(place.lat, place.lng);
+  }, [showCard]);
+
+  const handleDismissCard = useCallback(() => {
+    hideCard(() => setSelectedPlace(null));
+  }, [hideCard]);
+
+  const handleMyLocation = useCallback(() => {
+    if (locationStatus === 'denied' && !canAskAgain) {
+      openSettings();
+    } else {
+      requestPermission();
+    }
+    mapRef.current?.animateTo(coords.lat, coords.lng);
+  }, [coords, locationStatus, canAskAgain, requestPermission, openSettings]);
+
+  const handleSearchSubmit = useCallback(() => {
+    const q = query.trim();
+    if (!q) return;
+    setSubmittedQuery(q);
+    handleDismissCard();
+  }, [query, handleDismissCard]);
+
+  const handleClearSearch = useCallback(() => {
+    setQuery('');
+    setSubmittedQuery('');
+    handleDismissCard();
+  }, [handleDismissCard]);
+
+  const openList = useCallback(() => {
+    if (selectedPlace) handleDismissCard();
+    listSheetY.value = 600;
+    setShowList(true);
+  }, [selectedPlace, handleDismissCard, listSheetY]);
+
+  const closeList = useCallback(() => {
+    listSheetY.value = withSpring(600, { damping: 20, stiffness: 220 });
+    setTimeout(() => setShowList(false), 320);
+  }, [listSheetY]);
+
+  useEffect(() => {
+    if (showList) {
+      listSheetY.value = withSpring(0, { damping: 20, stiffness: 220 });
+    }
+  }, [showList, listSheetY]);
+
+  // ── Derived ───────────────────────────────────────────────────────────────────
+
+  const CARD_BOTTOM = insets.bottom + Spacing.md;
+  const LOC_BTN_BOTTOM = selectedPlace
+    ? CARD_BOTTOM + 170 + Spacing.md
+    : CARD_BOTTOM + Spacing['3xl'];
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <ScreenTransition>
-    <View style={{ flex: 1, backgroundColor: Colors.gray[100] }}>
-      {/* Mock Map */}
-      <View style={styles.map}>
-        {/* Grid pattern background */}
-        <View style={styles.mapGrid} />
+      <View style={styles.container}>
 
-        {/* Pins */}
-        {NEARBY_PINS.map((pin) => (
-          <TouchableOpacity
-            key={pin.id}
-            style={[styles.pin, { left: pin.x, top: pin.y }, selected === pin.id && styles.pinSelected]}
-            onPress={() => setSelected(pin.id === selected ? null : pin.id)}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.pinEmoji}>{pin.emoji}</Text>
-            {selected === pin.id && (
-              <View style={styles.pinLabel}>
-                <Text style={styles.pinLabelText}>{pin.name}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
+        {/* ── GPS 로딩 전체 화면 ──────────────────────────────────────────── */}
+        {!locationReady && (
+          <View style={[StyleSheet.absoluteFillObject, styles.gpsLoading]}>
+            <ActivityIndicator size="large" color={Colors.primary[500]} />
+            <Text style={styles.gpsLoadingText}>내 위치를 찾고 있어요...</Text>
+          </View>
+        )}
 
-        {/* Current Location */}
-        <View style={styles.myLocation}>
-          <View style={styles.myLocationPulse} />
-          <View style={styles.myLocationDot} />
-        </View>
-      </View>
-
-      {/* Search Bar */}
-      <View style={[styles.searchBar, { top: insets.top + Spacing.md }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={20} color={Colors.gray[700]} />
-        </TouchableOpacity>
-        <View style={styles.searchInput}>
-          <Search size={16} color={Colors.gray[400]} />
-          <TextInput
-            style={styles.searchText}
-            placeholder="장소 검색"
-            placeholderTextColor={Colors.gray[400]}
-            value={query}
-            onChangeText={setQuery}
+        {/* ── Map (native only via platform-specific component) ─────────── */}
+        {locationReady && (
+          <MapContainer
+            ref={mapRef}
+            places={places}
+            selectedId={selectedPlace?.id ?? null}
+            coords={coords}
+            onMarkerPress={handleMarkerPress}
+            onMapPress={() => {
+              if (showList) { closeList(); return; }
+              if (selectedPlace) handleDismissCard();
+            }}
           />
+        )}
+
+        {/* ── 위치 권한 거부 배너 ───────────────────────────────────────── */}
+        {locationStatus === 'denied' && (
+          <TouchableOpacity
+            style={[styles.locationDeniedBanner, { top: insets.top + 72 }]}
+            onPress={canAskAgain ? requestPermission : openSettings}
+            activeOpacity={0.85}
+          >
+            <Navigation size={13} color={Colors.white} />
+            <Text style={styles.locationDeniedText}>
+              {canAskAgain ? '위치 권한을 허용하면 내 주변 장소를 볼 수 있어요' : '설정에서 위치 권한을 허용해주세요'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Loading spinner ──────────────────────────────────────────────── */}
+        {isLoading && (
+          <View style={[styles.loadingPill, { top: insets.top + 64 }]}>
+            <ActivityIndicator size="small" color={Colors.primary[500]} />
+            <Text style={styles.loadingText}>장소 불러오는 중...</Text>
+          </View>
+        )}
+
+        {/* ── Place count badge (tappable → list sheet) ────────────────────── */}
+        {!isLoading && places.length > 0 && (
+          <TouchableOpacity
+            style={[styles.countBadge, { top: insets.top + 64 }]}
+            onPress={openList}
+            activeOpacity={0.8}
+          >
+            <MapPin size={11} color={Colors.primary[600]} />
+            <Text style={styles.countText}>{places.length}개의 장소</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Search bar ───────────────────────────────────────────────────── */}
+        <View style={[
+          styles.searchBar,
+          { top: insets.top + Spacing.md, width: width - Spacing['2xl'] * 2 },
+        ]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <ArrowLeft size={20} color={Colors.gray[700]} />
+          </TouchableOpacity>
+
+          <View style={styles.searchInputWrap}>
+            {searchLoading
+              ? <ActivityIndicator size="small" color={Colors.primary[400]} />
+              : <Search size={15} color={Colors.gray[400]} />
+            }
+            <TextInput
+              style={styles.searchInputText}
+              placeholder="장소 검색"
+              placeholderTextColor={Colors.gray[400]}
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={handleSearchSubmit}
+              returnKeyType="search"
+              autoCapitalize="none"
+            />
+            {query.length > 0 && (
+              <TouchableOpacity
+                onPress={handleClearSearch}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={15} color={Colors.gray[400]} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
 
-      {/* Current Location Button */}
-      <TouchableOpacity style={[styles.locBtn, { bottom: 220 + insets.bottom }]}>
-        <Navigation size={20} color={Colors.primary[600]} />
-      </TouchableOpacity>
+        {/* ── My location button ───────────────────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.locBtn, { bottom: LOC_BTN_BOTTOM }]}
+          onPress={handleMyLocation}
+          activeOpacity={0.8}
+        >
+          <Navigation size={20} color={Colors.primary[600]} />
+        </TouchableOpacity>
 
-      {/* Bottom Sheet */}
-      <View style={[styles.bottomSheet, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <View style={styles.sheetHandle} />
-        <Text style={styles.sheetTitle}>근처 장소</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sheetList}>
-          {NEARBY_PINS.map((pin) => (
+        {/* ── Selected place card ──────────────────────────────────────────── */}
+        {selectedPlace && (
+          <Animated.View style={[styles.card, { bottom: CARD_BOTTOM }, cardStyle]}>
             <TouchableOpacity
-              key={pin.id}
-              style={[styles.sheetCard, selected === pin.id && styles.sheetCardActive]}
-              onPress={() => { setSelected(pin.id); router.push(`/place/${pin.id}`); }}
-              activeOpacity={0.8}
+              style={styles.cardClose}
+              onPress={handleDismissCard}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <View style={styles.sheetEmoji}>
-                <Text style={{ fontSize: 24 }}>{pin.emoji}</Text>
-              </View>
-              <Text style={styles.sheetName} numberOfLines={1}>{pin.name}</Text>
-              <View style={styles.vibeTag}>
-                <Text style={styles.vibeText}>{pin.vibe}</Text>
-              </View>
+              <X size={15} color={Colors.gray[400]} />
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+
+            <View style={styles.cardRow}>
+              {/* Thumbnail */}
+              {selectedPlace.imageUrl ? (
+                <Image
+                  source={{ uri: selectedPlace.imageUrl }}
+                  style={styles.cardThumb}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.cardThumb, styles.cardThumbFallback]}>
+                  <Text style={styles.cardThumbEmoji}>
+                    {CATEGORY_EMOJI[selectedPlace.category] ?? '📍'}
+                  </Text>
+                </View>
+              )}
+
+              {/* Info */}
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardName} numberOfLines={1}>
+                  {selectedPlace.name}
+                </Text>
+                <Text style={styles.cardCat}>{selectedPlace.category}</Text>
+
+                <View style={styles.cardMeta}>
+                  {!!selectedPlace.distance && (
+                    <View style={styles.metaItem}>
+                      <MapPin size={10} color={Colors.text.muted} />
+                      <Text style={styles.metaText}>{selectedPlace.distance}</Text>
+                    </View>
+                  )}
+                  {(selectedPlace.googleRating ?? 0) > 0 && (
+                    <View style={styles.metaItem}>
+                      <Star size={10} color="#FACC15" fill="#FACC15" />
+                      <Text style={styles.metaText}>
+                        {selectedPlace.googleRating!.toFixed(1)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Buttons */}
+                <View style={styles.cardBtns}>
+                  <TouchableOpacity
+                    style={styles.btnOutline}
+                    onPress={() => router.push(`/place/${selectedPlace.id}`)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.btnOutlineText}>상세보기</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.btnPrimaryWrap}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/checkin',
+                        params: { placeId: selectedPlace.id },
+                      })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <LinearGradient
+                      colors={['#9810FA', '#E60076']}
+                      style={styles.btnPrimary}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Text style={styles.btnPrimaryText}>체크인</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* ── Place list sheet ─────────────────────────────────────────────── */}
+        {showList && (
+          <>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              onPress={closeList}
+              activeOpacity={1}
+            />
+            <Animated.View style={[styles.listSheet, { height: height * 0.6 }, listSheetStyle]}>
+              <View style={styles.listHandle} />
+              <Text style={styles.listTitle}>주변 장소 {places.length}개</Text>
+              <FlatList
+                data={places}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.xl }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.listItem}
+                    onPress={() => {
+                      closeList();
+                      setTimeout(() => handleMarkerPress(item), 320);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.listIcon, { borderColor: CATEGORY_COLOR[item.category] ?? Colors.gray[400] }]}>
+                      <Text style={styles.listIconEmoji}>{CATEGORY_EMOJI[item.category] ?? '📍'}</Text>
+                    </View>
+                    <View style={styles.listInfo}>
+                      <Text style={styles.listName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.listMeta}>
+                        {item.category}{item.distance ? ` · ${item.distance}` : ''}
+                      </Text>
+                    </View>
+                    {(item.googleRating ?? 0) > 0 && (
+                      <View style={styles.listRating}>
+                        <Star size={11} color="#FACC15" fill="#FACC15" />
+                        <Text style={styles.listRatingText}>{item.googleRating!.toFixed(1)}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
+              />
+            </Animated.View>
+          </>
+        )}
+
       </View>
-    </View>
     </ScreenTransition>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  map: { flex: 1, position: 'relative', backgroundColor: '#E8F4FD' },
-  mapGrid: { position: 'absolute', inset: 0, opacity: 0.3 },
-  pin: {
-    position: 'absolute', width: 48, height: 48, borderRadius: 24,
-    backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center',
-    ...Shadow.md, zIndex: 10,
+  container: { flex: 1 },
+
+  // Location denied banner
+  locationDeniedBanner: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#9810FA',
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 8,
+    ...Shadow.md,
   },
-  pinSelected: { backgroundColor: Colors.primary[100], borderWidth: 2, borderColor: Colors.primary[500] },
-  pinEmoji: { fontSize: 22 },
-  pinLabel: {
-    position: 'absolute', bottom: 54, backgroundColor: Colors.gray[900],
-    borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, paddingVertical: 4,
-    minWidth: 80, alignItems: 'center',
+  locationDeniedText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.white,
   },
-  pinLabelText: { fontSize: FontSize.xs, color: Colors.white, fontWeight: FontWeight.medium },
-  myLocation: { position: 'absolute', left: '45%', top: '55%', alignItems: 'center', justifyContent: 'center' },
-  myLocationPulse: { position: 'absolute', width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(124,58,237,0.15)' },
-  myLocationDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: Colors.primary[600], borderWidth: 3, borderColor: Colors.white },
-  searchBar: { position: 'absolute', left: Spacing['2xl'], right: Spacing['2xl'], flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
-  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...Shadow.md },
-  searchInput: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.white, borderRadius: BorderRadius['2xl'], paddingHorizontal: Spacing.lg, height: 44, ...Shadow.md,
+
+  gpsLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+    gap: 16,
   },
-  searchText: { flex: 1, fontSize: FontSize.base, color: Colors.gray[900] },
+  gpsLoadingText: {
+    fontSize: FontSize.base,
+    color: Colors.text.secondary,
+    fontWeight: FontWeight.medium,
+  },
+
+  // Loading / count
+  loadingPill: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 8,
+    ...Shadow.md,
+  },
+  loadingText: {
+    fontSize: FontSize.xs,
+    color: Colors.text.secondary,
+  },
+  countBadge: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    ...Shadow.md,
+  },
+  countText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.primary[700],
+  },
+
+  // Search bar
+  searchBar: {
+    position: 'absolute',
+    left: Spacing['2xl'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  backBtn: {
+    width: 44, height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center',
+    ...Shadow.md,
+  },
+  searchInputWrap: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius['2xl'],
+    paddingHorizontal: Spacing.lg,
+    height: 44,
+    ...Shadow.md,
+  },
+  searchInputText: {
+    flex: 1,
+    fontSize: FontSize.base,
+    color: Colors.gray[900],
+    paddingVertical: 0,
+  },
+
+  // Location button
   locBtn: {
-    position: 'absolute', right: Spacing['2xl'], width: 48, height: 48, borderRadius: 24,
-    backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...Shadow.md,
+    position: 'absolute',
+    right: Spacing['2xl'],
+    width: 48, height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center',
+    ...Shadow.md,
   },
-  bottomSheet: { backgroundColor: Colors.white, borderTopLeftRadius: BorderRadius['3xl'], borderTopRightRadius: BorderRadius['3xl'], paddingTop: Spacing.md, ...Shadow.lg },
-  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.gray[200], alignSelf: 'center', marginBottom: Spacing.md },
-  sheetTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.gray[900], paddingHorizontal: Spacing['2xl'], marginBottom: Spacing.md },
-  sheetList: { paddingHorizontal: Spacing['2xl'], gap: Spacing.md, paddingBottom: Spacing.sm },
-  sheetCard: { width: 120, backgroundColor: Colors.gray[50], borderRadius: BorderRadius['2xl'], padding: Spacing.md, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
-  sheetCardActive: { borderColor: Colors.primary[400], backgroundColor: Colors.primary[50] },
-  sheetEmoji: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm, ...Shadow.sm },
-  sheetName: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.gray[900], textAlign: 'center', marginBottom: 4 },
-  vibeTag: { backgroundColor: Colors.primary[100], borderRadius: BorderRadius.full, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
-  vibeText: { fontSize: 9, color: Colors.primary[700], fontWeight: FontWeight.medium },
+
+  // Selected place card
+  card: {
+    position: 'absolute',
+    left: Spacing['2xl'],
+    right: Spacing['2xl'],
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius['3xl'],
+    padding: Spacing.lg,
+    ...Shadow.lg,
+  },
+  cardClose: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+    zIndex: 1,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+  },
+  cardThumb: {
+    width: 76, height: 76,
+    borderRadius: BorderRadius['2xl'],
+  },
+  cardThumbFallback: {
+    backgroundColor: Colors.primary[100],
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardThumbEmoji: { fontSize: 28 },
+  cardInfo: {
+    flex: 1,
+    gap: 3,
+    justifyContent: 'center',
+  },
+  cardName: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  cardCat: {
+    fontSize: FontSize.xs,
+    color: Colors.text.muted,
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: 2,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  metaText: {
+    fontSize: FontSize.xs,
+    color: Colors.text.muted,
+  },
+  cardBtns: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  btnOutline: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.gray[100],
+    alignItems: 'center',
+  },
+  btnOutlineText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[700],
+  },
+  btnPrimaryWrap: { flex: 1 },
+  btnPrimary: {
+    paddingVertical: 8,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+  },
+  btnPrimaryText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.white,
+  },
+
+  // List sheet
+  listSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: BorderRadius['3xl'],
+    borderTopRightRadius: BorderRadius['3xl'],
+    paddingTop: Spacing.sm,
+    ...Shadow.lg,
+  },
+  listHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.gray[200],
+    alignSelf: 'center',
+    marginBottom: Spacing.md,
+  },
+  listTitle: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+    paddingHorizontal: Spacing['2xl'],
+    marginBottom: Spacing.sm,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing['2xl'],
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
+  },
+  listIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  listIconEmoji: { fontSize: 18 },
+  listInfo: { flex: 1 },
+  listName: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[900],
+  },
+  listMeta: {
+    fontSize: FontSize.xs,
+    color: Colors.text.muted,
+    marginTop: 2,
+  },
+  listRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  listRatingText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[700],
+  },
 });

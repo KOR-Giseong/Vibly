@@ -1,29 +1,24 @@
-import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
-import { Text, StyleSheet, Animated } from 'react-native';
+import React, { forwardRef, useImperativeHandle, useRef, useEffect, memo } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Colors, Shadow } from '@constants/theme';
+import { Colors } from '@constants/theme';
 import type { Place } from '@/types';
 
-// ─── Category styling ─────────────────────────────────────────────────────────
+// ─── Category colors ──────────────────────────────────────────────────────────
 
 const CATEGORY_COLOR: Record<string, string> = {
-  '카페':    Colors.primary[500],
-  '레스토랑': '#F97316',
-  '바':      Colors.pink[500],
-  '공원':    '#22C55E',
-  '문화공간': '#3B82F6',
-  '서점':    '#14B8A6',
-  '기타':    Colors.gray[500],
-};
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  '카페':    '☕',
-  '레스토랑': '🍽️',
-  '바':      '🍷',
-  '공원':    '🌿',
-  '문화공간': '🎨',
-  '서점':    '📚',
-  '기타':    '📍',
+  '카페':      '#9810FA',
+  '레스토랑':  '#F97316',
+  '바':        '#EC4899',
+  '공원':      '#22C55E',
+  '문화공간':  '#3B82F6',
+  '서점':      '#14B8A6',
+  '볼링장':    '#EAB308',
+  '노래방':    '#A855F7',
+  '찜질방/스파': '#06B6D4',
+  '방탈출':    '#EF4444',
+  '오락실':    '#F59E0B',
+  '기타':      '#6B7280',
 };
 
 const DEFAULT_DELTA = { latitudeDelta: 0.012, longitudeDelta: 0.012 };
@@ -42,12 +37,109 @@ export interface MapContainerProps {
   onMapPress: () => void;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── 개별 마커 핀 컴포넌트 (각각 독립적인 둥둥 애니메이션) ──────────────────
+
+interface MarkerPinProps {
+  place: Place;
+  isSelected: boolean;
+}
+
+const MarkerPin = memo(({ place, isSelected }: MarkerPinProps) => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const floatLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  const color = CATEGORY_COLOR[place.category] ?? '#6B7280';
+  const label = (place.name ?? '').slice(0, 6);
+
+  // 둥둥 뜨는 루프 애니메이션
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -5,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    floatLoopRef.current = loop;
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  // 선택 시 튕기는 효과
+  useEffect(() => {
+    if (isSelected) {
+      Animated.sequence([
+        Animated.spring(scaleAnim, {
+          toValue: 1.35,
+          tension: 300,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 200,
+          friction: 6,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isSelected]);
+
+  return (
+    <Animated.View
+      style={{
+        alignItems: 'center',
+        transform: [
+          { translateY: floatAnim },
+          { scale: scaleAnim },
+        ],
+      }}
+    >
+      {/* 핀 버블 */}
+      <View style={[
+        styles.pinBubble,
+        { backgroundColor: isSelected ? color : Colors.white },
+        isSelected && styles.pinBubbleSelected,
+      ]}>
+        <View style={[styles.pinDot, { backgroundColor: color }]} />
+        <Text
+          style={[
+            styles.pinLabel,
+            { color: isSelected ? Colors.white : color },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </View>
+
+      {/* 핀 꼬리 삼각형 */}
+      <View style={[
+        styles.pinTail,
+        { borderTopColor: isSelected ? color : Colors.white },
+      ]} />
+
+      {/* 그림자 타원 */}
+      <View style={[styles.pinShadow, isSelected && styles.pinShadowSelected]} />
+    </Animated.View>
+  );
+});
+
+MarkerPin.displayName = 'MarkerPin';
+
+// ─── MapContainer ─────────────────────────────────────────────────────────────
 
 const MapContainer = forwardRef<MapHandle, MapContainerProps>(
   ({ places, selectedId, coords, onMarkerPress, onMapPress }, ref) => {
     const mapRef = useRef<MapView>(null);
-    const scaleAnim = useRef(new Animated.Value(1)).current;
 
     useImperativeHandle(ref, () => ({
       animateTo: (lat, lng) => {
@@ -57,18 +149,6 @@ const MapContainer = forwardRef<MapHandle, MapContainerProps>(
         );
       },
     }));
-
-    // 마커 선택 시 spring bounce 애니메이션
-    useEffect(() => {
-      if (!selectedId) return;
-      scaleAnim.setValue(0.5);
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 250,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-    }, [selectedId]);
 
     return (
       <MapView
@@ -84,28 +164,20 @@ const MapContainer = forwardRef<MapHandle, MapContainerProps>(
         showsMyLocationButton={false}
         onPress={onMapPress}
       >
-        {places.map((place) => {
-          const isSelected = selectedId === place.id;
-          return (
-            <Marker
-              key={place.id}
-              coordinate={{ latitude: place.lat, longitude: place.lng }}
-              onPress={() => onMarkerPress(place)}
-              tracksViewChanges
-            >
-              <Animated.View style={[
-                styles.marker,
-                { borderColor: CATEGORY_COLOR[place.category] ?? Colors.gray[400] },
-                isSelected && styles.markerActive,
-                isSelected && { transform: [{ scale: scaleAnim }] },
-              ]}>
-                <Text style={styles.markerEmoji}>
-                  {CATEGORY_EMOJI[place.category] ?? '📍'}
-                </Text>
-              </Animated.View>
-            </Marker>
-          );
-        })}
+        {places.map((place) => (
+          <Marker
+            key={place.id}
+            coordinate={{ latitude: place.lat, longitude: place.lng }}
+            onPress={() => onMarkerPress(place)}
+            tracksViewChanges={selectedId === place.id}
+            anchor={{ x: 0.5, y: 1 }}
+          >
+            <MarkerPin
+              place={place}
+              isSelected={selectedId === place.id}
+            />
+          </Marker>
+        ))}
       </MapView>
     );
   },
@@ -117,18 +189,58 @@ export default MapContainer;
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  marker: {
-    width: 40, height: 40,
+  pinBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 20,
     backgroundColor: Colors.white,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2.5,
-    ...Shadow.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 5,
+    minWidth: 52,
   },
-  markerActive: {
-    width: 50, height: 50,
-    borderRadius: 25,
-    ...Shadow.lg,
+  pinBubbleSelected: {
+    borderWidth: 0,
+    elevation: 8,
+    shadowOpacity: 0.3,
   },
-  markerEmoji: { fontSize: 18 },
+  pinDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  pinLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  pinTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 7,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: Colors.white,
+    marginTop: -1,
+  },
+  pinShadow: {
+    width: 10,
+    height: 4,
+    borderRadius: 5,
+    backgroundColor: 'rgba(0,0,0,0.12)',
+    marginTop: 2,
+  },
+  pinShadowSelected: {
+    width: 14,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
 });

@@ -90,9 +90,18 @@ export default function MapScreen() {
     staleTime: 1000 * 60 * 2,
   });
 
-  const places: Place[] = submittedQuery
-    ? (searchData?.data ?? [])
-    : (nearbyData?.data ?? []);
+  // 주변 장소 + 검색 결과 동시에 표시 (중복 id 제거)
+  const nearbyPlaces: Place[] = nearbyData?.data ?? [];
+  const searchPlaces: Place[] = searchData?.data ?? [];
+  const places: Place[] = (() => {
+    if (!submittedQuery.trim()) return nearbyPlaces;
+    const seen = new Set(nearbyPlaces.map((p) => p.id));
+    const merged = [...nearbyPlaces];
+    for (const p of searchPlaces) {
+      if (!seen.has(p.id)) merged.push(p);
+    }
+    return merged;
+  })();
 
   const isLoading = nearbyLoading || searchLoading;
 
@@ -222,7 +231,9 @@ export default function MapScreen() {
             activeOpacity={0.8}
           >
             <MapPin size={11} color={Colors.primary[600]} />
-            <Text style={styles.countText}>{places.length}개의 장소</Text>
+            <Text style={styles.countText}>
+              {submittedQuery ? `검색 포함 ${places.length}개` : `주변 ${places.length}개`}
+            </Text>
           </TouchableOpacity>
         )}
 

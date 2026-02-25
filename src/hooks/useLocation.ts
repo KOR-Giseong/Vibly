@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Linking } from 'react-native';
 import * as Location from 'expo-location';
 
@@ -18,16 +18,41 @@ export function useLocation() {
     canAskAgain: true,
   });
 
-  const fetchLocation = async () => {
+  const watchRef = useRef<Location.LocationSubscription | null>(null);
+
+  const startWatching = async () => {
+    // 기존 감시 중지
+    if (watchRef.current) {
+      watchRef.current.remove();
+      watchRef.current = null;
+    }
+
     try {
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setState({
-        coords: { lat: location.coords.latitude, lng: location.coords.longitude },
-        status: 'granted',
-        canAskAgain: false,
-      });
+      // 먼저 마지막으로 알려진 위치를 빠르게 가져옴 (즉시 응답)
+      const last = await Location.getLastKnownPositionAsync({});
+      if (last) {
+        setState({
+          coords: { lat: last.coords.latitude, lng: last.coords.longitude },
+          status: 'granted',
+          canAskAgain: false,
+        });
+      }
+
+      // 실시간 위치 감시 시작 (정확한 GPS)
+      watchRef.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          distanceInterval: 30, // 30m 이동 시 업데이트
+          timeInterval: 5000,   // 최소 5초 간격
+        },
+        (location) => {
+          setState({
+            coords: { lat: location.coords.latitude, lng: location.coords.longitude },
+            status: 'granted',
+            canAskAgain: false,
+          });
+        },
+      );
     } catch {
       setState((prev) => ({ ...prev, status: 'denied' }));
     }
@@ -36,10 +61,10 @@ export function useLocation() {
   const requestPermission = async () => {
     setState((prev) => ({ ...prev, status: 'loading' }));
     try {
-      // 이미 권한이 있으면 바로 위치 가져오기
+      // 이미 권한이 있으면 바로 감시 시작
       const current = await Location.getForegroundPermissionsAsync();
       if (current.status === 'granted') {
-        await fetchLocation();
+        await startWatching();
         return;
       }
 
@@ -50,18 +75,20 @@ export function useLocation() {
         return;
       }
 
-      await fetchLocation();
+      await startWatching();
     } catch {
-      // expo-location 미지원 환경(웹 등) 폴백
       setState({ coords: DEFAULT_COORDS, status: 'denied', canAskAgain: false });
     }
   };
 
-  // 앱 설정으로 이동 (canAskAgain=false 일 때)
   const openSettings = () => Linking.openSettings();
 
   useEffect(() => {
     requestPermission();
+    return () => {
+      // 언마운트 시 감시 정리
+      watchRef.current?.remove();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

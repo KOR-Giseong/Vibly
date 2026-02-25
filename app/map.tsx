@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  Image, ActivityIndicator, useWindowDimensions, FlatList,
+  Image, ActivityIndicator, useWindowDimensions, FlatList, Keyboard,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle, withSpring, useSharedValue,
@@ -48,7 +48,7 @@ export default function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { coords, status: locationStatus, canAskAgain, requestPermission, openSettings } = useLocation();
+  const { coords, status: locationStatus, canAskAgain, isLive, requestPermission, openSettings } = useLocation();
 
   // 위치가 확정될 때까지 nearby 쿼리 비활성화
   const locationReady = locationStatus === 'granted' || locationStatus === 'denied';
@@ -61,7 +61,7 @@ export default function MapScreen() {
   const [showList, setShowList] = useState(false);
 
   // Animated bottom card
-  const cardY = useSharedValue(240);
+  const cardY = useSharedValue(320);
   const cardStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: cardY.value }],
   }));
@@ -71,6 +71,14 @@ export default function MapScreen() {
   const listSheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: listSheetY.value }],
   }));
+
+  // 실제 GPS가 처음 잡히면 지도를 내 위치로 이동 (캐시 위치 → 실제 위치 보정)
+  const hasCenteredRef = useRef(false);
+  useEffect(() => {
+    if (!isLive || hasCenteredRef.current) return;
+    hasCenteredRef.current = true;
+    mapRef.current?.animateTo(coords.lat, coords.lng);
+  }, [isLive, coords.lat, coords.lng]);
 
   // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -112,7 +120,7 @@ export default function MapScreen() {
   }, [cardY]);
 
   const hideCard = useCallback((onDone?: () => void) => {
-    cardY.value = withSpring(240, { damping: 20, stiffness: 220 });
+    cardY.value = withSpring(320, { damping: 20, stiffness: 220 });
     setTimeout(() => onDone?.(), 280);
   }, [cardY]);
 
@@ -138,6 +146,7 @@ export default function MapScreen() {
   const handleSearchSubmit = useCallback(() => {
     const q = query.trim();
     if (!q) return;
+    Keyboard.dismiss();
     setSubmittedQuery(q);
     handleDismissCard();
   }, [query, handleDismissCard]);
@@ -169,7 +178,7 @@ export default function MapScreen() {
 
   const CARD_BOTTOM = insets.bottom + Spacing.md;
   const LOC_BTN_BOTTOM = selectedPlace
-    ? CARD_BOTTOM + 170 + Spacing.md
+    ? CARD_BOTTOM + 260 + Spacing.md
     : CARD_BOTTOM + Spacing['3xl'];
 
   // ─── Render ───────────────────────────────────────────────────────────────────
@@ -284,84 +293,101 @@ export default function MapScreen() {
         {/* ── Selected place card ──────────────────────────────────────────── */}
         {selectedPlace && (
           <Animated.View style={[styles.card, { bottom: CARD_BOTTOM }, cardStyle]}>
-            <TouchableOpacity
-              style={styles.cardClose}
-              onPress={handleDismissCard}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <X size={15} color={Colors.gray[400]} />
-            </TouchableOpacity>
-
-            <View style={styles.cardRow}>
-              {/* Thumbnail */}
+            {/* Image / Fallback */}
+            <View style={styles.cardImageWrap}>
               {selectedPlace.imageUrl ? (
                 <Image
                   source={{ uri: selectedPlace.imageUrl }}
-                  style={styles.cardThumb}
+                  style={styles.cardImage}
                   resizeMode="cover"
                 />
               ) : (
-                <View style={[styles.cardThumb, styles.cardThumbFallback]}>
-                  <Text style={styles.cardThumbEmoji}>
+                <LinearGradient
+                  colors={[CATEGORY_COLOR[selectedPlace.category] ?? '#9810FA', '#1a1a2e']}
+                  style={styles.cardImage}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.cardFallbackEmoji}>
                     {CATEGORY_EMOJI[selectedPlace.category] ?? '📍'}
                   </Text>
-                </View>
+                </LinearGradient>
               )}
-
-              {/* Info */}
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardName} numberOfLines={1}>
-                  {selectedPlace.name}
+              {/* Gradient overlay */}
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.55)']}
+                style={styles.cardImageOverlay}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+              />
+              {/* Category badge on image */}
+              <View style={[styles.cardCatBadge, { backgroundColor: CATEGORY_COLOR[selectedPlace.category] ?? '#9810FA' }]}>
+                <Text style={styles.cardCatBadgeText}>
+                  {CATEGORY_EMOJI[selectedPlace.category] ?? '📍'} {selectedPlace.category}
                 </Text>
-                <Text style={styles.cardCat}>{selectedPlace.category}</Text>
+              </View>
+              {/* Close button */}
+              <TouchableOpacity
+                style={styles.cardClose}
+                onPress={handleDismissCard}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <X size={14} color={Colors.white} />
+              </TouchableOpacity>
+            </View>
 
-                <View style={styles.cardMeta}>
-                  {!!selectedPlace.distance && (
-                    <View style={styles.metaItem}>
-                      <MapPin size={10} color={Colors.text.muted} />
-                      <Text style={styles.metaText}>{selectedPlace.distance}</Text>
-                    </View>
-                  )}
-                  {(selectedPlace.googleRating ?? 0) > 0 && (
-                    <View style={styles.metaItem}>
-                      <Star size={10} color="#FACC15" fill="#FACC15" />
-                      <Text style={styles.metaText}>
-                        {selectedPlace.googleRating!.toFixed(1)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+            {/* Body */}
+            <View style={styles.cardBody}>
+              <Text style={styles.cardName} numberOfLines={1}>
+                {selectedPlace.name}
+              </Text>
 
-                {/* Buttons */}
-                <View style={styles.cardBtns}>
-                  <TouchableOpacity
-                    style={styles.btnOutline}
-                    onPress={() => router.push(`/place/${selectedPlace.id}`)}
-                    activeOpacity={0.8}
+              <View style={styles.cardMeta}>
+                {!!selectedPlace.distance && (
+                  <View style={styles.metaItem}>
+                    <MapPin size={11} color={Colors.text.muted} />
+                    <Text style={styles.metaText}>{selectedPlace.distance}</Text>
+                  </View>
+                )}
+                {(selectedPlace.googleRating ?? 0) > 0 && (
+                  <View style={styles.metaItem}>
+                    <Star size={11} color="#FACC15" fill="#FACC15" />
+                    <Text style={styles.metaText}>
+                      {selectedPlace.googleRating!.toFixed(1)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Buttons */}
+              <View style={styles.cardBtns}>
+                <TouchableOpacity
+                  style={styles.btnOutline}
+                  onPress={() => router.push(`/place/${selectedPlace.id}`)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.btnOutlineText}>상세보기</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.btnPrimaryWrap}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/checkin',
+                      params: { placeId: selectedPlace.id },
+                    })
+                  }
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient
+                    colors={['#9810FA', '#E60076']}
+                    style={styles.btnPrimary}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
                   >
-                    <Text style={styles.btnOutlineText}>상세보기</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.btnPrimaryWrap}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/checkin',
-                        params: { placeId: selectedPlace.id },
-                      })
-                    }
-                    activeOpacity={0.85}
-                  >
-                    <LinearGradient
-                      colors={['#9810FA', '#E60076']}
-                      style={styles.btnPrimary}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <Text style={styles.btnPrimaryText}>체크인</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
+                    <Text style={styles.btnPrimaryText}>✦ 체크인</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
               </View>
             </View>
           </Animated.View>
@@ -375,14 +401,26 @@ export default function MapScreen() {
               onPress={closeList}
               activeOpacity={1}
             />
-            <Animated.View style={[styles.listSheet, { height: height * 0.6 }, listSheetStyle]}>
+            <Animated.View style={[styles.listSheet, { height: height * 0.65 }, listSheetStyle]}>
+              {/* Handle */}
               <View style={styles.listHandle} />
-              <Text style={styles.listTitle}>주변 장소 {places.length}개</Text>
+
+              {/* Header */}
+              <View style={styles.listHeader}>
+                <View>
+                  <Text style={styles.listTitle}>주변 장소</Text>
+                  <Text style={styles.listSubtitle}>{places.length}개의 장소를 찾았어요</Text>
+                </View>
+                <TouchableOpacity onPress={closeList} style={styles.listCloseBtn}>
+                  <X size={16} color={Colors.gray[500]} />
+                </TouchableOpacity>
+              </View>
+
               <FlatList
                 data={places}
                 keyExtractor={(item) => item.id}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.xl }}
+                contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: insets.bottom + Spacing.xl, gap: Spacing.sm }}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.listItem}
@@ -392,19 +430,35 @@ export default function MapScreen() {
                     }}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.listIcon, { borderColor: CATEGORY_COLOR[item.category] ?? Colors.gray[400] }]}>
+                    {/* Icon */}
+                    <View style={[styles.listIcon, { backgroundColor: (CATEGORY_COLOR[item.category] ?? '#9810FA') + '18' }]}>
                       <Text style={styles.listIconEmoji}>{CATEGORY_EMOJI[item.category] ?? '📍'}</Text>
                     </View>
+
+                    {/* Info */}
                     <View style={styles.listInfo}>
                       <Text style={styles.listName} numberOfLines={1}>{item.name}</Text>
-                      <Text style={styles.listMeta}>
-                        {item.category}{item.distance ? ` · ${item.distance}` : ''}
-                      </Text>
+                      <View style={styles.listMetaRow}>
+                        <View style={[styles.listCatBadge, { backgroundColor: (CATEGORY_COLOR[item.category] ?? '#9810FA') + '20' }]}>
+                          <Text style={[styles.listCatText, { color: CATEGORY_COLOR[item.category] ?? '#9810FA' }]}>
+                            {item.category}
+                          </Text>
+                        </View>
+                        {item.distance && (
+                          <Text style={styles.listDist}>· {item.distance}</Text>
+                        )}
+                      </View>
                     </View>
-                    {(item.googleRating ?? 0) > 0 && (
+
+                    {/* Rating */}
+                    {(item.googleRating ?? 0) > 0 ? (
                       <View style={styles.listRating}>
                         <Star size={11} color="#FACC15" fill="#FACC15" />
                         <Text style={styles.listRatingText}>{item.googleRating!.toFixed(1)}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.listArrow}>
+                        <Text style={styles.listArrowText}>›</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -535,45 +589,63 @@ const styles = StyleSheet.create({
   // Selected place card
   card: {
     position: 'absolute',
-    left: Spacing['2xl'],
-    right: Spacing['2xl'],
+    left: Spacing.lg,
+    right: Spacing.lg,
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius['3xl'],
-    padding: Spacing.lg,
+    borderRadius: 24,
+    overflow: 'hidden',
     ...Shadow.lg,
+  },
+  cardImageWrap: {
+    width: '100%',
+    height: 130,
+    position: 'relative',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardFallbackEmoji: {
+    fontSize: 44,
+  },
+  cardImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  cardCatBadge: {
+    position: 'absolute',
+    bottom: Spacing.sm,
+    left: Spacing.md,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+  },
+  cardCatBadgeText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
   },
   cardClose: {
     position: 'absolute',
-    top: Spacing.md,
-    right: Spacing.md,
+    top: Spacing.sm,
+    right: Spacing.sm,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 1,
   },
-  cardRow: {
-    flexDirection: 'row',
-    gap: Spacing.lg,
-  },
-  cardThumb: {
-    width: 76, height: 76,
-    borderRadius: BorderRadius['2xl'],
-  },
-  cardThumbFallback: {
-    backgroundColor: Colors.primary[100],
-    alignItems: 'center', justifyContent: 'center',
-  },
-  cardThumbEmoji: { fontSize: 28 },
-  cardInfo: {
-    flex: 1,
-    gap: 3,
-    justifyContent: 'center',
+  cardBody: {
+    padding: Spacing.lg,
+    gap: Spacing.xs,
   },
   cardName: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.gray[900],
-  },
-  cardCat: {
-    fontSize: FontSize.xs,
-    color: Colors.text.muted,
   },
   cardMeta: {
     flexDirection: 'row',
@@ -592,12 +664,12 @@ const styles = StyleSheet.create({
   cardBtns: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    marginTop: Spacing.sm,
   },
   btnOutline: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.lg,
+    paddingVertical: 11,
+    borderRadius: BorderRadius.xl,
     backgroundColor: Colors.gray[100],
     alignItems: 'center',
   },
@@ -606,16 +678,17 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.gray[700],
   },
-  btnPrimaryWrap: { flex: 1 },
+  btnPrimaryWrap: { flex: 1.6 },
   btnPrimary: {
-    paddingVertical: 8,
-    borderRadius: BorderRadius.lg,
+    paddingVertical: 11,
+    borderRadius: BorderRadius.xl,
     alignItems: 'center',
   },
   btnPrimaryText: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
+    fontWeight: FontWeight.bold,
     color: Colors.white,
+    letterSpacing: 0.3,
   },
 
   // List sheet
@@ -625,62 +698,113 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: Colors.white,
-    borderTopLeftRadius: BorderRadius['3xl'],
-    borderTopRightRadius: BorderRadius['3xl'],
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingTop: Spacing.sm,
     ...Shadow.lg,
   },
   listHandle: {
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: Colors.gray[200],
     alignSelf: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray[100],
+    marginBottom: Spacing.sm,
   },
   listTitle: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.gray[900],
-    paddingHorizontal: Spacing['2xl'],
-    marginBottom: Spacing.sm,
+  },
+  listSubtitle: {
+    fontSize: FontSize.xs,
+    color: Colors.text.muted,
+    marginTop: 2,
+  },
+  listCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.gray[100],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.md,
+    backgroundColor: Colors.gray[50],
+    borderRadius: 16,
+    padding: Spacing.md,
     gap: Spacing.md,
   },
   listIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary[50],
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
   },
-  listIconEmoji: { fontSize: 18 },
+  listIconEmoji: { fontSize: 20 },
   listInfo: { flex: 1 },
   listName: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,
     color: Colors.gray[900],
   },
-  listMeta: {
+  listMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: 4,
+  },
+  listCatBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  listCatText: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+  },
+  listDist: {
     fontSize: FontSize.xs,
     color: Colors.text.muted,
-    marginTop: 2,
   },
   listRating: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
   },
   listRatingText: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
-    color: Colors.gray[700],
+    fontWeight: FontWeight.bold,
+    color: '#92400E',
+  },
+  listArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.gray[200],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listArrowText: {
+    fontSize: 18,
+    color: Colors.gray[400],
+    lineHeight: 22,
   },
 });

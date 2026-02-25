@@ -15,6 +15,7 @@ import {
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
 import { placeService } from '@services/place.service';
+import { usePlaceCacheStore } from '@stores/placeCache.store';
 import ShareIcon from '@assets/Share.svg';
 import ThumsIcon from '@assets/Thums.svg';
 import type { PlaceDetail, PlaceReview } from '@/types';
@@ -205,10 +206,18 @@ export default function PlaceDetailScreen() {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
+  const cachedPlace = usePlaceCacheStore((s) => s.places[id as string]);
+
   // ── 데이터 패치 ────────────────────────────────────────────────────────
   const { data: place, isLoading, isError } = useQuery<PlaceDetail>({
     queryKey: ['place', id],
-    queryFn: () => placeService.getById(id),
+    queryFn: () =>
+      placeService.getById(
+        id,
+        cachedPlace
+          ? { name: cachedPlace.name, lat: cachedPlace.lat, lng: cachedPlace.lng }
+          : undefined,
+      ),
     enabled: !!id,
   });
 
@@ -220,7 +229,7 @@ export default function PlaceDetailScreen() {
 
   // ── 즐겨찾기 토글 ──────────────────────────────────────────────────────
   const bookmarkMutation = useMutation({
-    mutationFn: () => placeService.toggleBookmark(id),
+    mutationFn: () => placeService.toggleBookmark(id, place?.imageUrl),
     onMutate: () => setIsBookmarked((prev) => !prev),
     onError: () => setIsBookmarked((prev) => !prev),
     onSuccess: (data) => {
@@ -326,7 +335,9 @@ export default function PlaceDetailScreen() {
 
   const emotions = place.emotionMatch ?? [];
 
-  const vibeScore = place.vibeScore ?? emotions[0]?.value ?? 72;
+  const vibeScore = (place.vibeScore != null && place.vibeScore > 0)
+    ? place.vibeScore
+    : (emotions[0]?.value ?? 72);
 
   return (
     <ScreenTransition>

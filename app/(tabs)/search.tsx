@@ -1,13 +1,13 @@
-﻿import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, FlatList, ActivityIndicator,
-  Modal, Pressable,
+  Modal, Pressable, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search, X, Check } from 'lucide-react-native';
+import { Search, X, Check, Sparkles } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { SearchResultCard } from '@components/features/place/SearchResultCard';
@@ -15,6 +15,8 @@ import ScreenTransition from '@components/ScreenTransition';
 import SearchSettingIcon from '@assets/searchsetting.svg';
 import { placeService } from '@services/place.service';
 import { useLocation } from '@hooks/useLocation';
+import { useMoodStore } from '@stores/mood.store';
+import { usePlaceCacheStore } from '@stores/placeCache.store';
 import type { Place } from '@/types';
 
 type ViewMode = 'list' | 'grid';
@@ -55,6 +57,8 @@ export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { coords } = useLocation();
+  const { searchResult, isSearching, setSearchResult } = useMoodStore();
+  const { setPlace } = usePlaceCacheStore();
 
   const [input, setInput] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
@@ -83,17 +87,65 @@ export default function SearchScreen() {
     staleTime: 1000 * 60 * 2,
   });
 
-  const isFetching = searchFetching || nearbyLoading;
+  // 기분/AI 결과가 있고 직접 검색어가 없을 때 → mood 결과 표시
+  const showMoodResults = !submittedQuery.trim() && !!searchResult;
+
+  // mood 배너 애니메이션 (페이드인 + 위에서 슬라이드 + 펄스 루프)
+  const moodBannerOpacity = useRef(new Animated.Value(0)).current;
+  const moodBannerY = useRef(new Animated.Value(-16)).current;
+  const moodBannerScale = useRef(new Animated.Value(1)).current;
+  const moodPulseRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    if (showMoodResults && searchResult) {
+      moodBannerOpacity.setValue(0);
+      moodBannerY.setValue(-16);
+      moodBannerScale.setValue(1);
+
+      // 진입 후 펄스 루프 시작
+      Animated.parallel([
+        Animated.timing(moodBannerOpacity, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.spring(moodBannerY, {
+          toValue: 0,
+          tension: 80,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        moodPulseRef.current = Animated.loop(
+          Animated.sequence([
+            Animated.timing(moodBannerScale, { toValue: 1.04, duration: 600, useNativeDriver: true }),
+            Animated.timing(moodBannerScale, { toValue: 1,    duration: 600, useNativeDriver: true }),
+            Animated.delay(1200),
+          ]),
+        );
+        moodPulseRef.current.start();
+      });
+    } else {
+      moodPulseRef.current?.stop();
+      moodBannerScale.setValue(1);
+    }
+    return () => { moodPulseRef.current?.stop(); };
+  }, [searchResult]);
+
+  const isFetching = searchFetching || nearbyLoading || isSearching;
   const rawPlaces: Place[] = submittedQuery.trim()
     ? (searchData?.data ?? [])
-    : (nearbyData?.data ?? []);
+    : showMoodResults
+      ? (searchResult!.places as Place[])
+      : (nearbyData?.data ?? []);
   const places = sortPlaces(rawPlaces, sortBy);
 
   const handleSubmit = useCallback(() => {
     const q = input.trim();
     if (!q) return;
     setSubmittedQuery(q);
-  }, [input]);
+    setSearchResult(null); // 텍스트 검색 시작하면 mood 결과 초기화
+  }, [input, setSearchResult]);
 
   const handleClear = useCallback(() => {
     setInput('');
@@ -101,6 +153,7 @@ export default function SearchScreen() {
   }, []);
 
   const handlePressPlace = (place: Place) => {
+    setPlace(place);
     router.push(`/place/${place.id}`);
   };
 
@@ -140,13 +193,38 @@ export default function SearchScreen() {
           </View>
         </View>
 
+        {/* AI 기분 검색 배너 */}
+        {!isFetching && showMoodResults && searchResult && (
+          <Animated.View
+            style={[
+              styles.moodBannerWrap,
+              { opacity: moodBannerOpacity, transform: [{ translateY: moodBannerY }, { scale: moodBannerScale }] },
+            ]}
+          >
+            <LinearGradient
+              colors={['#9810FA', '#E60076']}
+              style={styles.moodBanner}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Sparkles size={13} color="rgba(255,255,255,0.9)" />
+              <Text style={styles.moodBannerText} numberOfLines={1}>{searchResult.summary}</Text>
+              <TouchableOpacity onPress={() => setSearchResult(null)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <X size={14} color="rgba(255,255,255,0.8)" />
+              </TouchableOpacity>
+            </LinearGradient>
+          </Animated.View>
+        )}
+
         {/* 결과 카운트 + 뷰 토글 */}
         {!isFetching && places.length > 0 && (
           <View style={styles.resultRow}>
             <Text style={styles.countText}>
               {hasSearched
                 ? <><Text style={styles.countHighlight}>{places.length}개</Text>의 장소를 찾았어요</>
-                : <><Text style={styles.countHighlight}>{places.length}개</Text>의 주변 장소</>
+                : showMoodResults
+                  ? <><Text style={styles.countHighlight}>{places.length}개</Text>의 추천 장소</>
+                  : <><Text style={styles.countHighlight}>{places.length}개</Text>의 주변 장소</>
               }
             </Text>
             <View style={styles.toggleWrap}>
@@ -255,6 +333,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadow.sm,
+  },
+
+  moodBannerWrap: {
+    paddingHorizontal: Spacing['2xl'],
+    marginBottom: Spacing.sm,
+  },
+  moodBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 8,
+  },
+  moodBannerText: {
+    flex: 1,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+    color: Colors.white,
   },
 
   searchWrap: {

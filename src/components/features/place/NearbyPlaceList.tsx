@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { MapPin } from 'lucide-react-native';
+import { MapPin, RefreshCw } from 'lucide-react-native';
 import { placeService } from '@services/place.service';
+import { usePlaceCacheStore } from '@stores/placeCache.store';
 import { PlaceCard } from './PlaceCard';
 import { Colors, Spacing, FontSize, FontWeight, BorderRadius } from '@constants/theme';
 import type { Place } from '@/types';
@@ -16,17 +17,27 @@ interface NearbyPlaceListProps {
 
 export function NearbyPlaceList({ coords, locationStatus, onSeeAll }: NearbyPlaceListProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const QUERY_KEY = ['nearby', coords.lat, coords.lng];
 
   const { data, isLoading } = useQuery({
-    queryKey: ['nearby', coords.lat, coords.lng],
+    queryKey: QUERY_KEY,
     queryFn: () =>
       placeService.getNearby({ lat: coords.lat, lng: coords.lng, limit: 5 }),
     staleTime: 1000 * 60 * 5, // 5분 캐시
   });
 
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+  };
+
   const places = data?.data ?? [];
 
+  const { setPlace } = usePlaceCacheStore();
+
   const handlePress = (place: Place) => {
+    setPlace(place);
     router.push(`/place/${place.id}`);
   };
 
@@ -43,6 +54,9 @@ export function NearbyPlaceList({ coords, locationStatus, onSeeAll }: NearbyPlac
               <Text style={styles.defaultBadgeText}>서울 기준</Text>
             </View>
           )}
+          <TouchableOpacity onPress={handleRefresh} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <RefreshCw size={14} color={Colors.gray[400]} />
+          </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={onSeeAll ?? (() => router.push('/map'))}>
           <Text style={styles.seeAll}>지도로 보기</Text>

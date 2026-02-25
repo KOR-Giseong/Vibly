@@ -52,12 +52,19 @@ function GridCard({
   onPress: () => void;
   onRemove: () => void;
 }) {
+  const [imgError, setImgError] = useState(false);
+  console.log('[GridCard]', place.name, '| imageUrl:', place.imageUrl);
   return (
     <TouchableOpacity style={styles.gridCard} onPress={onPress} activeOpacity={0.85}>
       {/* 이미지 */}
       <View style={styles.gridImgWrap}>
-        {place.imageUrl ? (
-          <Image source={{ uri: place.imageUrl }} style={styles.gridImg} resizeMode="cover" />
+        {place.imageUrl && !imgError ? (
+          <Image
+            source={{ uri: place.imageUrl }}
+            style={styles.gridImg}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <LinearGradient colors={['#f3e8ff', '#fce7f3']} style={styles.gridImg} />
         )}
@@ -91,12 +98,18 @@ function ListCard({
   onPress: () => void;
   onRemove: () => void;
 }) {
+  const [imgError, setImgError] = useState(false);
   return (
     <TouchableOpacity style={styles.listCard} onPress={onPress} activeOpacity={0.85}>
       {/* 이미지 */}
       <View style={styles.listImgWrap}>
-        {place.imageUrl ? (
-          <Image source={{ uri: place.imageUrl }} style={styles.listImg} resizeMode="cover" />
+        {place.imageUrl && !imgError ? (
+          <Image
+            source={{ uri: place.imageUrl }}
+            style={styles.listImg}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <LinearGradient colors={['#f3e8ff', '#fce7f3']} style={styles.listImg} />
         )}
@@ -136,6 +149,7 @@ export default function BookmarkScreen() {
   const { data: bookmarks = [], isLoading, isError } = useQuery({
     queryKey: ['bookmarks'],
     queryFn: placeService.getBookmarks,
+    staleTime: 0,
   });
 
   // ── 북마크 해제 뮤테이션 (낙관적 업데이트)

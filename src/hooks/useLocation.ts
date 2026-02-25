@@ -9,6 +9,7 @@ interface LocationState {
   coords: { lat: number; lng: number };
   status: 'idle' | 'loading' | 'granted' | 'denied';
   canAskAgain: boolean;
+  isLive: boolean; // watchPositionAsync 콜백에서만 true (캐시 위치 아님)
 }
 
 export function useLocation() {
@@ -16,6 +17,7 @@ export function useLocation() {
     coords: DEFAULT_COORDS,
     status: 'idle',
     canAskAgain: true,
+    isLive: false,
   });
 
   const watchRef = useRef<Location.LocationSubscription | null>(null);
@@ -28,17 +30,18 @@ export function useLocation() {
     }
 
     try {
-      // 먼저 마지막으로 알려진 위치를 빠르게 가져옴 (즉시 응답)
+      // 먼저 마지막으로 알려진 위치를 빠르게 가져옴 (즉시 응답, isLive=false)
       const last = await Location.getLastKnownPositionAsync({});
       if (last) {
         setState({
           coords: { lat: last.coords.latitude, lng: last.coords.longitude },
           status: 'granted',
           canAskAgain: false,
+          isLive: false,
         });
       }
 
-      // 실시간 위치 감시 시작 (정확한 GPS)
+      // 실시간 위치 감시 시작 (정확한 GPS, isLive=true)
       watchRef.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
@@ -50,6 +53,7 @@ export function useLocation() {
             coords: { lat: location.coords.latitude, lng: location.coords.longitude },
             status: 'granted',
             canAskAgain: false,
+            isLive: true,
           });
         },
       );
@@ -71,13 +75,13 @@ export function useLocation() {
       // 권한 요청
       const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setState({ coords: DEFAULT_COORDS, status: 'denied', canAskAgain });
+        setState({ coords: DEFAULT_COORDS, status: 'denied', canAskAgain, isLive: false });
         return;
       }
 
       await startWatching();
     } catch {
-      setState({ coords: DEFAULT_COORDS, status: 'denied', canAskAgain: false });
+      setState({ coords: DEFAULT_COORDS, status: 'denied', canAskAgain: false, isLive: false });
     }
   };
 

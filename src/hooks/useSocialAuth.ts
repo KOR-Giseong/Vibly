@@ -19,7 +19,16 @@ const KAKAO_DISCOVERY = {
   tokenEndpoint: 'https://kauth.kakao.com/oauth/token',
 };
 
+// 카카오 등 다른 소셜 로그인용 (vibly:// 스킴)
 export const SOCIAL_REDIRECT_URI = makeRedirectUri({ scheme: 'vibly', path: 'auth' });
+
+// Google redirect URI
+// Desktop 앱 유형 OAuth 클라이언트는 custom scheme을 허용함
+// 네이티브(iOS/Android): vibly://auth
+// Web: vibly://auth (또는 webRedirectUri 별도)
+const GOOGLE_REDIRECT_URI = Platform.OS === 'web'
+  ? SOCIAL_REDIRECT_URI
+  : makeRedirectUri({ scheme: 'vibly', path: 'auth' });
 
 export function useSocialAuth() {
   const { setUser } = useAuthStore();
@@ -44,17 +53,17 @@ export function useSocialAuth() {
   };
 
   // ─── Google ──────────────────────────────────────────────────────────────
-  const googleClientId = Platform.OS === 'ios'
-    ? (process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '')
-    : Platform.OS === 'android'
-    ? (process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '')
-    : (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '');
+  // 네이티브(iOS/Android): Desktop 앱 유형 클라이언트 → vibly:// 커스텀 스킴 허용
+  // Web: Web 유형 클라이언트
+  const googleClientId = Platform.OS === 'web'
+    ? (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '')
+    : (process.env.EXPO_PUBLIC_GOOGLE_NATIVE_CLIENT_ID ?? '');
 
   const [, googleResponse, googlePromptAsync] = useAuthRequest(
     {
       clientId: googleClientId,
       scopes: ['openid', 'profile', 'email'],
-      redirectUri: SOCIAL_REDIRECT_URI,
+      redirectUri: GOOGLE_REDIRECT_URI,
     },
     GOOGLE_DISCOVERY,
   );
@@ -63,7 +72,7 @@ export function useSocialAuth() {
     if (!googleResponse) return;
     if (googleResponse.type === 'success') {
       const code = googleResponse.params.code;
-      if (code) finalizeSocialLogin('google', code, SOCIAL_REDIRECT_URI);
+      if (code) finalizeSocialLogin('google', code, GOOGLE_REDIRECT_URI);
     } else if (googleResponse.type === 'error') {
       setError('Google 로그인에 실패했어요.');
       setLoading(null);
@@ -73,7 +82,7 @@ export function useSocialAuth() {
   }, [googleResponse]);
 
   const signInWithGoogle = async () => {
-    console.log('[Google] signInWithGoogle called, Platform.OS:', Platform.OS, 'clientId:', googleClientId);
+    console.log('[Google] signInWithGoogle called, Platform.OS:', Platform.OS, 'clientId:', googleClientId, 'redirectUri:', GOOGLE_REDIRECT_URI);
     if (!googleClientId) {
       setError('Google 클라이언트 ID가 설정되지 않았어요.');
       return;

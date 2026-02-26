@@ -623,7 +623,7 @@ export default function PlaceDetailScreen() {
 
         {/* ── 하단 버튼 ─────────────────────────────────────────────── */}
         <LinearGradient
-          colors={['transparent', 'rgba(250,245,255,0.92)', '#faf5ff', '#eff6ff']}
+          colors={['rgba(250,245,255,0)', 'rgba(250,245,255,0.75)', '#faf5ff', '#eff6ff']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={[styles.bottomBar, { paddingBottom: insets.bottom + Spacing.md }]}

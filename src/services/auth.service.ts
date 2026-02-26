@@ -39,15 +39,25 @@ export const authService = {
     return data;
   },
 
+  async getUserStats(): Promise<{ checkinCount: number; bookmarkCount: number; reviewCount: number }> {
+    const { data } = await apiClient.get<{ checkinCount: number; bookmarkCount: number; reviewCount: number }>('/auth/stats');
+    return data;
+  },
+
+  async updateProfile(data: { name?: string; nickname?: string; preferredVibes?: string[] }): Promise<User> {
+    const { data: res } = await apiClient.patch<User>('/auth/profile', data);
+    return res;
+  },
+
+  async updateAvatar(base64: string): Promise<{ avatarUrl: string }> {
+    const { data } = await apiClient.patch<{ avatarUrl: string }>('/auth/avatar', { base64 });
+    return data;
+  },
+
   async checkNickname(nickname: string): Promise<{ available: boolean }> {
     const { data } = await apiClient.get<{ available: boolean }>('/auth/check-nickname', {
       params: { nickname },
     });
-    return data;
-  },
-
-  async updateProfile(nickname: string, preferredVibes: string[]): Promise<User> {
-    const { data } = await apiClient.patch<User>('/auth/profile', { nickname, preferredVibes });
     return data;
   },
 

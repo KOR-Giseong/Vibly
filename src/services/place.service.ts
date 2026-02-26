@@ -1,6 +1,19 @@
 import { apiClient } from './api';
 import type { Place, PlaceDetail, PlaceReview, PaginatedResponse } from '@/types';
 
+export interface MyCheckIn {
+  id: string;
+  placeId: string;
+  placeName: string;
+  category: string;
+  address: string;
+  imageUrl: string;
+  mood: string;
+  note?: string | null;
+  imageUrl_checkin?: string | null;
+  createdAt: string;
+}
+
 // 백엔드 응답 → Place 타입 정규화 (tags: 객체배열 → 문자열배열, images → imageUrl)
 function normalizePlace(raw: any): Place {
   return {
@@ -68,6 +81,11 @@ export const placeService = {
 
   async checkIn(placeId: string, mood: string, note?: string, imageUrl?: string): Promise<void> {
     await apiClient.post(`/places/${placeId}/checkin`, { mood, note, imageUrl });
+  },
+
+  async getMyCheckins(): Promise<MyCheckIn[]> {
+    const { data } = await apiClient.get<MyCheckIn[]>('/places/my-checkins');
+    return data;
   },
 
   async getReviews(placeId: string, page = 1, limit = 20): Promise<ReviewsResponse> {

@@ -18,6 +18,7 @@ import { placeService } from '@services/place.service';
 import { useLocation } from '@hooks/useLocation';
 import ScreenTransition from '@components/ScreenTransition';
 import MapContainer, { type MapHandle } from '@components/features/map/MapContainer';
+import { LocationPermissionModal } from '@components/ui';
 import type { Place } from '@/types';
 
 // ─── Category constants ───────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ export default function MapScreen() {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
+  const [locationModalDismissed, setLocationModalDismissed] = useState(false);
   const [showList, setShowList] = useState(false);
 
   // Animated bottom card
@@ -469,6 +471,21 @@ export default function MapScreen() {
         )}
 
       </View>
+
+      {/* ── 위치 권한 모달 ─────────────────────────────────────────────── */}
+      <LocationPermissionModal
+        visible={locationStatus === 'denied' && !locationModalDismissed}
+        onDismiss={() => setLocationModalDismissed(true)}
+        onRequestPermission={() => {
+          setLocationModalDismissed(true);
+          requestPermission();
+        }}
+        onOpenSettings={() => {
+          setLocationModalDismissed(true);
+          openSettings();
+        }}
+        canAskAgain={canAskAgain}
+      />
     </ScreenTransition>
   );
 }

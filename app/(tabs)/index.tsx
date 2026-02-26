@@ -16,6 +16,7 @@ import { MoodSelector } from '@components/features/mood/MoodSelector';
 import { RateLimitBanner } from '@components/features/mood/RateLimitBanner';
 import { AIBanner } from '@components/features/ai/AIBanner';
 import { NearbyPlaceList } from '@components/features/place/NearbyPlaceList';
+import { LocationPermissionModal } from '@components/ui';
 import ScreenTransition from '@components/ScreenTransition';
 import type { Mood } from '@/types';
 
@@ -26,10 +27,11 @@ export default function HomeScreen() {
   const { user } = useAuthStore();
   const { selectedMood, setSelectedMood, rateLimitRemaining } = useMoodStore();
   const { search } = useMoodSearch();
-  const { coords, status: locationStatus } = useLocation();
+  const { coords, status: locationStatus, canAskAgain, requestPermission, openSettings } = useLocation();
 
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiQuery, setAiQuery] = useState('');
+  const [locationModalDismissed, setLocationModalDismissed] = useState(false);
 
   const displayName = user?.name?.split(' ')[0] ?? '게스트';
 
@@ -173,6 +175,21 @@ export default function HomeScreen() {
           </KeyboardAvoidingView>
         </Pressable>
       </Modal>
+
+      {/* 위치 권한 모달 */}
+      <LocationPermissionModal
+        visible={locationStatus === 'denied' && !locationModalDismissed}
+        onDismiss={() => setLocationModalDismissed(true)}
+        onRequestPermission={() => {
+          setLocationModalDismissed(true);
+          requestPermission();
+        }}
+        onOpenSettings={() => {
+          setLocationModalDismissed(true);
+          openSettings();
+        }}
+        canAskAgain={canAskAgain}
+      />
     </ScreenTransition>
   );
 }

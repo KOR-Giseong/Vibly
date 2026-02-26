@@ -14,6 +14,7 @@ export interface User {
   avatarUrl?: string;
   status: UserStatus;
   isPremium: boolean;
+  isAdmin?: boolean;
   createdAt: string;
 }
 
@@ -126,25 +127,67 @@ export interface Subscription {
 
 // ─── Vibe Report ─────────────────────────────────────────────────────────────
 
-export interface DailyMood {
-  day: string;
-  emoji: string;
+export interface DailyMoodEntry {
+  /** ISO 날짜 문자열 */
+  date: string;
+  /** '월' | '화' | … | '일' */
+  dayLabel: string;
+  /** 'happy' | 'peaceful' | … | null (체크인 없는 날) */
+  mood: string | null;
+  /** 이모지 문자열 또는 null */
+  emoji: string | null;
+  /** 해당 날 체크인 수 */
+  checkInCount: number;
+}
+
+export interface EmotionDistributionEntry {
   mood: string;
-}
-
-export interface TopVibe {
-  vibe: string;
-  count: number;
+  label: string;
+  emoji: string;
   color: string;
+  count: number;
+  percentage: number;
 }
 
-export interface VibeReportData {
+export interface TopCategoryEntry {
+  category: string;
+  label: string;
+  color: string;
+  count: number;
+  percentage: number;
+}
+
+export interface VibeInsight {
+  emoji: string;
+  title: string;
+  desc: string;
+}
+
+export interface VibeReportResponse {
+  period: 'weekly' | 'monthly';
   dateRange: string;
-  checkIns: number;
-  newPlaces: number;
-  reviews: number;
-  dailyMoods: DailyMood[];
-  topVibes: TopVibe[];
+  checkInCount: number;
+  uniquePlacesCount: number;
+  reviewCount: number;
+  vibeScore: number;
+  emotionDistribution: EmotionDistributionEntry[];
+  dailyMoods: DailyMoodEntry[];
+  topCategories: TopCategoryEntry[];
+  insights: VibeInsight[];
+}
+
+// ─── Support ─────────────────────────────────────────────────────────────────
+
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+
+export interface SupportTicket {
+  id: string;
+  title: string;
+  body: string;
+  status: TicketStatus;
+  adminReply?: string;
+  repliedAt?: string;
+  createdAt: string;
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────

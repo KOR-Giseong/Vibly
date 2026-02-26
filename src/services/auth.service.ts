@@ -61,6 +61,20 @@ export const authService = {
     return data;
   },
 
+  async deleteAccount(): Promise<{ success: boolean }> {
+    const { data } = await apiClient.delete<{ success: boolean }>('/auth/account');
+    await clearTokens();
+    return data;
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean }> {
+    const { data } = await apiClient.patch<{ success: boolean }>('/auth/password', {
+      currentPassword,
+      newPassword,
+    });
+    return data;
+  },
+
   async isAuthenticated(): Promise<boolean> {
     const token = await storage.getItem('accessToken');
     return Boolean(token);

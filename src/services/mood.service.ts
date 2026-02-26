@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { AISearchResult } from '@/types';
+import type { AISearchResult, VibeReportResponse } from '@/types';
 
 interface MoodSearchParams {
   query: string;
@@ -13,8 +13,10 @@ export const moodService = {
     return data;
   },
 
-  async getVibeReport(period: 'weekly' | 'monthly'): Promise<unknown> {
-    const { data } = await apiClient.get(`/mood/report/${period}`);
+  async getVibeReport(period: 'weekly' | 'monthly'): Promise<VibeReportResponse> {
+    const { data } = await apiClient.get<VibeReportResponse>('/mood/vibe-report', {
+      params: { period },
+    });
     return data;
   },
 };

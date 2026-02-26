@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,6 +12,8 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
+  const router = useRouter();
+  const segments = useSegments();
   const { setUser, setAuthenticated } = useAuthStore();
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -21,12 +23,17 @@ function RootLayoutNav() {
         const user = await authService.getMe();
         setUser(user);
         setAuthenticated(true);
+        // 정지된 계정이면 suspended 화면으로 이동
+        if (user?.status === 'SUSPENDED') {
+          router.replace('/suspended');
+        }
       } catch {
         setAuthenticated(false);
       } finally {
         setIsLoaded(true);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!isLoaded) return null;
@@ -39,6 +46,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="welcome" />
+        <Stack.Screen name="suspended" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="place/[id]" />
         <Stack.Screen name="map" />
         <Stack.Screen name="checkin" options={{ animation: 'slide_from_bottom' }} />

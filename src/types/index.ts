@@ -13,6 +13,8 @@ export interface User {
   isProfileComplete: boolean;
   avatarUrl?: string;
   status: UserStatus;
+  suspendedUntil?: string | null;
+  suspendReason?: string | null;
   isPremium: boolean;
   isAdmin?: boolean;
   createdAt: string;

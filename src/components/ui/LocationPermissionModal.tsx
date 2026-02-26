@@ -249,9 +249,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     marginBottom: Spacing['2xl'],
+    alignSelf: 'stretch',
   },
   privacyText: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     color: Colors.primary[600],
     textAlign: 'center',
     lineHeight: 18,

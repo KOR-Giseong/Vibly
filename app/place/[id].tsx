@@ -353,16 +353,13 @@ export default function PlaceDetailScreen() {
     ? place.vibeScore
     : (emotions[0]?.value ?? 72);
 
-  // 진입 경로별 AI 분석 문구
-  const vibeMatchText = React.useMemo(() => {
-    if (source === 'search' && mood) {
-      return `'${mood}' 감정과 ${vibeScore}% 일치해요`;
-    }
-    if (source === 'home' || source === 'bookmark') {
-      return `선호 바이브와 ${vibeScore}% 일치해요`;
-    }
-    return `바이브와 ${vibeScore}% 일치해요`;
-  }, [source, mood, vibeScore]);
+  // 진입 경로별 AI 분석 문구 (훅 아님 — 얼리 리턴 뒤에서도 안전)
+  const vibeMatchText =
+    source === 'search' && mood
+      ? `'${mood}' 감정과 ${vibeScore}% 일치해요`
+      : source === 'home' || source === 'bookmark'
+        ? `선호 바이브와 ${vibeScore}% 일치해요`
+        : `바이브와 ${vibeScore}% 일치해요`;
 
   return (
     <ScreenTransition>

@@ -170,7 +170,7 @@ export default function LoginScreen() {
           />
         )}
 
-        {/* 약관 */
+        {/* 약관 */}
         <Text style={styles.terms}>
           {'계속 진행하면 '}
           <Text style={styles.termsLink}>서비스 약관</Text>

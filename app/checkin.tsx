@@ -18,6 +18,8 @@ import ScreenTransition from '@components/ScreenTransition';
 import type { Mood } from '@/types';
 
 const GPS_LIMIT_M = 100; // 체크인 허용 반경 (미터)
+const RECEIPT_REQUIRED = ['CAFE', 'RESTAURANT', 'BAR'];  // 영수증 필수
+const GPS_ONLY = ['PARK', 'CULTURAL'];                    // GPS 필수
 
 /** Haversine 거리 계산 (미터) */
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -160,8 +162,18 @@ export default function CheckInScreen() {
       : null;
   const isNearby = distanceM !== null && distanceM <= GPS_LIMIT_M;
 
-  // 영수증 있으면 OK, 없으면 반드시 GPS 100m 이내여야 함
-  const canSubmit = !!selectedMood && (!!receiptUri || isNearby) && !isSubmitting;
+  // 카테고리별 체크인 방식
+  const category = place?.category?.toUpperCase?.() ?? '';
+  const checkInMode =
+    RECEIPT_REQUIRED.includes(category) ? 'receipt' :
+    GPS_ONLY.includes(category) ? 'gps' : 'both';
+
+  // canSubmit 카테고리별 분기
+  const canSubmit = !!selectedMood && !isSubmitting && (
+    checkInMode === 'receipt' ? !!receiptUri :
+    checkInMode === 'gps'     ? isNearby :
+    (!!receiptUri || isNearby)  // both
+  );
   const placeEmoji = CATEGORY_EMOJI[place?.category?.toUpperCase?.() ?? ''] ?? '📍';
 
   return (
@@ -222,67 +234,90 @@ export default function CheckInScreen() {
               )}
             </View>
 
-            {/* 영수증 사진 (선택) + GPS 상태 */}
+            {/* 영수증 / GPS 섹션 (카테고리별 분기) */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionLabel}>영수증 사진</Text>
-                <View style={styles.optionalBadge}>
-                  <Text style={styles.optionalText}>선택</Text>
+                <Text style={styles.sectionLabel}>
+                  {checkInMode === 'receipt' ? '영수증 사진' :
+                   checkInMode === 'gps' ? 'GPS 위치 확인' : '영수증 사진'}
+                </Text>
+                <View style={[
+                  styles.optionalBadge,
+                  checkInMode === 'receipt' ? styles.requiredBadge :
+                  checkInMode === 'gps' ? styles.gpsBadge : null,
+                ]}>
+                  <Text style={styles.optionalText}>
+                    {checkInMode === 'receipt' ? '필수' :
+                     checkInMode === 'gps' ? 'GPS 전용' : '선택'}
+                  </Text>
                 </View>
               </View>
               <View style={styles.receiptHint}>
                 <Receipt size={14} color={Colors.primary[500]} />
-                <Text style={styles.receiptHintText}>영수증 첨부 시 인증 마크가 부여돼요. 없으면 GPS로 체크인됩니다.</Text>
-              </View>
-
-              {/* GPS 상태 표시 */}
-              <View style={[
-                styles.gpsStatus,
-                isNearby ? styles.gpsStatusOk : userLocation ? styles.gpsStatusWarn : styles.gpsStatusFail,
-              ]}>
-                {locationLoading ? (
-                  <ActivityIndicator size="small" color={Colors.gray[500]} />
-                ) : isNearby ? (
-                  <CheckCircle size={14} color="#16a34a" />
-                ) : (
-                  <MapPin size={14} color={userLocation ? '#d97706' : Colors.gray[400]} />
-                )}
-                <Text style={[
-                  styles.gpsStatusText,
-                  isNearby ? styles.gpsStatusTextOk
-                  : userLocation ? styles.gpsStatusTextWarn
-                  : styles.gpsStatusTextFail,
-                ]}>
-                  {locationLoading
-                    ? 'GPS 위치 확인 중...'
-                    : isNearby
-                    ? `📍 ${Math.round(distanceM!)}m 이내 — GPS 체크인 가능`
-                    : distanceM !== null
-                    ? `📍 ${Math.round(distanceM)}m 떨어짐 — ${GPS_LIMIT_M}m 이내 접근 필요 (영수증으로 체크인 가능)`
-                    : '위치 권한 없음 — 영수증으로만 체크인 가능'}
+                <Text style={styles.receiptHintText}>
+                  {checkInMode === 'receipt'
+                    ? '이 장소는 영수증으로만 체크인할 수 있어요.'
+                    : checkInMode === 'gps'
+                    ? '이 장소는 GPS로만 체크인할 수 있어요. 100m 이내 접근 필요.'
+                    : '영수증 첨부 시 인증 마크 부여, 없으면 GPS 100m 이내로 체크인.'
+                  }
                 </Text>
               </View>
-              {receiptUri ? (
-                <View style={styles.photoPreviewWrap}>
-                  <Image source={{ uri: receiptUri }} style={styles.photoPreview} resizeMode="contain" />
-                  <TouchableOpacity
-                    style={styles.photoRemoveBtn}
-                    onPress={() => setReceiptUri(null)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <X size={14} color={Colors.white} />
-                  </TouchableOpacity>
+
+              {/* GPS 상태 (receipt 전용이 아니면 표시) */}
+              {checkInMode !== 'receipt' && (
+                <View style={[
+                  styles.gpsStatus,
+                  isNearby ? styles.gpsStatusOk : userLocation ? styles.gpsStatusWarn : styles.gpsStatusFail,
+                ]}>
+                  {locationLoading ? (
+                    <ActivityIndicator size="small" color={Colors.gray[500]} />
+                  ) : isNearby ? (
+                    <CheckCircle size={14} color="#16a34a" />
+                  ) : (
+                    <MapPin size={14} color={userLocation ? '#d97706' : Colors.gray[400]} />
+                  )}
+                  <Text style={[
+                    styles.gpsStatusText,
+                    isNearby ? styles.gpsStatusTextOk
+                    : userLocation ? styles.gpsStatusTextWarn
+                    : styles.gpsStatusTextFail,
+                  ]}>
+                    {locationLoading
+                      ? 'GPS 위치 확인 중...'
+                      : isNearby
+                      ? `📍 ${Math.round(distanceM!)}m 이내 — GPS 체크인 가능`
+                      : distanceM !== null
+                      ? `📍 ${Math.round(distanceM)}m 떨어짐 — ${GPS_LIMIT_M}m 이내 접근 필요`
+                      : '위치 권한 없음 — 위치 접근을 허용해주세요'}
+                  </Text>
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.photoUploadArea}
-                  onPress={openReceiptPicker}
-                  activeOpacity={0.7}
-                >
-                  <Receipt size={32} color={Colors.primary[400]} />
-                  <Text style={styles.photoUploadText}>영수증 촬영 / 업로드</Text>
-                  <Text style={styles.photoUploadSub}>카메라 촬영 또는 갤러리에서 선택</Text>
-                </TouchableOpacity>
+              )}
+
+              {/* 영수증 업로드 (gps 전용이 아니면 표시) */}
+              {checkInMode !== 'gps' && (
+                receiptUri ? (
+                  <View style={styles.photoPreviewWrap}>
+                    <Image source={{ uri: receiptUri }} style={styles.photoPreview} resizeMode="contain" />
+                    <TouchableOpacity
+                      style={styles.photoRemoveBtn}
+                      onPress={() => setReceiptUri(null)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <X size={14} color={Colors.white} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.photoUploadArea}
+                    onPress={openReceiptPicker}
+                    activeOpacity={0.7}
+                  >
+                    <Receipt size={32} color={Colors.primary[400]} />
+                    <Text style={styles.photoUploadText}>영수증 촬영 / 업로드</Text>
+                    <Text style={styles.photoUploadSub}>카메라 촬영 또는 갤러리에서 선택</Text>
+                  </TouchableOpacity>
+                )
               )}
             </View>
 
@@ -331,6 +366,10 @@ export default function CheckInScreen() {
                 <Text style={[styles.submitText, !canSubmit && styles.submitTextDisabled]}>
                   {!selectedMood
                     ? '기분을 먼저 선택해주세요'
+                    : checkInMode === 'receipt'
+                    ? (receiptUri ? '영수증 인증 체크인 ✓' : '영수증을 첨부해주세요')
+                    : checkInMode === 'gps'
+                    ? (isNearby ? `GPS 체크인 (${Math.round(distanceM!)}m)` : distanceM !== null ? `너무 멀어요 (${Math.round(distanceM)}m)` : '위치 권한이 필요해요')
                     : receiptUri
                     ? '영수증 인증 체크인 ✓'
                     : isNearby
@@ -441,6 +480,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  requiredBadge: {
+    backgroundColor: Colors.primary[500],
+  },
+  gpsBadge: {
+    backgroundColor: '#16a34a',
   },
   optionalBadge: {
     backgroundColor: Colors.gray[400],

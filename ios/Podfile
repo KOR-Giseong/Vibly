@@ -69,5 +69,17 @@ target 'Vibly' do
         end
       end
     end
+
+    # Hermes run script 출력 파일 지정 (매 빌드마다 실행되는 경고 제거)
+    installer.pods_project.targets.each do |target|
+      target.build_phases.each do |phase|
+        if phase.respond_to?(:name) && phase.name&.include?('[Hermes] Replace Hermes')
+          phase.output_paths = [
+            '$(PODS_ROOT)/hermes-engine/destroot/Library/Frameworks/macosx/hermes.framework',
+            '$(PODS_ROOT)/hermes-engine/destroot/Library/Frameworks/universal/hermes.xcframework'
+          ]
+        end
+      end
+    end
   end
 end

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, Image,
-  ActivityIndicator, Alert, ActionSheetIOS,
+  ActivityIndicator, Alert, ActionSheetIOS, Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { ArrowLeft, Receipt, X, MapPin, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Receipt, X, MapPin, CheckCircle, HelpCircle } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { placeService } from '@services/place.service';
 import { MoodSelector } from '@components/features/mood/MoodSelector';
@@ -52,6 +52,7 @@ export default function CheckInScreen() {
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   // ── 위치 자동 취득 ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -178,6 +179,81 @@ export default function CheckInScreen() {
 
   return (
     <ScreenTransition>
+      {/* 체크인 안내 모달 */}
+      <Modal
+        visible={showGuide}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowGuide(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>체크인 안내</Text>
+              <TouchableOpacity onPress={() => setShowGuide(false)}>
+                <X size={20} color={Colors.gray[500]} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* 카테고리별 방식 */}
+              <Text style={styles.guideSection}>📋 장소 유형별 인증 방식</Text>
+              {[
+                { emoji: '☕🍽️🍺', label: '카페 · 식당 · 바', desc: '영수증 필수\n결제 후 받은 영수증을 촬영해주세요.' },
+                { emoji: '🌳🎨', label: '공원 · 문화공간', desc: 'GPS 필수\n현장에서 100m 이내에 있어야 해요.' },
+                { emoji: '📚🎳🎤 외', label: '서점 · 볼링 · 노래방 외', desc: '영수증 또는 GPS\n둘 중 하나로 인증할 수 있어요.' },
+              ].map((item, i) => (
+                <View key={i} style={styles.guideItem}>
+                  <Text style={styles.guideItemEmoji}>{item.emoji}</Text>
+                  <View style={styles.guideItemText}>
+                    <Text style={styles.guideItemLabel}>{item.label}</Text>
+                    <Text style={styles.guideItemDesc}>{item.desc}</Text>
+                  </View>
+                </View>
+              ))}
+
+              {/* 영수증 촬영 팁 */}
+              <Text style={styles.guideSection}>📸 영수증 촬영 팁</Text>
+              <View style={styles.guideTipBox}>
+                {[
+                  '매장명이 선명하게 나오도록 촬영해주세요.',
+                  '구겨지거나 흐릿하면 인식이 어려울 수 있어요.',
+                  '같은 영수증을 두 번 사용할 수 없어요.',
+                  '키오스크 영수증도 가능해요 (직원에게 요청).',
+                ].map((tip, i) => (
+                  <Text key={i} style={styles.guideTip}>• {tip}</Text>
+                ))}
+              </View>
+
+              {/* 주의사항 */}
+              <Text style={styles.guideSection}>⚠️ 주의사항</Text>
+              <View style={styles.guideTipBox}>
+                {[
+                  '같은 장소는 하루에 1번만 체크인할 수 있어요.',
+                  '하루 최대 10곳까지 체크인 가능해요.',
+                  'GPS 체크인은 같은 장소에서 2시간에 1번만 가능해요.',
+                  '위치 조작, 영수증 재사용 등 부정 이용은 제재될 수 있어요.',
+                ].map((tip, i) => (
+                  <Text key={i} style={styles.guideTip}>• {tip}</Text>
+                ))}
+              </View>
+
+              {/* 인증 마크 안내 */}
+              <Text style={styles.guideSection}>✅ 인증 마크</Text>
+              <View style={styles.guideTipBox}>
+                <Text style={styles.guideTip}>• 영수증 인증 체크인은 <Text style={styles.guideTipBold}>인증 마크</Text>가 부여돼요.</Text>
+                <Text style={styles.guideTip}>• GPS 체크인은 미인증으로 기록돼요.</Text>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => setShowGuide(false)}
+            >
+              <Text style={styles.modalCloseBtnText}>확인</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <LinearGradient colors={Gradients.background} style={styles.flex}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -197,7 +273,9 @@ export default function CheckInScreen() {
                 <ArrowLeft size={22} color={Colors.gray[700]} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>체크인</Text>
-              <View style={styles.headerPlaceholder} />
+              <TouchableOpacity onPress={() => setShowGuide(true)} style={styles.helpBtn}>
+                <HelpCircle size={22} color={Colors.primary[500]} />
+              </TouchableOpacity>
             </View>
 
             {/* 장소 정보 카드 */}
@@ -414,7 +492,7 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.gray[900],
   },
-  headerPlaceholder: { width: 40 },
+
 
   // 장소 카드
   placeCard: {
@@ -481,6 +559,95 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
+  helpBtn: {
+    width: 40, height: 40,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.sm,
+  },
+
+  // 모달
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: BorderRadius['3xl'] ?? 28,
+    borderTopRightRadius: BorderRadius['3xl'] ?? 28,
+    padding: Spacing['2xl'],
+    maxHeight: '85%',
+    gap: Spacing.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  guideSection: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[700],
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  guideItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray[100],
+  },
+  guideItemEmoji: { fontSize: 22, width: 36 },
+  guideItemText: { flex: 1, gap: 2 },
+  guideItemLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[800],
+  },
+  guideItemDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[500],
+    lineHeight: 18,
+  },
+  guideTipBox: {
+    backgroundColor: Colors.gray[50],
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  guideTip: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[600],
+    lineHeight: 18,
+  },
+  guideTipBold: {
+    fontWeight: FontWeight.bold,
+    color: Colors.primary[600],
+  },
+  modalCloseBtn: {
+    backgroundColor: Colors.primary[500],
+    borderRadius: BorderRadius['2xl'],
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.md,
+  },
+  modalCloseBtnText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  },
+
   requiredBadge: {
     backgroundColor: Colors.primary[500],
   },

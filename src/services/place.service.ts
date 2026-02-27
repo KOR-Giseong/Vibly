@@ -79,8 +79,33 @@ export const placeService = {
     return result;
   },
 
-  async checkIn(placeId: string, mood: string, note?: string, imageUrl?: string): Promise<void> {
-    await apiClient.post(`/places/${placeId}/checkin`, { mood, note, imageUrl });
+  async checkIn(
+    placeId: string,
+    mood: string,
+    receiptUri: string | null,
+    note?: string,
+    location?: { lat: number; lng: number },
+  ): Promise<void> {
+    const formData = new FormData();
+    formData.append('mood', mood);
+    if (note) formData.append('note', note);
+
+    if (receiptUri) {
+      // 영수증 OCR 방식
+      formData.append('receipt', {
+        uri: receiptUri,
+        type: 'image/jpeg',
+        name: 'receipt.jpg',
+      } as unknown as Blob);
+    } else if (location) {
+      // GPS 방식 (영수증 없는 경우)
+      formData.append('lat', String(location.lat));
+      formData.append('lng', String(location.lng));
+    }
+
+    await apiClient.post(`/places/${placeId}/checkin`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   },
 
   async getMyCheckins(): Promise<MyCheckIn[]> {

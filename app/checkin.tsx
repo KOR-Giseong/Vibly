@@ -1,20 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, Image,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, ActionSheetIOS,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { ArrowLeft, Camera, X } from 'lucide-react-native';
+import * as Location from 'expo-location';
+import { ArrowLeft, Receipt, X, MapPin, CheckCircle } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { placeService } from '@services/place.service';
 import { MoodSelector } from '@components/features/mood/MoodSelector';
 import ScreenTransition from '@components/ScreenTransition';
 import type { Mood } from '@/types';
+
+const GPS_LIMIT_M = 100; // 체크인 허용 반경 (미터)
+
+/** Haversine 거리 계산 (미터) */
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 // 카테고리 → 이모지 매핑
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -33,7 +47,27 @@ export default function CheckInScreen() {
 
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [memo, setMemo] = useState('');
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // ── 위치 자동 취득 ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      setLocationLoading(true);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        }
+      } catch {
+        // 위치 취득 실패 시 영수증으로만 체크인 가능
+      } finally {
+        setLocationLoading(false);
+      }
+    })();
+  }, []);
 
   // ── 장소 데이터 (상세 페이지 캐시 재사용) ──────────────────────────────────
   const { data: place, isLoading: isPlaceLoading } = useQuery({
@@ -43,23 +77,67 @@ export default function CheckInScreen() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // ── 체크인 제출 ────────────────────────────────────────────────────────────
+  // ── 체크인 제출 (영수증 or GPS) ─────────────────────────────────────────────
   const { mutate: submitCheckIn, isPending: isSubmitting } = useMutation({
     mutationFn: () =>
-      placeService.checkIn(placeId!, selectedMood!.value, memo.trim() || undefined),
+      placeService.checkIn(
+        placeId!,
+        selectedMood!.value,
+        receiptUri,
+        memo.trim() || undefined,
+        receiptUri ? undefined : (userLocation ?? undefined),
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['place', placeId] });
       Alert.alert('체크인 완료! 🎉', `${place?.name ?? '장소'}에 체크인했어요.`, [
         { text: '확인', onPress: () => router.back() },
       ]);
     },
-    onError: () => {
-      Alert.alert('오류', '체크인에 실패했어요. 다시 시도해주세요.');
+    onError: (error: any) => {
+      // 422: OCR 체크인 검증 실패
+      const msg: string =
+        error?.response?.data?.message ??
+        '체크인에 실패했어요. 다시 시도해주세요.';
+      Alert.alert('체크인 실패', msg);
     },
   });
 
-  // ── 사진 선택 (갤러리) ─────────────────────────────────────────────────────
-  const handlePickPhoto = async () => {
+  // ── 영수증 촬영 (카메라/갤러리 선택) ─────────────────────────────────────────
+  const openReceiptPicker = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['취소', '카메라로 촬영', '갤러리에서 선택'], cancelButtonIndex: 0 },
+        (idx) => {
+          if (idx === 1) launchCamera();
+          if (idx === 2) launchGallery();
+        },
+      );
+    } else {
+      Alert.alert('영수증 사진', '추가 방법을 선택해주세요.', [
+        { text: '취소', style: 'cancel' },
+        { text: '카메라로 촬영', onPress: launchCamera },
+        { text: '갤러리에서 선택', onPress: launchGallery },
+      ]);
+    }
+  };
+
+  const launchCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '카메라 권한이 필요해요.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.85,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setReceiptUri(result.assets[0].uri);
+    }
+  };
+
+  const launchGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('권한 필요', '사진 접근 권한이 필요해요.');
@@ -67,16 +145,23 @@ export default function CheckInScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.8,
-      allowsEditing: true,
-      aspect: [4, 3],
+      quality: 0.85,
+      allowsEditing: false,
     });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      setReceiptUri(result.assets[0].uri);
     }
   };
 
-  const canSubmit = !!selectedMood && !isSubmitting;
+  // 장소와의 거리 계산
+  const distanceM =
+    userLocation && place?.lat && place?.lng
+      ? haversineDistance(userLocation.lat, userLocation.lng, place.lat, place.lng)
+      : null;
+  const isNearby = distanceM !== null && distanceM <= GPS_LIMIT_M;
+
+  // 영수증 있으면 OK, 없으면 반드시 GPS 100m 이내여야 함
+  const canSubmit = !!selectedMood && (!!receiptUri || isNearby) && !isSubmitting;
   const placeEmoji = CATEGORY_EMOJI[place?.category?.toUpperCase?.() ?? ''] ?? '📍';
 
   return (
@@ -137,15 +222,52 @@ export default function CheckInScreen() {
               )}
             </View>
 
-            {/* 사진 추가 */}
+            {/* 영수증 사진 (선택) + GPS 상태 */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>사진 추가 (선택)</Text>
-              {photoUri ? (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionLabel}>영수증 사진</Text>
+                <View style={styles.optionalBadge}>
+                  <Text style={styles.optionalText}>선택</Text>
+                </View>
+              </View>
+              <View style={styles.receiptHint}>
+                <Receipt size={14} color={Colors.primary[500]} />
+                <Text style={styles.receiptHintText}>영수증 첨부 시 인증 마크가 부여돼요. 없으면 GPS로 체크인됩니다.</Text>
+              </View>
+
+              {/* GPS 상태 표시 */}
+              <View style={[
+                styles.gpsStatus,
+                isNearby ? styles.gpsStatusOk : userLocation ? styles.gpsStatusWarn : styles.gpsStatusFail,
+              ]}>
+                {locationLoading ? (
+                  <ActivityIndicator size="small" color={Colors.gray[500]} />
+                ) : isNearby ? (
+                  <CheckCircle size={14} color="#16a34a" />
+                ) : (
+                  <MapPin size={14} color={userLocation ? '#d97706' : Colors.gray[400]} />
+                )}
+                <Text style={[
+                  styles.gpsStatusText,
+                  isNearby ? styles.gpsStatusTextOk
+                  : userLocation ? styles.gpsStatusTextWarn
+                  : styles.gpsStatusTextFail,
+                ]}>
+                  {locationLoading
+                    ? 'GPS 위치 확인 중...'
+                    : isNearby
+                    ? `📍 ${Math.round(distanceM!)}m 이내 — GPS 체크인 가능`
+                    : distanceM !== null
+                    ? `📍 ${Math.round(distanceM)}m 떨어짐 — ${GPS_LIMIT_M}m 이내 접근 필요 (영수증으로 체크인 가능)`
+                    : '위치 권한 없음 — 영수증으로만 체크인 가능'}
+                </Text>
+              </View>
+              {receiptUri ? (
                 <View style={styles.photoPreviewWrap}>
-                  <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+                  <Image source={{ uri: receiptUri }} style={styles.photoPreview} resizeMode="contain" />
                   <TouchableOpacity
                     style={styles.photoRemoveBtn}
-                    onPress={() => setPhotoUri(null)}
+                    onPress={() => setReceiptUri(null)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <X size={14} color={Colors.white} />
@@ -154,11 +276,12 @@ export default function CheckInScreen() {
               ) : (
                 <TouchableOpacity
                   style={styles.photoUploadArea}
-                  onPress={handlePickPhoto}
+                  onPress={openReceiptPicker}
                   activeOpacity={0.7}
                 >
-                  <Camera size={32} color={Colors.gray[400]} />
-                  <Text style={styles.photoUploadText}>사진 업로드</Text>
+                  <Receipt size={32} color={Colors.primary[400]} />
+                  <Text style={styles.photoUploadText}>영수증 촬영 / 업로드</Text>
+                  <Text style={styles.photoUploadSub}>카메라 촬영 또는 갤러리에서 선택</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -206,7 +329,15 @@ export default function CheckInScreen() {
                 <ActivityIndicator color={Colors.white} />
               ) : (
                 <Text style={[styles.submitText, !canSubmit && styles.submitTextDisabled]}>
-                  체크인 완료
+                  {!selectedMood
+                    ? '기분을 먼저 선택해주세요'
+                    : receiptUri
+                    ? '영수증 인증 체크인 ✓'
+                    : isNearby
+                    ? `GPS 체크인 (${Math.round(distanceM!)}m)`
+                    : distanceM !== null
+                    ? `너무 멀어요 (${Math.round(distanceM)}m) — 영수증 첨부 필요`
+                    : '위치 권한 없음 — 영수증을 첨부해주세요'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -298,6 +429,60 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
     color: Colors.primary[500],
+  },
+  photoUploadSub: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[400],
+    marginTop: 2,
+  },
+
+  // 섹션 헤더 (라벨 + 배지)
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  optionalBadge: {
+    backgroundColor: Colors.gray[400],
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  optionalText: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  },
+
+  // GPS 상태
+  gpsStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+  },
+  gpsStatusOk: { backgroundColor: 'rgba(22,163,74,0.08)' },
+  gpsStatusWarn: { backgroundColor: 'rgba(217,119,6,0.08)' },
+  gpsStatusFail: { backgroundColor: 'rgba(0,0,0,0.04)' },
+  gpsStatusText: { fontSize: FontSize.xs, flex: 1 },
+  gpsStatusTextOk: { color: '#16a34a' },
+  gpsStatusTextWarn: { color: '#d97706' },
+  gpsStatusTextFail: { color: Colors.gray[400] },
+
+  // 영수증 안내 문구
+  receiptHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(152,16,250,0.06)',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+  },
+  receiptHintText: {
+    fontSize: FontSize.xs,
+    color: Colors.primary[600],
+    flex: 1,
   },
   photoPreviewWrap: {
     borderRadius: BorderRadius['2xl'],

@@ -37,5 +37,9 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/ios
 /android
+
+# iOS - 생성되는 폴더만 제외 (Podfile 등은 추적)
+/ios/Pods/
+/ios/build/
+/ios/DerivedData/

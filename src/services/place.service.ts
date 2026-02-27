@@ -89,8 +89,6 @@ export const placeService = {
   async getBookmarks(): Promise<Place[]> {
     const { data } = await apiClient.get<Place[]>('/places/bookmarks');
     const result = (data as any[]).map(normalizePlace);
-    console.log('[Bookmarks] raw[0]:', JSON.stringify((data as any[])[0]));
-    console.log('[Bookmarks] normalized[0]:', JSON.stringify(result[0]));
     return result;
   },
 

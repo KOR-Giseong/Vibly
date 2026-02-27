@@ -88,7 +88,6 @@ export function useSocialAuth() {
   }, [googleResponse]);
 
   const signInWithGoogle = async () => {
-    console.log('[Google] signInWithGoogle called, Platform.OS:', Platform.OS, 'clientId:', googleClientId, 'redirectUri:', GOOGLE_REDIRECT_URI);
     if (!googleClientId) {
       setError('Google 클라이언트 ID가 설정되지 않았어요.');
       return;
@@ -103,8 +102,6 @@ export function useSocialAuth() {
       url.searchParams.set('redirect_uri', SOCIAL_REDIRECT_URI);
       url.searchParams.set('response_type', 'code');
       url.searchParams.set('scope', 'openid profile email');
-      console.log('[Google] Redirecting to:', url.toString());
-      console.log('[Google] REDIRECT_URI:', SOCIAL_REDIRECT_URI);
       sessionStorage.setItem('oauthProvider', 'google');
       window.location.href = url.toString();
       return;

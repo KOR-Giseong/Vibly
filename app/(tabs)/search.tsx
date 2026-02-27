@@ -157,14 +157,18 @@ export default function SearchScreen() {
 
   const handlePressPlace = (place: Place) => {
     setPlace(place);
-    // 무드 검색 결과에서 진입할 때 source=search + mood 전달
     if (showMoodResults) {
+      // 무드 검색 결과 → 무드 기반 분석
       const moodLabel = selectedMood?.label ?? searchResult?.query;
       router.push({
         pathname: `/place/${place.id}`,
         params: { source: 'search', ...(moodLabel ? { mood: moodLabel } : {}) },
       });
+    } else if (!submittedQuery.trim()) {
+      // 주변 장소 (검색어 없음) → 선호 바이브 기반 분석
+      router.push({ pathname: `/place/${place.id}`, params: { source: 'home' } });
     } else {
+      // 키워드 검색 결과 → 기본 분석
       router.push(`/place/${place.id}`);
     }
   };

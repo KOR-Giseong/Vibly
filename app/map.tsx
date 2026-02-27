@@ -365,7 +365,7 @@ export default function MapScreen() {
               <View style={styles.cardBtns}>
                 <TouchableOpacity
                   style={styles.btnOutline}
-                  onPress={() => router.push(`/place/${selectedPlace.id}`)}
+                  onPress={() => router.push({ pathname: `/place/${selectedPlace.id}`, params: { source: 'home' } })}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.btnOutlineText}>상세보기</Text>

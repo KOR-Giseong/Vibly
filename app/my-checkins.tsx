@@ -142,7 +142,7 @@ export default function MyCheckInsScreen() {
             renderItem={({ item }) => (
               <CheckInCard
                 item={item}
-                onPress={() => router.push(`/place/${item.placeId}`)}
+                onPress={() => router.push({ pathname: '/place/[id]', params: { id: item.placeId, source: 'home' } })}
               />
             )}
             contentContainerStyle={[

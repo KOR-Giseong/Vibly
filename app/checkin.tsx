@@ -200,7 +200,7 @@ export default function CheckInScreen() {
               {[
                 { emoji: '☕🍽️🍺', label: '카페 · 식당 · 바', desc: '영수증 필수\n결제 후 받은 영수증을 촬영해주세요.' },
                 { emoji: '🌳🎨', label: '공원 · 문화공간', desc: 'GPS 필수\n현장에서 100m 이내에 있어야 해요.' },
-                { emoji: '📚🎳🎤 외', label: '서점 · 볼링 · 노래방 외', desc: '영수증 또는 GPS\n둘 중 하나로 인증할 수 있어요.' },
+                { emoji: '📚🎳🎤···', label: '그 외 모든 장소', desc: '영수증 또는 GPS\n둘 중 하나로 인증할 수 있어요.' },
               ].map((item, i) => (
                 <View key={i} style={styles.guideItem}>
                   <Text style={styles.guideItemEmoji}>{item.emoji}</Text>
@@ -237,12 +237,6 @@ export default function CheckInScreen() {
                 ))}
               </View>
 
-              {/* 인증 마크 안내 */}
-              <Text style={styles.guideSection}>✅ 인증 마크</Text>
-              <View style={styles.guideTipBox}>
-                <Text style={styles.guideTip}>• 영수증 인증 체크인은 <Text style={styles.guideTipBold}>인증 마크</Text>가 부여돼요.</Text>
-                <Text style={styles.guideTip}>• GPS 체크인은 미인증으로 기록돼요.</Text>
-              </View>
             </ScrollView>
 
             <TouchableOpacity
@@ -337,7 +331,7 @@ export default function CheckInScreen() {
                     ? '이 장소는 영수증으로만 체크인할 수 있어요.'
                     : checkInMode === 'gps'
                     ? '이 장소는 GPS로만 체크인할 수 있어요. 100m 이내 접근 필요.'
-                    : '영수증 첨부 시 인증 마크 부여, 없으면 GPS 100m 이내로 체크인.'
+                    : '영수증 또는 GPS 100m 이내로 체크인할 수 있어요.'
                   }
                 </Text>
               </View>

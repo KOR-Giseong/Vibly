@@ -320,13 +320,15 @@ export default function EmailLoginScreen() {
               textColor="#101828"
               borderColor="#E5E7EB"
             />
-            <SocialButton
-              icon={AppleIcon}
-              label="Apple로 계속하기"
-              onPress={signInWithApple}
-              backgroundColor="#000000"
-              textColor={Colors.white}
-            />
+            {Platform.OS === 'ios' && (
+              <SocialButton
+                icon={AppleIcon}
+                label="Apple로 계속하기"
+                onPress={signInWithApple}
+                backgroundColor="#000000"
+                textColor={Colors.white}
+              />
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

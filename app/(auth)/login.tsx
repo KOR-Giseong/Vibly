@@ -160,15 +160,17 @@ export default function LoginScreen() {
           textColor="#101828"
           borderColor="#E5E7EB"
         />
-        <LoginButton
-          icon={AppleIcon}
-          label="Apple로 시작하기"
-          onPress={signInWithApple}
-          backgroundColor="#000000"
-          textColor={Colors.white}
-        />
+        {Platform.OS === 'ios' && (
+          <LoginButton
+            icon={AppleIcon}
+            label="Apple로 시작하기"
+            onPress={signInWithApple}
+            backgroundColor="#000000"
+            textColor={Colors.white}
+          />
+        )}
 
-        {/* 약관 */}
+        {/* 약관 */
         <Text style={styles.terms}>
           {'계속 진행하면 '}
           <Text style={styles.termsLink}>서비스 약관</Text>

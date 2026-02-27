@@ -285,13 +285,13 @@ export default function BookmarkScreen() {
               viewMode === 'grid' ? (
                 <GridCard
                   place={item}
-                  onPress={() => router.push(`/place/${item.id}`)}
+                  onPress={() => router.push({ pathname: `/place/${item.id}`, params: { source: 'bookmark' } })}
                   onRemove={() => handleRemove(item.id)}
                 />
               ) : (
                 <ListCard
                   place={item}
-                  onPress={() => router.push(`/place/${item.id}`)}
+                  onPress={() => router.push({ pathname: `/place/${item.id}`, params: { source: 'bookmark' } })}
                   onRemove={() => handleRemove(item.id)}
                 />
               )

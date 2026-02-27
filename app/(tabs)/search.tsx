@@ -57,7 +57,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { coords, status: locationStatus } = useLocation();
-  const { searchResult, isSearching, setSearchResult } = useMoodStore();
+  const { searchResult, isSearching, setSearchResult, selectedMood } = useMoodStore();
   const { setPlace } = usePlaceCacheStore();
 
   const [input, setInput] = useState('');
@@ -157,7 +157,16 @@ export default function SearchScreen() {
 
   const handlePressPlace = (place: Place) => {
     setPlace(place);
-    router.push(`/place/${place.id}`);
+    // 무드 검색 결과에서 진입할 때 source=search + mood 전달
+    if (showMoodResults) {
+      const moodLabel = selectedMood?.label ?? searchResult?.query;
+      router.push({
+        pathname: `/place/${place.id}`,
+        params: { source: 'search', ...(moodLabel ? { mood: moodLabel } : {}) },
+      });
+    } else {
+      router.push(`/place/${place.id}`);
+    }
   };
 
   const hasSearched = submittedQuery.trim().length > 0;

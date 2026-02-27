@@ -16,6 +16,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow 
 import ScreenTransition from '@components/ScreenTransition';
 import { placeService } from '@services/place.service';
 import { usePlaceCacheStore } from '@stores/placeCache.store';
+import { useAuthStore } from '@stores/auth.store';
 import ShareIcon from '@assets/Share.svg';
 import ThumsIcon from '@assets/Thums.svg';
 import type { PlaceDetail, PlaceReview } from '@/types';
@@ -201,22 +202,35 @@ export default function PlaceDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, source, mood } = useLocalSearchParams<{ id: string; source?: string; mood?: string }>();
   const queryClient = useQueryClient();
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   const cachedPlace = usePlaceCacheStore((s) => s.places[id as string]);
+  const { user } = useAuthStore();
 
   // ── 데이터 패치 ────────────────────────────────────────────────────────
+  // 진입 경로별 AI 분석 컨텍스트 구성
+  const placeContext = React.useMemo(() => {
+    if (source === 'search' && mood) {
+      return { mood };
+    }
+    if ((source === 'home' || source === 'bookmark') && user?.preferredVibes?.length) {
+      return { vibes: user.preferredVibes };
+    }
+    return undefined;
+  }, [source, mood, user?.preferredVibes]);
+
   const { data: place, isLoading, isError } = useQuery<PlaceDetail>({
-    queryKey: ['place', id],
+    queryKey: ['place', id, source, mood, user?.preferredVibes?.join(',')],
     queryFn: () =>
       placeService.getById(
         id,
         cachedPlace
           ? { name: cachedPlace.name, lat: cachedPlace.lat, lng: cachedPlace.lng }
           : undefined,
+        placeContext,
       ),
     enabled: !!id,
   });
@@ -338,6 +352,17 @@ export default function PlaceDetailScreen() {
   const vibeScore = (place.vibeScore != null && place.vibeScore > 0)
     ? place.vibeScore
     : (emotions[0]?.value ?? 72);
+
+  // 진입 경로별 AI 분석 문구
+  const vibeMatchText = React.useMemo(() => {
+    if (source === 'search' && mood) {
+      return `'${mood}' 감정과 ${vibeScore}% 일치해요`;
+    }
+    if (source === 'home' || source === 'bookmark') {
+      return `선호 바이브와 ${vibeScore}% 일치해요`;
+    }
+    return `바이브와 ${vibeScore}% 일치해요`;
+  }, [source, mood, vibeScore]);
 
   return (
     <ScreenTransition>
@@ -481,11 +506,7 @@ export default function PlaceDetailScreen() {
                   <Text style={styles.vibeScoreBig}>{vibeScore}</Text>
                   <Text style={styles.vibeScoreUnit}>/ 100점</Text>
                 </View>
-                <Text style={styles.vibeMatchText}>
-                  {'당신의 감정과 '}
-                  <Text style={{ fontWeight: FontWeight.bold }}>{vibeScore}%</Text>
-                  {' 일치해요'}
-                </Text>
+                <Text style={styles.vibeMatchText}>{vibeMatchText}</Text>
                 <View style={styles.vibeBars}>
                   {emotions.map((e) => (
                     <EmotionBar key={e.label} label={e.label} value={e.value} />

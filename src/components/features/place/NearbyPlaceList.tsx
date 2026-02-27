@@ -38,7 +38,7 @@ export function NearbyPlaceList({ coords, locationStatus, onSeeAll }: NearbyPlac
 
   const handlePress = (place: Place) => {
     setPlace(place);
-    router.push(`/place/${place.id}`);
+    router.push({ pathname: `/place/${place.id}`, params: { source: 'home' } });
   };
 
   const isDenied = locationStatus === 'denied';

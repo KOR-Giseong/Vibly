@@ -49,6 +49,11 @@ interface SearchParams {
   limit?: number;
 }
 
+export interface PlaceContext {
+  mood?: string;          // 무드 검색에서 진입 시
+  vibes?: string[];       // 홈/북마크에서 진입 시 (선호 바이브)
+}
+
 export const placeService = {
   async getNearby(params: NearbyParams): Promise<PaginatedResponse<Place>> {
     const { data } = await apiClient.get<PaginatedResponse<Place>>('/places/nearby', { params });
@@ -60,9 +65,19 @@ export const placeService = {
     return { ...data, data: data.data.map(normalizePlace) };
   },
 
-  async getById(id: string, hint?: { name: string; lat: number; lng: number }): Promise<PlaceDetail> {
-    const params = hint ? { name: hint.name, lat: hint.lat, lng: hint.lng } : undefined;
-    const { data } = await apiClient.get<PlaceDetail>(`/places/${id}`, { params });
+  async getById(id: string, hint?: { name: string; lat: number; lng: number }, context?: PlaceContext): Promise<PlaceDetail> {
+    const params: Record<string, string> = {};
+    if (hint) {
+      params.name = hint.name;
+      params.lat  = String(hint.lat);
+      params.lng  = String(hint.lng);
+    }
+    if (context?.mood) {
+      params.mood = context.mood;
+    } else if (context?.vibes && context.vibes.length > 0) {
+      params.vibes = context.vibes.join(',');
+    }
+    const { data } = await apiClient.get<PlaceDetail>(`/places/${id}`, { params: Object.keys(params).length ? params : undefined });
     return normalizePlace(data) as PlaceDetail;
   },
 

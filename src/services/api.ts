@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { storage } from '@utils/storage';
+import { router } from 'expo-router';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
@@ -37,6 +38,12 @@ apiClient.interceptors.response.use(
         await storage.deleteItem('accessToken');
         await storage.deleteItem('refreshToken');
       }
+    }
+
+    // 계정 정지 → 즉시 정지 화면으로 이동
+    const responseData = error.response?.data as any;
+    if (error.response?.status === 403 && responseData?.code === 'ACCOUNT_SUSPENDED') {
+      router.replace('/suspended');
     }
 
     return Promise.reject(error);

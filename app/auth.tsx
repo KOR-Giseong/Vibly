@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { Platform, View, ActivityIndicator, Text } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { authService } from '@services/auth.service';
 import { useAuthStore } from '@stores/auth.store';
@@ -12,7 +12,8 @@ export default function AuthCallback() {
   const { setUser } = useAuthStore();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    // 웹 전용 콜백 화면 (네이티브는 deep link로 처리)
+    if (Platform.OS !== 'web') return;
 
     const provider = sessionStorage.getItem('oauthProvider') as 'google' | 'kakao' | null;
     sessionStorage.removeItem('oauthProvider');

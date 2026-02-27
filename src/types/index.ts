@@ -9,6 +9,7 @@ export interface User {
   email: string;
   name: string;
   nickname?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
   preferredVibes?: string[];
   isProfileComplete: boolean;
   avatarUrl?: string;
@@ -211,4 +212,80 @@ export interface ApiError {
   statusCode: number;
   message: string;
   error?: string;
+}
+
+// ─── Community ────────────────────────────────────────────────────────────────
+
+export type PostCategory = 'FREE' | 'INFO' | 'QUESTION' | 'REVIEW';
+
+export const POST_CATEGORY_LABEL: Record<PostCategory, string> = {
+  FREE: '자유게시판',
+  INFO: '정보공유',
+  QUESTION: '질문/도움',
+  REVIEW: '장소후기',
+};
+export type ReportReason = 'SPAM' | 'ABUSE' | 'ILLEGAL' | 'ADULT' | 'PRIVACY' | 'OTHER';
+
+export const REPORT_REASON_LABEL: Record<ReportReason, string> = {
+  SPAM: '스팸/광고',
+  ABUSE: '욕설/협오',
+  ILLEGAL: '불법 정보',
+  ADULT: '성인/음란물',
+  PRIVACY: '개인정보 침해',
+  OTHER: '기타',
+};
+export interface PostAuthor {
+  id: string;
+  nickname?: string;
+  name: string;
+  avatarUrl?: string;
+}
+
+export interface PostComment {
+  id: string;
+  body: string;
+  createdAt: string;
+  user: PostAuthor;
+}
+
+export interface Post {
+  id: string;
+  category: PostCategory;
+  title: string;
+  body: string;
+  imageUrl?: string;
+  isPinned: boolean;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  isLiked: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user: PostAuthor;
+  comments?: PostComment[];
+}
+
+export interface PostsResponse {
+  items: Post[];
+  total: number;
+  page: number;
+  hasNext: boolean;
+}
+
+// ─── Notice ───────────────────────────────────────────────────────────────────
+
+export interface Notice {
+  id: string;
+  title: string;
+  body: string;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NoticesResponse {
+  items: Notice[];
+  total: number;
+  page: number;
+  hasNext: boolean;
 }

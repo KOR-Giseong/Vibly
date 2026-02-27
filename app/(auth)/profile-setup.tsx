@@ -33,6 +33,7 @@ export default function ProfileSetupScreen() {
   const { setUser } = useAuthStore();
   const [nickname, setNickname] = useState('');
   const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>('idle');
+  const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER' | null>(null);
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -69,6 +70,10 @@ export default function ProfileSetupScreen() {
       setError('닉네임 중복확인을 해주세요.');
       return;
     }
+    if (!gender) {
+      setError('성별을 선택해주세요.');
+      return;
+    }
     if (selectedVibes.length === 0) {
       setError('분위기를 하나 이상 선택해주세요.');
       return;
@@ -76,10 +81,9 @@ export default function ProfileSetupScreen() {
     setError('');
     setLoading(true);
     try {
-      const updatedUser = await authService.updateProfile(nickname.trim(), selectedVibes);
-      // (auth)/_layout의 redirect 경쟁 방지: 내비게이션 먼저, store 업데이트는 직후
-      router.replace('/welcome');
+      const updatedUser = await authService.updateProfile({ nickname: nickname.trim(), gender, preferredVibes: selectedVibes });
       setUser(updatedUser);
+      router.replace('/welcome');
     } catch {
       setError('저장에 실패했어요. 다시 시도해주세요.');
     } finally {
@@ -88,7 +92,7 @@ export default function ProfileSetupScreen() {
   };
 
   const canCheckNickname = nickname.trim().length > 0 && nicknameStatus !== 'checking';
-  const canSubmit = nicknameStatus === 'available' && selectedVibes.length > 0;
+  const canSubmit = nicknameStatus === 'available' && !!gender && selectedVibes.length > 0;
 
   const inputBorderColor =
     nicknameStatus === 'available' ? '#10B981' :
@@ -174,6 +178,38 @@ export default function ProfileSetupScreen() {
             )}
           </View>
 
+          {/* 성별 선택 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>성별</Text>
+            <View style={styles.genderRow}>
+              {([['MALE', '남성', '👨'], ['FEMALE', '여성', '👩'], ['OTHER', '기타', '🧑']] as const).map(([val, label, emoji]) => (
+                <TouchableOpacity
+                  key={val}
+                  onPress={() => setGender(val)}
+                  activeOpacity={0.8}
+                  style={styles.genderChipWrap}
+                >
+                  {gender === val ? (
+                    <LinearGradient
+                      colors={['#9810FA', '#E60076']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.genderChip}
+                    >
+                      <Text style={styles.genderEmoji}>{emoji}</Text>
+                      <Text style={[styles.genderLabel, styles.genderLabelSelected]}>{label}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={[styles.genderChip, styles.genderChipUnselected]}>
+                      <Text style={styles.genderEmoji}>{emoji}</Text>
+                      <Text style={styles.genderLabel}>{label}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           {/* 분위기 선택 */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>
@@ -236,7 +272,7 @@ export default function ProfileSetupScreen() {
             />
             {loading
               ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.btnText}>vibly 시작하기</Text>
+              : <Text style={styles.btnText}>Vibly 시작하기</Text>
             }
           </TouchableOpacity>
         </ScrollView>
@@ -340,6 +376,41 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
+  },
+
+  genderRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  genderChipWrap: {
+    flex: 1,
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+  },
+  genderChip: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    gap: 4,
+    borderRadius: BorderRadius.lg,
+  },
+  genderChipUnselected: {
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.gray[200],
+    ...Shadow.sm,
+  },
+  genderEmoji: {
+    fontSize: 20,
+  },
+  genderLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.gray[700],
+  },
+  genderLabelSelected: {
+    color: Colors.white,
+    fontWeight: FontWeight.semibold,
   },
 
   vibesGrid: {

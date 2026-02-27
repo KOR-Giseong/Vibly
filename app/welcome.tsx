@@ -84,7 +84,7 @@ export default function WelcomeScreen() {
 
         {/* 서브타이틀 */}
         <Animated.Text style={[styles.subtitle, anim(2)]}>
-          vibly와 함께 특별한 공간을{'\n'}발견해보세요
+          Vibly와 함께 특별한 공간을{'\n'}발견해보세요
         </Animated.Text>
 
         {/* 피쳐 카드 */}
@@ -115,7 +115,7 @@ export default function WelcomeScreen() {
               end={{ x: 1, y: 0 }}
               style={[StyleSheet.absoluteFill, { borderRadius: BorderRadius.lg }]}
             />
-            <Text style={styles.btnText}>vibly 시작하기</Text>
+            <Text style={styles.btnText}>Vibly 시작하기</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>

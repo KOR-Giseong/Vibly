@@ -56,7 +56,7 @@ function sortPlaces(places: Place[], sort: SortType): Place[] {
 export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { coords } = useLocation();
+  const { coords, status: locationStatus } = useLocation();
   const { searchResult, isSearching, setSearchResult } = useMoodStore();
   const { setPlace } = usePlaceCacheStore();
 
@@ -67,11 +67,13 @@ export default function SearchScreen() {
   const [showSort, setShowSort] = useState(false);
 
   // 주변 장소 (검색어 없을 때 기본으로 표시)
-  const { data: nearbyData, isLoading: nearbyLoading } = useQuery({
+  const { data: nearbyData, isLoading: nearbyLoading, isError: nearbyError, refetch: refetchNearby } = useQuery({
     queryKey: ['nearby-search', coords.lat, coords.lng],
     queryFn: () =>
       placeService.getNearby({ lat: coords.lat, lng: coords.lng, radius: 3000, limit: 30 }),
+    enabled: locationStatus === 'granted',
     staleTime: 1000 * 60 * 5,
+    retry: 1,
   });
 
   const { data: searchData, isFetching: searchFetching } = useQuery({
@@ -132,7 +134,8 @@ export default function SearchScreen() {
     return () => { moodPulseRef.current?.stop(); };
   }, [searchResult]);
 
-  const isFetching = searchFetching || nearbyLoading || isSearching;
+  const isLocationLoading = locationStatus === 'idle' || locationStatus === 'loading';
+  const isFetching = searchFetching || nearbyLoading || isSearching || isLocationLoading;
   const rawPlaces: Place[] = submittedQuery.trim()
     ? (searchData?.data ?? [])
     : showMoodResults
@@ -257,9 +260,18 @@ export default function SearchScreen() {
         {/* 결과 없음 */}
         {!isFetching && places.length === 0 && (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>{hasSearched ? '😅' : '📍'}</Text>
-            <Text style={styles.emptyTitle}>{hasSearched ? '검색 결과가 없어요' : '주변 장소를 불러오는 중'}</Text>
-            <Text style={styles.emptyDesc}>{hasSearched ? '다른 키워드로 검색해보세요' : '잠시 후 다시 시도해보세요'}</Text>
+            <Text style={styles.emptyIcon}>{hasSearched ? '😅' : nearbyError ? '⚠️' : '📍'}</Text>
+            <Text style={styles.emptyTitle}>
+              {hasSearched ? '검색 결과가 없어요' : nearbyError ? '주변 장소를 불러오지 못했어요' : '주변 장소가 없어요'}
+            </Text>
+            <Text style={styles.emptyDesc}>
+              {hasSearched ? '다른 키워드로 검색해보세요' : nearbyError ? '네트워크 상태를 확인해주세요' : '더 넓은 범위를 탐색해보세요'}
+            </Text>
+            {nearbyError && !hasSearched && (
+              <TouchableOpacity style={styles.retryBtn} onPress={() => refetchNearby()}>
+                <Text style={styles.retryBtnText}>다시 시도</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -413,6 +425,11 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 56 },
   emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.gray[900] },
   emptyDesc: { fontSize: FontSize.base, color: Colors.gray[500], textAlign: 'center', lineHeight: 22 },
+  retryBtn: {
+    marginTop: Spacing.md, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm,
+    backgroundColor: Colors.primary[600], borderRadius: BorderRadius.full,
+  },
+  retryBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: '#fff' },
 
   list: { paddingHorizontal: Spacing['2xl'], gap: Spacing.md },
   listItemWrap: { alignSelf: 'stretch' },

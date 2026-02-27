@@ -40,12 +40,18 @@ export function useSocialAuth() {
     provider: 'kakao' | 'google' | 'apple',
     token: string,
     redirectUri?: string,
+    name?: string,
   ) => {
     try {
-      await authService.socialLogin(provider, token, redirectUri);
+      await authService.socialLogin(provider, token, redirectUri, name);
       const user = await authService.getMe();
       setUser(user);
-      router.replace('/(tabs)');
+      // 신규 사용자(프로필 미완성) → 프로필 설정, 기존 사용자 → 홈
+      if (!user.isProfileComplete) {
+        router.replace('/(auth)/profile-setup');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (e: any) {
       setError(e?.response?.data?.message ?? `${provider} 로그인에 실패했어요.`);
       setLoading(null);
@@ -121,7 +127,10 @@ export function useSocialAuth() {
         ],
       });
       if (credential.identityToken) {
-        await finalizeSocialLogin('apple', credential.identityToken);
+        const given = credential.fullName?.givenName ?? '';
+        const family = credential.fullName?.familyName ?? '';
+        const appleName = [family, given].filter(Boolean).join('') || undefined;
+        await finalizeSocialLogin('apple', credential.identityToken, undefined, appleName);
       } else {
         setLoading(null);
       }

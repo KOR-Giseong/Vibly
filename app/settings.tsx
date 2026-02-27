@@ -37,6 +37,7 @@ import {
 } from 'lucide-react-native';
 import { Colors, Gradients, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@constants/theme';
 import { useAuth } from '@hooks/useAuth';
+import { useAuthStore } from '@stores/auth.store';
 import { authService } from '@services/auth.service';
 
 const ADMIN_WEB_URL = 'https://admin.vibly.app';
@@ -134,6 +135,7 @@ function ChangePasswordModal({ visible, onClose }: { visible: boolean; onClose: 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { reset } = useAuthStore();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -162,13 +164,13 @@ export default function SettingsScreen() {
   }, [logout]);
 
   const handleDeleteAccount = useCallback(() => {
-    Alert.alert('계정 삭제', '모든 데이터가 영구적으로 삭제됩니다. 정말 삭제하시겠어요?', [
+    Alert.alert('계정 삭제', '모든 데이터가 영구적으로 삭제되며, 탈퇴 후 30일간 동일 계정으로 재가입이 제한됩니다. 정말 삭제하시겠어요?', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제하기',
         style: 'destructive',
         onPress: () =>
-          Alert.alert('최종 확인', '이 작업은 되돌릴 수 없습니다. 계속하시겠어요?', [
+          Alert.alert('최종 확인', '탈퇴 시 모든 데이터가 삭제되고 30일간 재가입이 불가능합니다. 계속하시겠어요?', [
             { text: '취소', style: 'cancel' },
             {
               text: '영구 삭제',
@@ -176,6 +178,7 @@ export default function SettingsScreen() {
               onPress: async () => {
                 try {
                   await authService.deleteAccount();
+                  reset();
                   router.replace('/(auth)/login');
                 } catch { Alert.alert('오류', '계정 삭제에 실패했어요.'); }
               },
@@ -183,7 +186,7 @@ export default function SettingsScreen() {
           ]),
       },
     ]);
-  }, [router]);
+  }, [router, reset]);
 
   const openAdminWeb = useCallback(() => Linking.openURL(ADMIN_WEB_URL), []);
   const handleLanguage = useCallback(() => {

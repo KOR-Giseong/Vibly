@@ -33,7 +33,7 @@ export default function HomeScreen() {
   const [aiQuery, setAiQuery] = useState('');
   const [locationModalDismissed, setLocationModalDismissed] = useState(false);
 
-  const displayName = user?.name?.split(' ')[0] ?? '게스트';
+  const displayName = (user?.nickname ?? user?.name)?.split(' ')[0] ?? '게스트';
 
   // 기분 카드 선택 → 검색 후 검색 화면으로 이동
   const handleMoodSelect = (mood: Mood) => {

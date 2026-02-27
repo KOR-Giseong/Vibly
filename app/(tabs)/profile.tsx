@@ -136,6 +136,7 @@ function EditProfileModal({
   visible,
   initialName,
   initialNickname,
+  initialGender,
   initialVibes,
   onClose,
   onSave,
@@ -143,12 +144,14 @@ function EditProfileModal({
   visible: boolean;
   initialName: string;
   initialNickname: string;
+  initialGender: 'MALE' | 'FEMALE' | 'OTHER' | null;
   initialVibes: string[];
   onClose: () => void;
-  onSave: (data: { name: string; nickname: string; preferredVibes: string[] }) => Promise<void>;
+  onSave: (data: { name: string; nickname: string; gender: 'MALE' | 'FEMALE' | 'OTHER' | null; preferredVibes: string[] }) => Promise<void>;
 }) {
   const [name, setName] = useState(initialName);
   const [nickname, setNickname] = useState(initialNickname);
+  const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER' | null>(initialGender);
   const [vibes, setVibes] = useState<string[]>(initialVibes);
   const [saving, setSaving] = useState(false);
 
@@ -157,6 +160,7 @@ function EditProfileModal({
     if (visible) {
       setName(initialName);
       setNickname(initialNickname);
+      setGender(initialGender);
       setVibes(initialVibes);
     }
   }, [visible]);
@@ -177,7 +181,7 @@ function EditProfileModal({
     if (!name.trim()) { Alert.alert('이름을 입력해주세요'); return; }
     setSaving(true);
     try {
-      await onSave({ name: name.trim(), nickname: nickname.trim(), preferredVibes: vibes });
+      await onSave({ name: name.trim(), nickname: nickname.trim(), gender, preferredVibes: vibes });
       onClose();
     } catch (e: any) {
       Alert.alert('저장 실패', e?.response?.data?.message ?? '다시 시도해주세요');
@@ -225,6 +229,31 @@ function EditProfileModal({
                 maxLength={30}
                 autoCapitalize="none"
               />
+
+              {/* 성별 */}
+              <Text style={styles.inputLabel}>성별</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                {([['MALE', '남성', '👨'], ['FEMALE', '여성', '👩'], ['OTHER', '기타', '🧑']] as const).map(([val, label, emoji]) => {
+                  const selected = gender === val;
+                  return (
+                    <TouchableOpacity
+                      key={val}
+                      onPress={() => setGender(val)}
+                      activeOpacity={0.8}
+                      style={[
+                        styles.genderChipEdit,
+                        selected && styles.genderChipEditSelected,
+                      ]}
+                    >
+                      <Text style={{ fontSize: 18 }}>{emoji}</Text>
+                      <Text style={[
+                        styles.genderChipEditLabel,
+                        selected && styles.genderChipEditLabelSelected,
+                      ]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               {/* 선호 바이브 */}
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
@@ -307,14 +336,23 @@ export default function ProfileScreen() {
   const displayName = user?.nickname ?? user?.name ?? '사용자';
 
   // ── 아바타 변경 ───────────────────────────────────────────────────────────
-  const handleAvatarPress = async () => {
+  const handleAvatarPress = () => {
+    const options = [
+      { text: '사진 선택', onPress: handlePickPhoto },
+      ...(user?.avatarUrl ? [{ text: '기본 이미지로 변경', onPress: handleResetAvatar }] : []),
+      { text: '취소', style: 'cancel' as const },
+    ];
+    Alert.alert('프로필 사진', '변경할 방법을 선택하세요.', options);
+  };
+
+  const handlePickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('권한 필요', '사진 접근 권한을 허용해주세요.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.6,
@@ -338,8 +376,20 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleResetAvatar = async () => {
+    setUploading(true);
+    try {
+      await authService.resetAvatar();
+      setUser({ ...(user as any), avatarUrl: null });
+    } catch {
+      Alert.alert('실패', '기본 이미지로 변경에 실패했어요.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // ── 프로필 저장 ───────────────────────────────────────────────────────────
-  const handleSaveProfile = async (data: { name: string; nickname: string; preferredVibes: string[] }) => {
+  const handleSaveProfile = async (data: { name: string; nickname: string; gender: 'MALE' | 'FEMALE' | 'OTHER' | null; preferredVibes: string[] }) => {
     const updated = await authService.updateProfile(data);
     setUser({ ...(user as any), ...updated });
     qc.invalidateQueries({ queryKey: ['user-stats'] });
@@ -387,6 +437,13 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.email}>{user?.email ?? ''}</Text>
+
+            {/* 성별 배지 */}
+            <View style={styles.genderBadge}>
+              <Text style={styles.genderBadgeText}>
+                {user?.gender === 'MALE' ? '👨 남성' : user?.gender === 'FEMALE' ? '👩 여성' : user?.gender === 'OTHER' ? '🧑 기타' : '⚪ 성별 미설정'}
+              </Text>
+            </View>
 
             {/* 선호 바이브 태그 */}
             {user?.preferredVibes && user.preferredVibes.length > 0 && (
@@ -463,6 +520,7 @@ export default function ProfileScreen() {
         visible={editVisible}
         initialName={user?.name ?? ''}
         initialNickname={user?.nickname ?? ''}
+        initialGender={user?.gender ?? null}
         initialVibes={user?.preferredVibes ?? []}
         onClose={() => setEditVisible(false)}
         onSave={handleSaveProfile}
@@ -524,7 +582,32 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary[50],
     alignItems: 'center', justifyContent: 'center',
   },
-  email: { fontSize: FontSize.sm, color: Colors.gray[400], marginBottom: Spacing.lg },
+  email: { fontSize: FontSize.sm, color: Colors.gray[400], marginBottom: Spacing.sm },
+
+  // 성별 배지 (프로필 카드)
+  genderBadge: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.gray[100], borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: 4,
+    marginBottom: Spacing.lg,
+  },
+  genderBadgeText: { fontSize: FontSize.xs, color: Colors.gray[600], fontWeight: FontWeight.medium },
+
+  // 성별 칩 (편집 모달)
+  genderChipEdit: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1.5,
+    borderColor: Colors.gray[200],
+    backgroundColor: Colors.white,
+  },
+  genderChipEditSelected: {
+    borderColor: Colors.primary[600],
+    backgroundColor: Colors.primary[50],
+  },
+  genderChipEditLabel: { fontSize: FontSize.sm, color: Colors.gray[500], fontWeight: FontWeight.medium },
+  genderChipEditLabelSelected: { color: Colors.primary[700], fontWeight: FontWeight.semibold },
 
   // 바이브 태그
   vibesRow: {

@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -134,7 +135,21 @@ export default function EmailLoginScreen() {
       setUser(user);
       router.replace(user.isProfileComplete ? '/(tabs)' : '/(auth)/profile-setup');
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? '요청에 실패했어요. 다시 시도해주세요.');
+      const status = e?.response?.status;
+      const message = e?.response?.data?.message ?? '요청에 실패했어요. 다시 시도해주세요.';
+      // 404: 계정 없음 → 회원가입 유도
+      if (mode === 'login' && status === 404) {
+        Alert.alert(
+          '계정이 없어요',
+          `${email}로 등록된 계정이 없어요.\n회원가입 하시겠어요?`,
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '회원가입', onPress: () => switchMode('signup') },
+          ],
+        );
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }

@@ -17,5 +17,5 @@ export function useAuth() {
     setUser(me);
   }, [setUser]);
 
-  return { user, isAuthenticated, isLoading, logout, refreshUser };
+  return { user, isAuthenticated, isLoading, logout, refreshUser, reset };
 }

@@ -96,7 +96,7 @@ const LoginButton = ({
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signInWithKakao, signInWithGoogle, signInWithApple } = useSocialAuth();
+  const { signInWithKakao, signInWithGoogle, signInWithApple, error, clearError } = useSocialAuth();
 
   const handleEmail = () => {
     router.push('/(auth)/email-login');
@@ -132,6 +132,11 @@ export default function LoginScreen() {
 
       {/* 로그인 버튼 영역 */}
       <View style={[styles.btnArea, { paddingBottom: insets.bottom + Spacing['2xl'] }]}>
+        {!!error && (
+          <TouchableOpacity style={styles.errorBox} onPress={clearError} activeOpacity={0.8}>
+            <Text style={styles.errorText}>{error}</Text>
+          </TouchableOpacity>
+        )}
         <LoginButton
           icon={KakaoTalkIcon}
           label="카카오로 시작하기"
@@ -252,5 +257,20 @@ const styles = StyleSheet.create({
   termsLink: {
     textDecorationLine: 'underline',
     color: '#6A7282',
+  },
+
+  // 에러
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+  },
+  errorText: {
+    fontSize: FontSize.sm,
+    color: '#DC2626',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

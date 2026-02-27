@@ -19,8 +19,9 @@ export const authService = {
     provider: 'kakao' | 'google' | 'apple',
     idToken: string,
     redirectUri?: string,
+    name?: string,
   ): Promise<AuthTokens> {
-    const { data } = await apiClient.post<AuthTokens>(`/auth/${provider}`, { idToken, redirectUri });
+    const { data } = await apiClient.post<AuthTokens>(`/auth/${provider}`, { idToken, redirectUri, name });
     await saveTokens(data);
     return data;
   },
@@ -44,7 +45,7 @@ export const authService = {
     return data;
   },
 
-  async updateProfile(data: { name?: string; nickname?: string; preferredVibes?: string[] }): Promise<User> {
+  async updateProfile(data: { name?: string; nickname?: string; gender?: string; preferredVibes?: string[] }): Promise<User> {
     const { data: res } = await apiClient.patch<User>('/auth/profile', data);
     return res;
   },
@@ -52,6 +53,10 @@ export const authService = {
   async updateAvatar(base64: string): Promise<{ avatarUrl: string }> {
     const { data } = await apiClient.patch<{ avatarUrl: string }>('/auth/avatar', { base64 });
     return data;
+  },
+
+  async resetAvatar(): Promise<void> {
+    await apiClient.delete('/auth/avatar');
   },
 
   async checkNickname(nickname: string): Promise<{ available: boolean }> {

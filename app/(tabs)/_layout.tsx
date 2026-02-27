@@ -1,6 +1,6 @@
 import { Tabs, Redirect } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
-import { Home, Search, Bookmark, User } from 'lucide-react-native';
+import { Home, Search, Bookmark, User, Users } from 'lucide-react-native';
 import { useAuthStore } from '@stores/auth.store';
 import { Colors } from '@constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,14 +15,16 @@ const ICON_MAP: Record<string, IconComponent> = {
   Home,
   Search,
   Bookmark,
+  Users,
   User,
 };
 
 const TABS = [
-  { name: 'index',    label: '홈',     icon: 'Home'     },
-  { name: 'search',   label: '검색',   icon: 'Search'   },
-  { name: 'bookmark', label: '저장',   icon: 'Bookmark' },
-  { name: 'profile',  label: '프로필', icon: 'User'     },
+  { name: 'index',     label: '홈',       icon: 'Home'     },
+  { name: 'search',    label: '검색',     icon: 'Search'   },
+  { name: 'bookmark',  label: '저장',     icon: 'Bookmark' },
+  { name: 'community', label: '커뮤니티', icon: 'Users'    },
+  { name: 'profile',   label: '프로필',   icon: 'User'     },
 ] as const;
 
 export default function TabsLayout() {

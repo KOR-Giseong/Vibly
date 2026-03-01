@@ -206,6 +206,7 @@ export default function PlaceDetailScreen() {
   const queryClient = useQueryClient();
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [imgFullscreen, setImgFullscreen] = useState(false);
 
   const cachedPlace = usePlaceCacheStore((s) => s.places[id as string]);
   const { user } = useAuthStore();
@@ -365,59 +366,70 @@ export default function PlaceDetailScreen() {
     <ScreenTransition>
       {/* 배경색을 그라데이션 끝색으로 채워 하단 흰 여백 방지 */}
       <View style={styles.root}>
+        {/* ── 고정 헤더 버튼 (스크롤해도 고정) ──────────────────────── */}
+        <View style={[styles.floatRow, { top: insets.top + 12, zIndex: 100 }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.floatBtn}>
+            <ArrowLeft size={20} color={Colors.gray[800]} />
+          </TouchableOpacity>
+          <View style={styles.floatRight}>
+            <TouchableOpacity onPress={handleShare} style={styles.floatBtn}>
+              <ShareIcon width={20} height={20} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => bookmarkMutation.mutate()}
+              style={[styles.floatBtn, isBookmarked && styles.floatBtnActive]}
+              disabled={bookmarkMutation.isPending}
+            >
+              <Heart
+                size={20}
+                color={isBookmarked ? '#e60076' : Colors.gray[700]}
+                fill={isBookmarked ? '#e60076' : 'transparent'}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <ScrollView
           contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* ── 히어로 이미지 ─────────────────────────────────────────── */}
-          <View style={{ height: IMAGE_HEIGHT }}>
-            {place.imageUrl ? (
-              <Image
-                source={{ uri: place.imageUrl }}
-                style={{ width, height: IMAGE_HEIGHT }}
-                resizeMode="cover"
-              />
-            ) : (
-              <LinearGradient
-                colors={Gradients.primary}
-                style={{ width, height: IMAGE_HEIGHT, alignItems: 'center', justifyContent: 'center' }}
-                start={{ x: 0, y: 1 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Text style={styles.heroEmoji}>🏠</Text>
-              </LinearGradient>
-            )}
-            {/* 상단 어둠 오버레이 */}
-            <LinearGradient
-              colors={['rgba(0,0,0,0.35)', 'transparent']}
-              style={[StyleSheet.absoluteFill, { height: IMAGE_HEIGHT * 0.45 }]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-            />
-          </View>
-
-          {/* ── 플로팅 버튼 ───────────────────────────────────────────── */}
-          <View style={[styles.floatRow, { top: insets.top + 12 }]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.floatBtn}>
-              <ArrowLeft size={20} color={Colors.gray[800]} />
-            </TouchableOpacity>
-            <View style={styles.floatRight}>
-              <TouchableOpacity onPress={handleShare} style={styles.floatBtn}>
-                <ShareIcon width={20} height={20} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => bookmarkMutation.mutate()}
-                style={[styles.floatBtn, isBookmarked && styles.floatBtnActive]}
-                disabled={bookmarkMutation.isPending}
-              >
-                <Heart
-                  size={20}
-                  color={isBookmarked ? '#e60076' : Colors.gray[700]}
-                  fill={isBookmarked ? '#e60076' : 'transparent'}
+          {/* ── 히어로 이미지 (탭하면 풀스크린) ─────────────────────── */}
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => place.imageUrl && setImgFullscreen(true)}
+          >
+            <View style={{ height: IMAGE_HEIGHT }}>
+              {place.imageUrl ? (
+                <Image
+                  source={{ uri: place.imageUrl }}
+                  style={{ width, height: IMAGE_HEIGHT }}
+                  resizeMode="cover"
                 />
-              </TouchableOpacity>
+              ) : (
+                <LinearGradient
+                  colors={Gradients.primary}
+                  style={{ width, height: IMAGE_HEIGHT, alignItems: 'center', justifyContent: 'center' }}
+                  start={{ x: 0, y: 1 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={styles.heroEmoji}>🏠</Text>
+                </LinearGradient>
+              )}
+              {/* 상단 어둠 오버레이 */}
+              <LinearGradient
+                colors={['rgba(0,0,0,0.35)', 'transparent']}
+                style={[StyleSheet.absoluteFill, { height: IMAGE_HEIGHT * 0.45 }]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+              {/* 이미지 확대 힌트 */}
+              {place.imageUrl && (
+                <View style={styles.imgExpandHint}>
+                  <Text style={styles.imgExpandHintText}>🔍 탭하여 전체보기</Text>
+                </View>
+              )}
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* ── 콘텐츠 시트 ──────────────────────────────────────────── */}
           <LinearGradient
@@ -456,12 +468,12 @@ export default function PlaceDetailScreen() {
                         <Text style={[styles.ratingText, { fontSize: 13, color: '#9810fa' }]}>
                           {place.rating.toFixed(1)}
                         </Text>
-                        <Text style={styles.ratingLabel}>vibly</Text>
+                        <Text style={styles.ratingLabel}>Vibly</Text>
                       </View>
                     </>
                   ) : (
                     <View>
-                      <Text style={[styles.ratingLabel, { color: Colors.gray[400] }]}>vibly</Text>
+                      <Text style={[styles.ratingLabel, { color: Colors.gray[400] }]}>Vibly</Text>
                       <Text style={[styles.ratingEmpty, { fontSize: 11 }]}>평점 없음</Text>
                     </View>
                   )}
@@ -671,6 +683,31 @@ export default function PlaceDetailScreen() {
           initialRating={place.myReview?.rating ?? 5}
           initialBody={place.myReview?.body ?? ''}
         />
+
+        {/* ── 이미지 풀스크린 모달 ────────────────────────────────── */}
+        <Modal
+          visible={imgFullscreen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setImgFullscreen(false)}
+        >
+          <View style={styles.fullscreenOverlay}>
+            <TouchableOpacity
+              style={styles.fullscreenCloseBtn}
+              onPress={() => setImgFullscreen(false)}
+            >
+              <X size={26} color={Colors.white} />
+            </TouchableOpacity>
+            {place.imageUrl && (
+              <Image
+                source={{ uri: place.imageUrl }}
+                style={styles.fullscreenImg}
+                resizeMode="contain"
+              />
+            )}
+            <Text style={styles.fullscreenPlaceName}>{place.name}</Text>
+          </View>
+        </Modal>
       </View>
     </ScreenTransition>
   );
@@ -684,7 +721,7 @@ const styles = StyleSheet.create({
   errorText: { color: Colors.gray[500], fontSize: FontSize.base },
   heroEmoji: { fontSize: 80 },
 
-  // 플로팅 버튼
+  // 플로팅 버튼 (스크롤 시 고정)
   floatRow: {
     position: 'absolute',
     left: Spacing['2xl'],
@@ -692,6 +729,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    zIndex: 100,
+  },
+
+  // 이미지 확대 힌트
+  imgExpandHint: {
+    position: 'absolute',
+    bottom: 44,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  imgExpandHintText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.9)',
+  },
+
+  // 풀스크린 이미지 모달
+  fullscreenOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreenCloseBtn: {
+    position: 'absolute',
+    top: 56,
+    right: 20,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fullscreenImg: {
+    width: '100%',
+    height: '75%',
+  },
+  fullscreenPlaceName: {
+    position: 'absolute',
+    bottom: 60,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
   floatBtn: {
     width: 40, height: 40, borderRadius: 20,

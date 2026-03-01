@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, ChevronRight, Sparkles, BookmarkPlus, Check, Coins, X, Edit2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Sparkles, BookmarkPlus, Check, Coins, X, Edit2, CalendarDays } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow, Gradients } from '@constants/theme';
 import { coupleService, type AiDateAnalysisResult, type AiDateTimelineItem } from '@services/couple.service';
 
@@ -194,6 +194,10 @@ export default function AiAnalysisScreen() {
   const [refineVisible, setRefineVisible] = useState(false);
   const [refining, setRefining] = useState(false);
 
+  const [allPickerVisible, setAllPickerVisible] = useState(false);
+  const [allSaving, setAllSaving] = useState(false);
+  const [allSaved, setAllSaved] = useState(false);
+
   useEffect(() => {
     coupleService.aiDateAnalysis(userNote ?? undefined)
       .then((res) => {
@@ -212,6 +216,31 @@ export default function AiAnalysisScreen() {
       memo: `[AI 추천] ${item.time} · ${item.place} — ${item.tip}`,
     });
     Alert.alert('✅ 저장 완료', `"${item.activity}" 플랜이 데이트 탭에 추가됐어요!`);
+  };
+
+  const saveAllPlans = async (date: Date) => {
+    if (timeline.length === 0) return;
+    setAllSaving(true);
+    try {
+      await Promise.all(
+        timeline.map((item) =>
+          coupleService.createDatePlan({
+            title: item.activity,
+            dateAt: date.toISOString(),
+            memo: `[AI코스] ${item.time} · ${item.place} — ${item.tip}`,
+          })
+        )
+      );
+      setAllSaved(true);
+      Alert.alert(
+        '🗓️ 코스 전체 저장 완료',
+        `${timeline.length}개 플랜이 데이트 탭에 저장됐어요!\n라운지 → 데이트 탭에서 확인하세요.`,
+      );
+    } catch (e: any) {
+      Alert.alert('저장 실패', e?.response?.data?.message ?? '다시 시도해주세요.');
+    } finally {
+      setAllSaving(false);
+    }
   };
 
   const openRefine = (idx: number) => {
@@ -253,7 +282,30 @@ export default function AiAnalysisScreen() {
             </LinearGradient>
             <ActivityIndicator color="#9810FA" size="large" />
             <Text style={s.ldTitle}>AI가 분석 중이에요</Text>
-            <Text style={s.ldDesc}>{'북마크와 데이트 기록을 바탕으로\n최적의 코스를 찾고 있어요...'}</Text>
+            <Text style={s.ldDesc}>{'카카오 실제 장소를 검색하고\n최적의 하루 코스를 짜고 있어요...'}</Text>
+            {/* 분석 소스 표시 */}
+            <View style={s.ldSources}>
+              <Text style={s.ldSourcesLabel}>분석 중인 정보</Text>
+              <View style={s.ldSourceChips}>
+                {userNote ? (
+                  <View style={[s.ldChip, s.ldChipNote]}>
+                    <Text style={[s.ldChipTxt, { color: '#9810FA' }]}>✏️ {userNote.length > 14 ? userNote.slice(0, 14) + '…' : userNote}</Text>
+                  </View>
+                ) : null}
+                <View style={s.ldChip}>
+                  <Text style={s.ldChipTxt}>🔖 내 북마크</Text>
+                </View>
+                <View style={s.ldChip}>
+                  <Text style={s.ldChipTxt}>🔖 파트너 북마크</Text>
+                </View>
+                <View style={s.ldChip}>
+                  <Text style={s.ldChipTxt}>📅 데이트 기록</Text>
+                </View>
+                <View style={s.ldChip}>
+                  <Text style={s.ldChipTxt}>📍 카카오 실장소</Text>
+                </View>
+              </View>
+            </View>
           </View>
         </View>
       ) : error ? (
@@ -277,6 +329,31 @@ export default function AiAnalysisScreen() {
           <LinearGradient colors={['#9810FA', '#E60076']} style={s.anlCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={s.anlHdr}><Sparkles size={18} color="#FDE68A" /><Text style={s.anlLabel}>AI 데이트 패턴 분석</Text></View>
             <Text style={s.anlTxt}>{result.analysis}</Text>
+            {/* 코스 생성 기반 정보 */}
+            <View style={s.basisRow}>
+              <Text style={s.basisLabel}>코스 생성 기반</Text>
+              <View style={s.basisChips}>
+                {userNote ? (
+                  <View style={s.basisChip}>
+                    <Text style={s.basisChipTxt}>✏️ 요청사항</Text>
+                  </View>
+                ) : null}
+                {result.region ? (
+                  <View style={s.basisChip}>
+                    <Text style={s.basisChipTxt}>📍 {result.region}</Text>
+                  </View>
+                ) : null}
+                <View style={s.basisChip}>
+                  <Text style={s.basisChipTxt}>🔖 내 북마크</Text>
+                </View>
+                <View style={s.basisChip}>
+                  <Text style={s.basisChipTxt}>🔖 파트너 북마크</Text>
+                </View>
+                <View style={s.basisChip}>
+                  <Text style={s.basisChipTxt}>📅 데이트 기록</Text>
+                </View>
+              </View>
+            </View>
           </LinearGradient>
 
           {timeline.length > 0 && (
@@ -285,6 +362,42 @@ export default function AiAnalysisScreen() {
                 <Text style={s.secTitle}>🗓 오늘의 데이트 코스</Text>
                 <Text style={s.secSub}>✏️ 아이콘으로 항목 수정 (2크레딧) · 북마크로 플랜 저장</Text>
               </View>
+
+              {/* 전체 코스 한번에 저장 버튼 */}
+              {!allSaved ? (
+                <TouchableOpacity
+                  style={[s.saveAllBtn, allSaving && { opacity: 0.5 }]}
+                  onPress={() => setAllPickerVisible(true)}
+                  disabled={allSaving}
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient
+                    colors={['#9810FA', '#E60076']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={s.saveAllGrad}
+                  >
+                    {allSaving ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <CalendarDays size={16} color="#fff" />
+                        <Text style={s.saveAllTxt}>전체 코스 한번에 저장</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              ) : (
+                <View style={s.saveAllDone}>
+                  <Check size={15} color="#10B981" />
+                  <Text style={s.saveAllDoneTxt}>전체 코스가 데이트 탭에 저장됐어요!</Text>
+                </View>
+              )}
+              <DatePickerModal
+                visible={allPickerVisible}
+                onConfirm={(d) => saveAllPlans(d)}
+                onClose={() => setAllPickerVisible(false)}
+              />
+
               <View style={s.tlContainer}>
                 {timeline.map((item, idx) => (
                   <TimelineCard
@@ -325,6 +438,17 @@ const s = StyleSheet.create({
   ldIcon: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   ldTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.gray[900] },
   ldDesc: { fontSize: FontSize.sm, color: Colors.gray[500], textAlign: 'center', lineHeight: 20 },
+  ldSources: { width: '100%', marginTop: 8, gap: 6 },
+  ldSourcesLabel: { fontSize: FontSize.xs, color: Colors.gray[400], textAlign: 'center' },
+  ldSourceChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  ldChip: { backgroundColor: Colors.gray[100], borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
+  ldChipNote: { backgroundColor: '#F3E8FF', borderWidth: 1, borderColor: '#E9D5FF' },
+  ldChipTxt: { fontSize: 11, color: Colors.gray[600], fontWeight: FontWeight.medium },
+  basisRow: { marginTop: 12, gap: 6, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: 10 },
+  basisLabel: { fontSize: 10, color: 'rgba(255,255,255,0.65)', letterSpacing: 0.3 },
+  basisChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  basisChip: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  basisChipTxt: { fontSize: 11, color: Colors.white, fontWeight: FontWeight.medium },
   errTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.gray[800] },
   errDesc: { fontSize: FontSize.sm, color: Colors.gray[500], textAlign: 'center' },
   retryBtn: { backgroundColor: Colors.white, paddingHorizontal: Spacing['2xl'], paddingVertical: Spacing.md, borderRadius: BorderRadius.xl, ...Shadow.sm },
@@ -363,6 +487,11 @@ const s = StyleSheet.create({
   refineBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F5F0FF', alignItems: 'center', justifyContent: 'center' },
   doneBtn: { backgroundColor: Colors.white, borderRadius: 14, paddingVertical: 14, alignItems: 'center', ...Shadow.sm, marginTop: 4 },
   doneTxt: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, color: Colors.gray[700] },
+  saveAllBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 12 },
+  saveAllGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14 },
+  saveAllTxt: { fontSize: FontSize.base, fontWeight: FontWeight.bold, color: '#fff' },
+  saveAllDone: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#ECFDF5', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 12, justifyContent: 'center' },
+  saveAllDoneTxt: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: '#10B981' },
 });
 
 const rf = StyleSheet.create({

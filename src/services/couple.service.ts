@@ -194,7 +194,8 @@ export const coupleService = {
   aiDateAnalysis: async (userNote?: string): Promise<AiDateAnalysisResult> => {
     const { data } = await apiClient.post<AiDateAnalysisResult>(
       '/couple/date-plans/ai-analysis',
-      { userNote }
+      { userNote },
+      { timeout: 60000 },
     );
     return data;
   },
@@ -202,7 +203,8 @@ export const coupleService = {
   aiRefineTimeline: async (opts: { timeline: AiDateTimelineItem[]; itemIndex?: number; feedback: string }): Promise<AiDateAnalysisResult> => {
     const { data } = await apiClient.post<AiDateAnalysisResult>(
       '/couple/date-plans/ai-refine',
-      { timeline: opts.timeline, feedback: opts.feedback }
+      { timeline: opts.timeline, feedback: opts.feedback },
+      { timeout: 60000 },
     );
     return data;
   },

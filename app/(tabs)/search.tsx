@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, Check, Sparkles } from 'lucide-react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { SearchResultCard } from '@components/features/place/SearchResultCard';
 import { CreditDisplay } from '@components/features/credit/CreditDisplay';
@@ -67,6 +67,7 @@ export default function SearchScreen() {
   const { searchResult, isSearching, setSearchResult, selectedMood } = useMoodStore();
   const { setPlace } = usePlaceCacheStore();
 
+  const queryClient = useQueryClient();
   const { limit, radius, setLimit, setRadius } = useMapFilterStore();
 
   const [input, setInput] = useState('');
@@ -81,7 +82,7 @@ export default function SearchScreen() {
     queryFn: () =>
       placeService.getNearby({ lat: coords.lat, lng: coords.lng, radius, limit }),
     enabled: locationStatus === 'granted',
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 2,
     retry: 1,
   });
 
@@ -232,8 +233,8 @@ export default function SearchScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Sparkles size={13} color="rgba(255,255,255,0.9)" />
-              <Text style={styles.moodBannerText} numberOfLines={1}>{searchResult.summary}</Text>
+              <Sparkles size={13} color="rgba(255,255,255,0.9)" style={{ marginTop: 2 }} />
+              <Text style={styles.moodBannerText} numberOfLines={2}>{searchResult.summary}</Text>
               <TouchableOpacity onPress={() => setSearchResult(null)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                 <X size={14} color="rgba(255,255,255,0.8)" />
               </TouchableOpacity>
@@ -382,9 +383,18 @@ export default function SearchScreen() {
             </View>
 
             {/* ── 적용 버튼 ── */}
-            <TouchableOpacity style={styles.applyBtn} onPress={() => setShowSort(false)} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.applyBtn}
+              onPress={() => {
+                queryClient.invalidateQueries({ queryKey: ['nearby-search'] });
+                queryClient.invalidateQueries({ queryKey: ['search'] });
+                setShowSort(false);
+              }}
+              activeOpacity={0.85}
+            >
               <Text style={styles.applyBtnText}>적용하기</Text>
             </TouchableOpacity>
+
           </Pressable>
         </Pressable>
       </Modal>
@@ -428,17 +438,18 @@ const styles = StyleSheet.create({
   },
   moodBanner: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: Spacing.sm,
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius['2xl'],
     paddingHorizontal: Spacing.lg,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   moodBannerText: {
     flex: 1,
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
     color: Colors.white,
+    lineHeight: 18,
   },
 
   searchWrap: {

@@ -26,7 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Heart, Plus, Camera, Sparkles, ChevronLeft,
   UserPlus, Bookmark, User, Coins, Flag,
-  MessageCircle, Send, Gift, X,
+  MessageCircle, Send, Gift, X, Check,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -684,10 +684,15 @@ const DATE_HOW_TO_STEPS = [
 function DateHowToModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
+      <Pressable style={styles.howToOverlay} onPress={onClose}>
         <Pressable style={styles.howToSheet}>
           <View style={styles.reportHandle} />
-          <Text style={styles.howToTitle}>📅 데이트 탭 사용법</Text>
+          <View style={styles.howToHeader}>
+            <Text style={styles.howToTitle}>📅 데이트 탭 사용법</Text>
+            <TouchableOpacity onPress={onClose} style={styles.howToCloseX}>
+              <X size={20} color={Colors.gray[500]} />
+            </TouchableOpacity>
+          </View>
           <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 4 }}>
             {DATE_HOW_TO_STEPS.map((step, i) => (
               <View key={i} style={styles.howToItem}>
@@ -705,13 +710,238 @@ function DateHowToModal({ visible, onClose }: { visible: boolean; onClose: () =>
                 </View>
               </View>
             ))}
-            <TouchableOpacity style={styles.howToCloseBtn} onPress={onClose}>
-              <Text style={styles.howToCloseBtnText}>닫기</Text>
-            </TouchableOpacity>
           </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+// ── AI 데이트 코스 상세 모달 ────────────────────────────────────────────────────
+function AiCourseDetailModal({ group, visible, onClose, onStatusChange }: {
+  group: AiCourseGroup | null;
+  visible: boolean;
+  onClose: () => void;
+  onStatusChange: (id: string, status: DatePlanStatus) => void;
+}) {
+  if (!group) return null;
+
+  const parseMemo = (memo: string | null) => {
+    if (!memo) return { time: null, place: null, tip: null };
+    const m = memo.match(/\[AI코스\]\s*([^\s·]+)\s*·\s*(.+?)\s*—\s*(.+)/);
+    if (m) return { time: m[1], place: m[2].trim(), tip: m[3].trim() };
+    return { time: null, place: memo.replace('[AI코스]', '').trim(), tip: null };
+  };
+
+  const first = group.plans[0];
+  const dateStr = new Date(first.dateAt).toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+  });
+  const now = new Date();
+  const target = new Date(first.dateAt);
+  const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tarDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const diff = Math.round((tarDay.getTime() - nowDay.getTime()) / (1000 * 60 * 60 * 24));
+  const dDay = diff === 0 ? 'D-Day' : diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+  const dDayColor = diff === 0 ? '#E60076' : diff > 0 ? '#9810FA' : '#DC2626';
+  const allDone = group.plans.every((p) => p.status !== 'PLANNED');
+
+  const sheetHeight = Dimensions.get('window').height * 0.78;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.howToOverlay} onPress={onClose}>
+        <Pressable style={[styles.howToSheet, { height: sheetHeight, paddingBottom: 0 }]}>
+          <View style={styles.reportHandle} />
+          {/* 헤더 */}
+          <View style={styles.aiDetailHeader}>
+            <LinearGradient colors={['#9810FA', '#E60076']} style={styles.aiDetailIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Sparkles size={14} color="#fff" />
+            </LinearGradient>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.aiDetailTitle}>AI 데이트 코스</Text>
+                <View style={[styles.aiCourseDDay, { backgroundColor: dDayColor + '20' }]}>
+                  <Text style={[styles.aiCourseDDayTxt, { color: dDayColor }]}>{dDay}</Text>
+                </View>
+                {allDone && (
+                  <View style={styles.aiCourseDoneBadge}>
+                    <Text style={styles.aiCourseDoneTxt}>완료</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.aiDetailDateTxt}>{dateStr} · {group.plans.length}개 장소</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.howToCloseX}>
+              <X size={20} color={Colors.gray[500]} />
+            </TouchableOpacity>
+          </View>
+          <View style={{ height: 1, backgroundColor: Colors.gray[100], marginHorizontal: 20 }} />
+          {/* 타임라인 */}
+          <ScrollView style={styles.aiDetailScroll} contentContainerStyle={[styles.aiDetailContent, { paddingBottom: 48 }]} showsVerticalScrollIndicator={false}>
+            {group.plans.map((plan, idx) => {
+              const { time, place, tip } = parseMemo(plan.memo);
+              const isLast = idx === group.plans.length - 1;
+              const done = plan.status !== 'PLANNED';
+              return (
+                <View key={plan.id} style={styles.aiDetailRow}>
+                  <View style={styles.aiDetailLeft}>
+                    <Text style={[styles.aiDetailTime, done && { color: Colors.gray[400] }]}>{time ?? '—'}</Text>
+                    <View style={[styles.aiDetailDot, done && { backgroundColor: Colors.gray[300] }]} />
+                    {!isLast && <View style={[styles.aiDetailLine, done && { backgroundColor: Colors.gray[200] }]} />}
+                  </View>
+                  <View style={[styles.aiDetailRight, isLast && { paddingBottom: 4 }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.aiDetailPlace, done && { color: Colors.gray[400], textDecorationLine: 'line-through' }]}>
+                        {place ?? plan.title}
+                      </Text>
+                      {tip && (
+                        <Text style={[styles.aiDetailTip, done && { color: Colors.gray[300] }]}>
+                          {tip}
+                        </Text>
+                      )}
+                    </View>
+                    {plan.status === 'PLANNED' ? (
+                      <TouchableOpacity
+                        onPress={() => onStatusChange(plan.id, 'COMPLETED')}
+                        style={styles.aiCourseCheckBtn}
+                        activeOpacity={0.7}
+                      >
+                        <Check size={13} color="#9810FA" />
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.aiCourseDoneChip}>
+                        <Check size={11} color="#10B981" />
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ── AI 데이트 코스 그룹 카드 ──────────────────────────────────────────────────
+interface AiCourseGroup {
+  dateKey: string; // yyyy-MM-dd
+  plans: DatePlan[];
+}
+
+function AiCoursePlanGroup({ group, onStatusChange, onOpenDetail }: {
+  group: AiCourseGroup;
+  onStatusChange: (id: string, status: DatePlanStatus) => void;
+  onOpenDetail: () => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+
+  const dateStr = new Date(group.plans[0].dateAt).toLocaleDateString('ko-KR', {
+    month: 'long', day: 'numeric', weekday: 'short',
+  });
+
+  // D-Day 계산
+  const now = new Date();
+  const target = new Date(group.plans[0].dateAt);
+  const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tarDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const diff = Math.round((tarDay.getTime() - nowDay.getTime()) / (1000 * 60 * 60 * 24));
+  const dDay = diff === 0 ? 'D-Day' : diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+  const dDayColor = diff === 0 ? '#E60076' : diff > 0 ? '#9810FA' : '#DC2626';
+
+  // 모두 완료 여부
+  const allDone = group.plans.every((p) => p.status !== 'PLANNED');
+
+  /* 메모에서 시간 파싱: "[AI코스] 12:00 · 카페 — ..." → "12:00" */
+  const parseTime = (memo: string | null) => {
+    if (!memo) return null;
+    const m = memo.match(/\[AI코스\]\s*([^\s·]+)/);
+    return m ? m[1] : null;
+  };
+
+  return (
+    <View style={[
+      styles.aiCourseCard,
+      { borderLeftColor: diff < 0 ? '#DC2626' : diff === 0 ? '#E60076' : '#9810FA' },
+    ]}>
+      {/* 헤더 */}
+      <View style={styles.aiCourseHeader}>
+        <TouchableOpacity
+          style={styles.aiCourseHeaderLeft}
+          onPress={onOpenDetail}
+          activeOpacity={0.8}
+        >
+          <LinearGradient colors={['#9810FA','#E60076']} style={styles.aiCourseIcon} start={{x:0,y:0}} end={{x:1,y:1}}>
+            <Sparkles size={12} color="#fff" />
+          </LinearGradient>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.aiCourseTitle}>AI 데이트 코스</Text>
+              <View style={[styles.aiCourseDDay, { backgroundColor: dDayColor + '20' }]}>
+                <Text style={[styles.aiCourseDDayTxt, { color: dDayColor }]}>{dDay}</Text>
+              </View>
+              {allDone && (
+                <View style={styles.aiCourseDoneBadge}>
+                  <Text style={styles.aiCourseDoneTxt}>완료</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.aiCourseDateTxt}>{dateStr} · {group.plans.length}개 장소</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setExpanded((v) => !v)} style={{ padding: 4 }}>
+          <Text style={{ color: Colors.gray[400], fontSize: 18 }}>{expanded ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 타임라인 아이템 */}
+      {expanded && (
+        <View style={styles.aiCourseBody}>
+          {group.plans.map((plan, idx) => {
+            const time = parseTime(plan.memo);
+            const isLast = idx === group.plans.length - 1;
+            const done = plan.status !== 'PLANNED';
+            return (
+              <View key={plan.id} style={styles.aiCourseRow}>
+                <View style={styles.aiCourseLeft}>
+                  <Text style={[styles.aiCourseTime, done && { color: Colors.gray[400] }]}>
+                    {time ?? '—'}
+                  </Text>
+                  <View style={[styles.aiCourseDot, done && { backgroundColor: Colors.gray[300] }]} />
+                  {!isLast && <View style={[styles.aiCourseLine, done && { backgroundColor: Colors.gray[200] }]} />}
+                </View>
+                <View style={styles.aiCourseItem}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                    <Text
+                      style={[styles.aiCourseItemTitle, done && { color: Colors.gray[400], textDecorationLine: 'line-through' }]}
+                      numberOfLines={1}
+                    >
+                      {plan.title}
+                    </Text>
+                  </View>
+                  {plan.status === 'PLANNED' && (
+                    <TouchableOpacity
+                      onPress={() => onStatusChange(plan.id, 'COMPLETED')}
+                      style={styles.aiCourseCheckBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Check size={13} color="#9810FA" />
+                    </TouchableOpacity>
+                  )}
+                  {done && (
+                    <View style={styles.aiCourseDoneChip}>
+                      <Check size={11} color="#10B981" />
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -727,6 +957,9 @@ function DateTab() {
   // 완료 후 추억 업로드 상태
   const [memoryUploading, setMemoryUploading] = useState(false);
 
+  // AI 코스 상세 모달
+  const [detailGroup, setDetailGroup] = useState<AiCourseGroup | null>(null);
+
   // 포커스 변화(form에서 돌아올 때 포함)마다 플랜 새로고침
   useEffect(() => {
     if (!isFocused) return;
@@ -736,13 +969,48 @@ function DateTab() {
       .finally(() => setLoading(false));
   }, [isFocused]);
 
-  // 예정: dateAt ASC / 완료+취소: updatedAt DESC
+  // AI코스 플랜 분리: [AI코스] 메모 prefix
+  const isAiCoursePlan = (p: DatePlan) => !!p.memo?.startsWith('[AI코스]');
+
+  // 예정: dateAt ASC / 완료+취소: updatedAt DESC (AI코스 제외)
   const planned = [...plans]
-    .filter((p) => p.status === 'PLANNED')
+    .filter((p) => p.status === 'PLANNED' && !isAiCoursePlan(p))
     .sort((a, b) => new Date(a.dateAt).getTime() - new Date(b.dateAt).getTime());
   const done = [...plans]
-    .filter((p) => p.status !== 'PLANNED')
+    .filter((p) => p.status !== 'PLANNED' && !isAiCoursePlan(p))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+  // AI코스 플랜들을 날짜별로 그룹핑 (PLANNED 먼저, 완료/취소 별도)
+  const aiCoursePlanned: AiCourseGroup[] = (() => {
+    const map: Record<string, DatePlan[]> = {};
+    plans
+      .filter((p) => p.status === 'PLANNED' && isAiCoursePlan(p))
+      .forEach((p) => {
+        const key = new Date(p.dateAt).toISOString().slice(0, 10);
+        if (!map[key]) map[key] = [];
+        map[key].push(p);
+      });
+    return Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dateKey, ps]) => ({
+        dateKey,
+        plans: ps.sort((a, b) => (a.memo ?? '').localeCompare(b.memo ?? '')),
+      }));
+  })();
+
+  const aiCourseDone: AiCourseGroup[] = (() => {
+    const map: Record<string, DatePlan[]> = {};
+    plans
+      .filter((p) => p.status !== 'PLANNED' && isAiCoursePlan(p))
+      .forEach((p) => {
+        const key = new Date(p.dateAt).toISOString().slice(0, 10);
+        if (!map[key]) map[key] = [];
+        map[key].push(p);
+      });
+    return Object.entries(map)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([dateKey, ps]) => ({ dateKey, plans: ps }));
+  })();
 
   const handleStatusChange = async (id: string, status: DatePlanStatus) => {
     try {
@@ -815,25 +1083,37 @@ function DateTab() {
     <View style={{ flex: 1 }}>
       {/* AI 분석 안내 카드 */}
       <View style={styles.aiInfoCard}>
-        <View style={styles.aiInfoLeft}>
-          <View style={styles.aiInfoIconWrap}>
-            <Sparkles size={20} color="#9810FA" />
+        <View style={styles.aiInfoTop}>
+          <View style={styles.aiInfoLeft}>
+            <View style={styles.aiInfoIconWrap}>
+              <Sparkles size={20} color="#9810FA" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aiInfoTitle}>AI 데이트 코스 분석</Text>
+              <Text style={styles.aiInfoDesc}>
+                {'요청사항 + 두 사람 취향을 분석해\n카카오 실제 장소로 하루 코스를 만들어드려요!'}
+              </Text>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.aiInfoTitle}>AI 데이트 코스 분석</Text>
-            <Text style={styles.aiInfoDesc}>
-              플랜·북마크 기반으로 오전부터 저녁까지 하루 데이트 일정을 짜드려요!
-            </Text>
+          <View style={styles.aiInfoRight}>
+            <View style={styles.aiCreditBadge}>
+              <Coins size={11} color="#9810FA" />
+              <Text style={styles.aiCreditText}>15크레딧</Text>
+            </View>
+            <TouchableOpacity style={styles.aiStartBtn} onPress={handleAI}>
+              <Text style={styles.aiStartBtnText}>시작하기</Text>
+            </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.aiInfoRight}>
-          <View style={styles.aiCreditBadge}>
-            <Coins size={11} color="#9810FA" />
-            <Text style={styles.aiCreditText}>15크레딧</Text>
+        {/* 분석 소스 칩 */}
+        <View style={styles.aiInfoSources}>
+          <Text style={styles.aiInfoSourcesLabel}>분석 기반</Text>
+          <View style={styles.aiInfoChips}>
+            <View style={styles.aiInfoChip}><Text style={styles.aiInfoChipTxt}>✏️ 직접 입력 요청사항</Text></View>
+            <View style={styles.aiInfoChip}><Text style={styles.aiInfoChipTxt}>🔖 두 사람 북마크</Text></View>
+            <View style={styles.aiInfoChip}><Text style={styles.aiInfoChipTxt}>📅 데이트 기록</Text></View>
+            <View style={styles.aiInfoChip}><Text style={styles.aiInfoChipTxt}>📍 카카오 실제 장소</Text></View>
           </View>
-          <TouchableOpacity style={styles.aiStartBtn} onPress={handleAI}>
-            <Text style={styles.aiStartBtnText}>시작하기</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -864,19 +1144,28 @@ function DateTab() {
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.aiNoteTitle}>AI 데이트 코스 만들기</Text>
-                    <Text style={styles.aiNoteSub}>원하는 조건을 알려주면 더 정확해져요</Text>
+                    <Text style={styles.aiNoteSub}>지역·분위기 등 요청사항을 적으면 최우선 반영해요</Text>
                   </View>
                   <TouchableOpacity onPress={() => setAiNoteVisible(false)}><X size={18} color={Colors.gray[400]} /></TouchableOpacity>
                 </View>
                 <TextInput
                   style={styles.aiNoteInput}
-                  placeholder={'예) 홍대 근처, 조용한 분위기\n첫 기념일이라 특별하게 하고 싶어요'}
+                  placeholder={'예) 서울숲 근처, 조용한 분위기\n첫 기념일이라 특별하게 하고 싶어요'}
                   placeholderTextColor={Colors.gray[400]}
                   multiline
                   maxLength={200}
                   value={aiNote}
                   onChangeText={setAiNote}
                 />
+                {/* 자동 분석 기반 안내 */}
+                <View style={styles.aiNoteSourceRow}>
+                  <Text style={styles.aiNoteSourceLabel}>자동으로 같이 분석 →</Text>
+                  <View style={styles.aiNoteSourceChips}>
+                    <View style={styles.aiNoteSourceChip}><Text style={styles.aiNoteSourceChipTxt}>🔖 북마크</Text></View>
+                    <View style={styles.aiNoteSourceChip}><Text style={styles.aiNoteSourceChipTxt}>📅 데이트 기록</Text></View>
+                    <View style={styles.aiNoteSourceChip}><Text style={styles.aiNoteSourceChipTxt}>📍 카카오 실장소</Text></View>
+                  </View>
+                </View>
                 <View style={styles.aiNoteFooter}>
                   <View style={styles.aiNoteCreditBadge}>
                     <Coins size={12} color="#9810FA" />
@@ -893,6 +1182,13 @@ function DateTab() {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
+
+      <AiCourseDetailModal
+        group={detailGroup}
+        visible={!!detailGroup}
+        onClose={() => setDetailGroup(null)}
+        onStatusChange={handleStatusChange}
+      />
 
       {plans.length === 0 ? (
         <ScrollView contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -925,9 +1221,28 @@ function DateTab() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.tabContent}>
+          {/* AI 데이트 코스 예정 섹션 */}
+          {aiCoursePlanned.length > 0 && (
+            <View>
+              <View style={styles.planSectionHeader}>
+                <LinearGradient colors={['#9810FA','#E60076']} style={[styles.planSectionDot, { width: 10, height: 10, borderRadius: 5 }]} />
+                <Text style={[styles.planSectionTitle, { color: '#9810FA' }]}>AI 데이트 코스</Text>
+                <Text style={styles.planSectionCount}>{aiCoursePlanned.reduce((s, g) => s + g.plans.length, 0)}</Text>
+              </View>
+              {aiCoursePlanned.map((group) => (
+                <AiCoursePlanGroup
+                  key={group.dateKey}
+                  group={group}
+                  onStatusChange={handleStatusChange}
+                  onOpenDetail={() => setDetailGroup(group)}
+                />
+              ))}
+            </View>
+          )}
+
           {/* 예정 섹션 */}
           {planned.length > 0 && (
-            <View>
+            <View style={aiCoursePlanned.length > 0 ? { marginTop: 8 } : undefined}>
               <View style={styles.planSectionHeader}>
                 <View style={[styles.planSectionDot, { backgroundColor: '#9810FA' }]} />
                 <Text style={styles.planSectionTitle}>예정된 데이트</Text>
@@ -945,13 +1260,21 @@ function DateTab() {
           )}
 
           {/* 완료·취소 섹션 */}
-          {done.length > 0 && (
-            <View style={planned.length > 0 ? { marginTop: 8 } : undefined}>
+          {(done.length > 0 || aiCourseDone.length > 0) && (
+            <View style={(planned.length > 0 || aiCoursePlanned.length > 0) ? { marginTop: 8 } : undefined}>
               <View style={styles.planSectionHeader}>
                 <View style={[styles.planSectionDot, { backgroundColor: Colors.gray[400] }]} />
                 <Text style={[styles.planSectionTitle, { color: Colors.gray[500] }]}>완료 · 취소</Text>
-                <Text style={styles.planSectionCount}>{done.length}</Text>
+                <Text style={styles.planSectionCount}>{done.length + aiCourseDone.reduce((s, g) => s + g.plans.length, 0)}</Text>
               </View>
+              {aiCourseDone.map((group) => (
+                <AiCoursePlanGroup
+                  key={group.dateKey + '-done'}
+                  group={group}
+                  onStatusChange={handleStatusChange}
+                  onOpenDetail={() => setDetailGroup(group)}
+                />
+              ))}
               {done.map((plan) => (
                 <DatePlanCard
                   key={plan.id}
@@ -2087,11 +2410,44 @@ const styles = StyleSheet.create({
     borderColor: '#EDE9FE',
     ...Shadow.sm,
   },
+  aiInfoTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
   aiInfoLeft: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    marginBottom: 12,
+    flex: 1,
+  },
+  aiInfoSources: {
+    borderTopWidth: 1,
+    borderTopColor: '#F3E8FF',
+    paddingTop: 10,
+    gap: 6,
+  },
+  aiInfoSourcesLabel: {
+    fontSize: 10,
+    color: Colors.gray[400],
+    fontWeight: FontWeight.semibold,
+    letterSpacing: 0.3,
+  },
+  aiInfoChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  aiInfoChip: {
+    backgroundColor: '#F5F0FF',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  aiInfoChipTxt: {
+    fontSize: 11,
+    color: '#7C3AED',
+    fontWeight: FontWeight.medium,
   },
   aiInfoIconWrap: {
     width: 40,
@@ -2113,9 +2469,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   aiInfoRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 8,
+    flexShrink: 0,
+    marginLeft: 8,
   },
   aiCreditBadge: {
     flexDirection: 'row',
@@ -2183,17 +2541,37 @@ const styles = StyleSheet.create({
   },
   howToSheet: {
     backgroundColor: Colors.white,
-    borderRadius: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: Spacing.lg,
+    paddingBottom: 36,
     maxHeight: '80%',
     ...Shadow.lg,
+  },
+  howToOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  howToHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  howToCloseX: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.gray[100],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   howToTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.gray[900],
-    textAlign: 'center',
-    marginBottom: Spacing.md,
+    flex: 1,
+    marginBottom: 0,
   },
   howToItem: {
     flexDirection: 'row',
@@ -2322,6 +2700,213 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.gray[400],
     fontWeight: FontWeight.medium,
+  },
+  // AI 코스 카드
+  aiCourseCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#9810FA',
+    ...Shadow.sm,
+    overflow: 'hidden',
+  },
+  aiCourseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  aiCourseHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  aiCourseIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiCourseTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  aiCourseDateTxt: {
+    fontSize: 11,
+    color: Colors.gray[400],
+    marginTop: 1,
+  },
+  aiCourseDDay: {
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  aiCourseDDayTxt: {
+    fontSize: 11,
+    fontWeight: FontWeight.bold,
+  },
+  aiCourseDoneBadge: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  aiCourseDoneTxt: {
+    fontSize: 11,
+    fontWeight: FontWeight.bold,
+    color: '#16A34A',
+  },
+  aiCourseBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray[100],
+    paddingTop: 10,
+    gap: 0,
+  },
+  aiCourseRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  aiCourseLeft: {
+    width: 44,
+    alignItems: 'center',
+  },
+  aiCourseTime: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: '#9810FA',
+    marginBottom: 3,
+  },
+  aiCourseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#9810FA',
+  },
+  aiCourseLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#E9D5FF',
+    marginTop: 2,
+    marginBottom: 0,
+    minHeight: 12,
+  },
+  aiCourseItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 12,
+    gap: 6,
+  },
+  aiCourseItemTitle: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[800],
+  },
+  aiCourseCheckBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#F5F0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  aiCourseDoneChip: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  // AI 코스 상세 모달
+  aiDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  aiDetailIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  aiDetailTitle: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  aiDetailDateTxt: {
+    fontSize: 12,
+    color: Colors.gray[400],
+    marginTop: 2,
+  },
+  aiDetailScroll: {
+    flex: 1,
+  },
+  aiDetailContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
+  },
+  aiDetailRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  aiDetailLeft: {
+    width: 48,
+    alignItems: 'center',
+  },
+  aiDetailTime: {
+    fontSize: 12,
+    fontWeight: FontWeight.bold,
+    color: '#9810FA',
+    marginBottom: 4,
+  },
+  aiDetailDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#9810FA',
+  },
+  aiDetailLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#E9D5FF',
+    marginTop: 3,
+    minHeight: 16,
+  },
+  aiDetailRight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingBottom: 20,
+    gap: 8,
+  },
+  aiDetailPlace: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[900],
+    lineHeight: 22,
+  },
+  aiDetailTip: {
+    fontSize: 12,
+    color: Colors.gray[400],
+    lineHeight: 18,
+    marginTop: 2,
   },
   memoryUploadingBanner: {
     flexDirection: 'row',
@@ -2629,6 +3214,34 @@ const styles = StyleSheet.create({
     color: Colors.gray[900],
     minHeight: 90,
     textAlignVertical: 'top',
+  },
+  aiNoteSourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  aiNoteSourceLabel: {
+    fontSize: 10,
+    color: Colors.gray[400],
+    flexShrink: 0,
+  },
+  aiNoteSourceChips: {
+    flexDirection: 'row',
+    gap: 5,
+    flexWrap: 'wrap',
+  },
+  aiNoteSourceChip: {
+    backgroundColor: Colors.gray[100],
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  aiNoteSourceChipTxt: {
+    fontSize: 10,
+    color: Colors.gray[500],
+    fontWeight: FontWeight.medium,
   },
   aiNoteFooter: {
     flexDirection: 'row',

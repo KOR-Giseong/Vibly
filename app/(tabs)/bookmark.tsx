@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LayoutGrid, List, Bookmark, Heart } from 'lucide-react-native';
+import { useCoupleStore } from '@stores/couple.store';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
 import { placeService } from '@services/place.service';
@@ -144,6 +145,7 @@ export default function BookmarkScreen() {
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [activeCategory, setActiveCategory] = useState('전체');
+  const { coupleInfo } = useCoupleStore();
 
   // ── 데이터 조회
   const { data: bookmarks = [], isLoading, isError } = useQuery({
@@ -237,6 +239,21 @@ export default function BookmarkScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ── 파트너 스크랩 배너 (커플 등록 시에만 표시) */}
+        {coupleInfo && (
+          <TouchableOpacity
+            style={styles.partnerBanner}
+            onPress={() => router.push('/couple-lounge' as any)}
+            activeOpacity={0.85}
+          >
+            <Heart size={15} color="#E60076" fill="#E60076" />
+            <Text style={styles.partnerBannerText}>
+              {coupleInfo.partnerName}의 스크랩 보기
+            </Text>
+            <Text style={styles.partnerBannerArrow}>›</Text>
+          </TouchableOpacity>
+        )}
 
         {/* ── 카테고리 필터: 헤더 바로 아래 */}
         <FlatList
@@ -348,6 +365,32 @@ const styles = StyleSheet.create({
   },
   toggleBtnActive: {
     backgroundColor: '#9810fa',
+  },
+
+  // ── 파트너 스크랩 배너
+  partnerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 24,
+    marginBottom: 10,
+    backgroundColor: '#FDF2F8',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: '#F9A8D4',
+  },
+  partnerBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#E60076',
+  },
+  partnerBannerArrow: {
+    fontSize: 18,
+    color: '#E60076',
+    lineHeight: 22,
   },
 
   // ── 카테고리 필터

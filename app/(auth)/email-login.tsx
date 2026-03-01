@@ -20,6 +20,8 @@ import BackIcon from '@assets/Back-icon.svg';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
 import { authService } from '@services/auth.service';
 import { useAuthStore } from '@stores/auth.store';
+import { useCreditStore } from '@stores/credit.store';
+import { useCoupleStore } from '@stores/couple.store';
 import { useSocialAuth } from '@hooks/useSocialAuth';
 import KakaoTalkIcon from '@assets/KakaoTalk.svg';
 import GoogleIcon from '@assets/Google.svg';
@@ -103,6 +105,8 @@ export default function EmailLoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { setUser } = useAuthStore();
+  const { setCredits, setPremium } = useCreditStore();
+  const { setCoupleInfo } = useCoupleStore();
   const { signInWithKakao, signInWithGoogle, signInWithApple } = useSocialAuth();
 
   const switchMode = (m: Mode) => {
@@ -133,6 +137,11 @@ export default function EmailLoginScreen() {
       }
       const user = await authService.getMe();
       setUser(user);
+      if (typeof user.credits === 'number') {
+        setCredits(user.credits);
+        setPremium(user.isPremium);
+      }
+      setCoupleInfo(user?.couple ?? null);
       router.replace(user.isProfileComplete ? '/(tabs)' : '/(auth)/profile-setup');
     } catch (e: any) {
       const status = e?.response?.status;

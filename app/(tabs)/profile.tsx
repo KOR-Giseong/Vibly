@@ -10,8 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Settings, ChevronRight, MapPin, Bookmark,
   Crown, BarChart2, CreditCard, LogOut, Sparkles,
-  Camera, User, Pencil, X,
+  Camera, User, Pencil, X, Heart,
 } from 'lucide-react-native';
+import { useCoupleStore } from '@stores/couple.store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
@@ -318,6 +319,7 @@ export default function ProfileScreen() {
 
   const [uploading, setUploading] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
+  const { coupleInfo } = useCoupleStore();
 
   // 실제 통계 API
   const { data: stats } = useQuery({
@@ -444,6 +446,19 @@ export default function ProfileScreen() {
                 {user?.gender === 'MALE' ? '👨 남성' : user?.gender === 'FEMALE' ? '👩 여성' : user?.gender === 'OTHER' ? '🧑 기타' : '⚪ 성별 미설정'}
               </Text>
             </View>
+
+            {/* 커플 뱃지 */}
+            <TouchableOpacity
+              style={[styles.coupleBadge, coupleInfo && styles.coupleBadgeActive]}
+              onPress={() => router.push('/couple-lounge' as any)}
+              activeOpacity={0.8}
+            >
+              <Heart size={14} color={coupleInfo ? '#E60076' : Colors.gray[400]} fill={coupleInfo ? '#E60076' : 'transparent'} />
+              <Text style={[styles.coupleBadgeText, coupleInfo && styles.coupleBadgeTextActive]}>
+                {coupleInfo ? `💑 ${coupleInfo.partnerName}와 커플` : '커플 라운지 시작하기'}
+              </Text>
+              <ChevronRight size={13} color={coupleInfo ? '#E60076' : Colors.gray[400]} />
+            </TouchableOpacity>
 
             {/* 선호 바이브 태그 */}
             {user?.preferredVibes && user.preferredVibes.length > 0 && (
@@ -608,6 +623,24 @@ const styles = StyleSheet.create({
   },
   genderChipEditLabel: { fontSize: FontSize.sm, color: Colors.gray[500], fontWeight: FontWeight.medium },
   genderChipEditLabelSelected: { color: Colors.primary[700], fontWeight: FontWeight.semibold },
+
+  // 커플 뱃지
+  coupleBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: Colors.gray[100], borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: 6,
+    marginBottom: Spacing.md,
+  },
+  coupleBadgeActive: {
+    backgroundColor: '#FDF2F8',
+  },
+  coupleBadgeText: {
+    fontSize: FontSize.xs, color: Colors.gray[500], fontWeight: FontWeight.medium,
+    flex: 1,
+  },
+  coupleBadgeTextActive: {
+    color: '#E60076',
+  },
 
   // 바이브 태그
   vibesRow: {

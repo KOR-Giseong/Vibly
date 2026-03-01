@@ -4,6 +4,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { useAuthRequest, makeRedirectUri } from 'expo-auth-session';
 import { router } from 'expo-router';
 import { useAuthStore } from '@stores/auth.store';
+import { useCreditStore } from '@stores/credit.store';
+import { useCoupleStore } from '@stores/couple.store';
 import { authService } from '@services/auth.service';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -32,6 +34,8 @@ const GOOGLE_REDIRECT_URI = Platform.OS === 'web'
 
 export function useSocialAuth() {
   const { setUser } = useAuthStore();
+  const { setCredits, setPremium } = useCreditStore();
+  const { setCoupleInfo } = useCoupleStore();
   const [loading, setLoading] = useState<'kakao' | 'google' | 'apple' | null>(null);
   const [error, setError] = useState('');
 
@@ -46,6 +50,11 @@ export function useSocialAuth() {
       await authService.socialLogin(provider, token, redirectUri, name);
       const user = await authService.getMe();
       setUser(user);
+      if (typeof user.credits === 'number') {
+        setCredits(user.credits);
+        setPremium(user.isPremium);
+      }
+      setCoupleInfo(user?.couple ?? null);
       // 신규 사용자(프로필 미완성) → 프로필 설정, 기존 사용자 → 홈
       if (!user.isProfileComplete) {
         router.replace('/(auth)/profile-setup');

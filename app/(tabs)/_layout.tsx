@@ -1,6 +1,6 @@
 import { Tabs, Redirect, useRouter } from 'expo-router';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Animated, Easing } from 'react-native';
-import { Home, Search, Bookmark, User, Users, Grid2X2, X } from 'lucide-react-native';
+import { Home, Search, Bookmark, User, Users, Grid2X2, X, Heart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@stores/auth.store';
 import { Colors } from '@constants/theme';
@@ -13,6 +13,7 @@ const TAB_INACTIVE_COLOR = '#6A7282';
 // ── 메뉴 아이템 정의 ────────────────────────────────────────────────────────
 const MENU_ITEMS = [
   { label: '커뮤니티', icon: Users, route: '/(tabs)/community', color: '#9810FA', bg: '#F3E8FF' },
+  { label: '커플 라운지', icon: Heart, route: '/couple-lounge', color: '#E60076', bg: '#FDF2F8' },
 ];
 
 export default function TabsLayout() {

@@ -4,6 +4,16 @@ export type AuthProvider = 'kakao' | 'google' | 'apple' | 'email';
 
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'PENDING_DELETION';
 
+export interface CoupleInfo {
+  coupleId: string;
+  partnerId: string;
+  partnerName: string;
+  partnerAvatarUrl?: string | null;
+  creditShareEnabled: boolean;
+  anniversaryDate?: string | null;
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -20,6 +30,7 @@ export interface User {
   isAdmin?: boolean;
   credits: number;
   createdAt: string;
+  couple?: CoupleInfo | null;
 }
 
 export interface AuthTokens {
@@ -271,6 +282,86 @@ export interface PostsResponse {
   total: number;
   page: number;
   hasNext: boolean;
+}
+
+// ─── Couple ───────────────────────────────────────────────────────────────────
+
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
+export type DatePlanStatus = 'PLANNED' | 'COMPLETED' | 'CANCELLED';
+
+export interface CoupleInvitation {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  status: InvitationStatus;
+  message?: string;
+  createdAt: string;
+  respondedAt?: string;
+  sender?: Pick<User, 'id' | 'name' | 'nickname' | 'avatarUrl'>;
+  receiver?: Pick<User, 'id' | 'name' | 'nickname' | 'avatarUrl'>;
+}
+
+export interface DatePlan {
+  id: string;
+  coupleId: string;
+  title: string;
+  dateAt: string;
+  memo?: string;
+  status: DatePlanStatus;
+  placeIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoupleMemory {
+  id: string;
+  coupleId: string;
+  uploaderId: string;
+  imageUrl: string;
+  caption?: string;
+  takenAt?: string;
+  createdAt: string;
+}
+
+export interface PartnerProfile {
+  id: string;
+  name: string;
+  nickname?: string;
+  avatarUrl?: string;
+  gender?: string;
+  preferredVibes: string[];
+  credits: number;
+  stats: {
+    checkinCount: number;
+    bookmarkCount: number;
+    reviewCount: number;
+  };
+}
+
+// ─── Couple Chat ──────────────────────────────────────────────────────────────
+
+export type MessageType = 'TEXT' | 'IMAGE' | 'EMOJI';
+
+export interface CoupleMessage {
+  id: string;
+  coupleId: string;
+  senderId: string;
+  type: MessageType;
+  text?: string | null;
+  imageUrl?: string | null;
+  emoji?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+}
+
+export interface CoupleCreditHistory {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatarUrl: string | null;
+  amount: number;
+  createdAt: string;
+  isMine: boolean;
 }
 
 // ─── Notice ───────────────────────────────────────────────────────────────────

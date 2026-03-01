@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@stores/auth.store';
 import { useCreditStore } from '@stores/credit.store';
+import { useCoupleStore } from '@stores/couple.store';
 import { authService } from '@services/auth.service';
 
 const queryClient = new QueryClient({
@@ -16,6 +17,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const { setUser, setAuthenticated } = useAuthStore();
   const { setCredits, setPremium } = useCreditStore();
+  const { setCoupleInfo } = useCoupleStore();
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -29,6 +31,7 @@ function RootLayoutNav() {
           setCredits(user.credits);
           setPremium(user.isPremium);
         }
+        setCoupleInfo(user?.couple ?? null);
         if (user?.status === 'SUSPENDED') {
           router.replace('/suspended');
         }
@@ -61,6 +64,9 @@ function RootLayoutNav() {
         <Stack.Screen name="subscription" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings" />
         <Stack.Screen name="credits" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="couple-lounge" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="couple/date-plan-form" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="couple/ai-analysis" options={{ animation: 'slide_from_bottom' }} />
       </Stack>
     </>
   );

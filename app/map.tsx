@@ -10,17 +10,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Search, Navigation, MapPin, Star, X, SlidersHorizontal } from 'lucide-react-native';
+import { ArrowLeft, Search, Navigation, MapPin, Star, X, SlidersHorizontal, Heart } from 'lucide-react-native';
 import {
   Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow,
 } from '@constants/theme';
 import { placeService } from '@services/place.service';
+import { coupleService } from '@services/couple.service';
 import { useLocation } from '@hooks/useLocation';
 import ScreenTransition from '@components/ScreenTransition';
 import MapContainer, { type MapHandle } from '@components/features/map/MapContainer';
 import { MapFilterSheet } from '@components/features/map/MapFilterSheet';
 import { LocationPermissionModal } from '@components/ui';
 import { useMapFilterStore, radiusLabel } from '@stores/mapFilter.store';
+import { useCoupleStore } from '@stores/couple.store';
 import type { Place } from '@/types';
 
 // ─── Category constants ───────────────────────────────────────────────────────
@@ -60,12 +62,17 @@ export default function MapScreen() {
 
   const { limit, radius } = useMapFilterStore();
 
+  const { coupleInfo } = useCoupleStore();
+
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [locationModalDismissed, setLocationModalDismissed] = useState(false);
   const [showList, setShowList] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
+  const [showPartnerScrap, setShowPartnerScrap] = useState(false);
+  const [partnerPlaces, setPartnerPlaces] = useState<Place[]>([]);
+  const [partnerLoading, setPartnerLoading] = useState(false);
 
   // Animated bottom card
   const cardY = useSharedValue(320);
@@ -109,10 +116,19 @@ export default function MapScreen() {
   const nearbyPlaces: Place[] = nearbyData?.data ?? [];
   const searchPlaces: Place[] = searchData?.data ?? [];
   const places: Place[] = (() => {
-    if (!submittedQuery.trim()) return nearbyPlaces;
-    const seen = new Set(nearbyPlaces.map((p) => p.id));
-    const merged = [...nearbyPlaces];
-    for (const p of searchPlaces) {
+    const base = (() => {
+      if (!submittedQuery.trim()) return nearbyPlaces;
+      const seen = new Set(nearbyPlaces.map((p) => p.id));
+      const merged = [...nearbyPlaces];
+      for (const p of searchPlaces) {
+        if (!seen.has(p.id)) merged.push(p);
+      }
+      return merged;
+    })();
+    if (!showPartnerScrap || partnerPlaces.length === 0) return base;
+    const seen = new Set(base.map((p) => p.id));
+    const merged = [...base];
+    for (const p of partnerPlaces) {
       if (!seen.has(p.id)) merged.push(p);
     }
     return merged;
@@ -149,6 +165,23 @@ export default function MapScreen() {
     }
     mapRef.current?.animateTo(coords.lat, coords.lng);
   }, [coords, locationStatus, canAskAgain, requestPermission, openSettings]);
+
+  const handleTogglePartnerScrap = useCallback(async () => {
+    if (!coupleInfo) return;
+    const next = !showPartnerScrap;
+    setShowPartnerScrap(next);
+    if (next && partnerPlaces.length === 0) {
+      setPartnerLoading(true);
+      try {
+        const res = await coupleService.getPartnerBookmarks();
+        setPartnerPlaces(res);
+      } catch {
+        setShowPartnerScrap(false);
+      } finally {
+        setPartnerLoading(false);
+      }
+    }
+  }, [coupleInfo, showPartnerScrap, partnerPlaces.length]);
 
   const handleSearchSubmit = useCallback(() => {
     const q = query.trim();
@@ -251,6 +284,27 @@ export default function MapScreen() {
               {submittedQuery ? `검색 포함 ${places.length}개` : `주변 ${places.length}개`}
             </Text>
             <Text style={styles.countRadius}>· {radiusLabel(radius)}</Text>
+            {showPartnerScrap && (
+              <Text style={styles.partnerBadgeText}>💕 파트너 포함</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* ── 파트너 스크랩 토글 (커플 등록 시에만 표시) ─────────────────── */}
+        {coupleInfo && (
+          <TouchableOpacity
+            style={[
+              styles.partnerBtn,
+              { top: insets.top + 64 },
+              showPartnerScrap && styles.partnerBtnActive,
+            ]}
+            onPress={handleTogglePartnerScrap}
+            activeOpacity={0.8}
+          >
+            {partnerLoading
+              ? <ActivityIndicator size="small" color={showPartnerScrap ? Colors.white : '#E60076'} />
+              : <Heart size={18} color={showPartnerScrap ? Colors.white : '#E60076'} fill={showPartnerScrap ? Colors.white : 'transparent'} />
+            }
           </TouchableOpacity>
         )}
 
@@ -619,6 +673,31 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     alignItems: 'center', justifyContent: 'center',
     ...Shadow.md,
+  },
+
+  // Partner scrap toggle
+  partnerBtn: {
+    position: 'absolute',
+    right: Spacing['2xl'],
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E60076',
+    ...Shadow.md,
+  },
+  partnerBtnActive: {
+    backgroundColor: '#E60076',
+    borderColor: '#E60076',
+  },
+  partnerBadgeText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: '#E60076',
+    marginLeft: 2,
   },
 
   // Location button

@@ -53,17 +53,18 @@ export interface UploadMemoryDto {
   takenAt?: string;
 }
 
-export interface AiDateAnalysisRecommendation {
-  type: string;
+export interface AiDateTimelineItem {
+  time: string;
+  emoji: string;
+  place: string;
   activity: string;
-  reason: string;
+  tip: string;
 }
 
 export interface AiDateAnalysisResult {
   analysis: string;
-  creditsRemaining?: number;
-  recommendations?: AiDateAnalysisRecommendation[];
   creditsRemaining: number;
+  timeline?: AiDateTimelineItem[];
 }
 
 export interface UserSearchResult {

@@ -6,9 +6,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, ChevronRight, Sparkles, MapPin, BookmarkPlus, Check, Coins, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Sparkles, BookmarkPlus, Check, Coins, X } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow, Gradients } from '@constants/theme';
-import { coupleService, type AiDateAnalysisResult, type AiDateAnalysisRecommendation } from '@services/couple.service';
+import { coupleService, type AiDateAnalysisResult, type AiDateTimelineItem } from '@services/couple.service';
 
 const WEEKDAYS = ['일','월','화','수','목','금','토'];
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -69,28 +69,35 @@ function DatePickerModal({ visible, onConfirm, onClose }:{ visible:boolean; onCo
   );
 }
 
-function RecommendCard({ rec, index, onSave }:{ rec:AiDateAnalysisRecommendation; index:number; onSave:(r:AiDateAnalysisRecommendation,d:Date)=>Promise<void>; }) {
+function TimelineCard({ item, isLast, onSave }:{ item:AiDateTimelineItem; isLast:boolean; onSave:(item:AiDateTimelineItem,d:Date)=>Promise<void>; }) {
   const [picker, setPicker] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const confirm = async (date:Date) => { setSaving(true); try { await onSave(rec,date); setSaved(true); } finally { setSaving(false); } };
+  const confirm = async (date:Date) => { setSaving(true); try { await onSave(item,date); setSaved(true); } finally { setSaving(false); } };
   return (
-    <View style={s.recCard}>
-      <View style={s.recTop}>
-        <LinearGradient colors={['#9810FA','#E60076']} style={s.recNum} start={{x:0,y:0}} end={{x:1,y:1}}>
-          <Text style={s.recNumTxt}>{index+1}</Text>
-        </LinearGradient>
-        <View style={s.typeBadge}><MapPin size={11} color="#9810FA"/><Text style={s.typeTxt}>{rec.type}</Text></View>
-        {saved && <View style={s.savedBadge}><Check size={11} color="#10B981"/><Text style={s.savedTxt}>저장됨</Text></View>}
+    <View style={s.tlRow}>
+      <View style={s.tlLeft}>
+        <Text style={s.tlTime}>{item.time}</Text>
+        <View style={s.tlDot}/>
+        {!isLast && <View style={s.tlLine}/>}
       </View>
-      <Text style={s.recAct}>{rec.activity}</Text>
-      <Text style={s.recRsn}>{rec.reason}</Text>
-      {!saved && (
-        <TouchableOpacity style={[s.saveBtn,saving&&{opacity:0.5}]} onPress={()=>setPicker(true)} disabled={saving} activeOpacity={0.8}>
-          {saving ? <ActivityIndicator size="small" color="#9810FA"/> : <><BookmarkPlus size={14} color="#9810FA"/><Text style={s.saveBtnTxt}>데이트 플랜으로 저장</Text></>}
-        </TouchableOpacity>
-      )}
-      <DatePickerModal visible={picker} onConfirm={confirm} onClose={()=>setPicker(false)}/>
+      <View style={[s.tlCard, isLast&&{marginBottom:0}]}>
+        <View style={s.tlTop}>
+          <View style={s.tlEmojiBubble}><Text style={s.tlEmojiTxt}>{item.emoji}</Text></View>
+          <View style={{flex:1}}>
+            <Text style={s.tlPlace}>{item.place}</Text>
+            <Text style={s.tlAct}>{item.activity}</Text>
+          </View>
+          {saved && <View style={s.savedBadge}><Check size={11} color="#10B981"/><Text style={s.savedTxt}>저장됨</Text></View>}
+        </View>
+        <Text style={s.tlTip}>{item.tip}</Text>
+        {!saved && (
+          <TouchableOpacity style={[s.saveBtn,saving&&{opacity:0.5}]} onPress={()=>setPicker(true)} disabled={saving} activeOpacity={0.8}>
+            {saving ? <ActivityIndicator size="small" color="#9810FA"/> : <><BookmarkPlus size={14} color="#9810FA"/><Text style={s.saveBtnTxt}>플랜으로 저장</Text></>}
+          </TouchableOpacity>
+        )}
+        <DatePickerModal visible={picker} onConfirm={confirm} onClose={()=>setPicker(false)}/>
+      </View>
     </View>
   );
 }
@@ -109,9 +116,9 @@ export default function AiAnalysisScreen() {
       .finally(()=>setLoading(false));
   }, []);
 
-  const savePlan = async (rec:AiDateAnalysisRecommendation, date:Date) => {
-    await coupleService.createDatePlan({ title:rec.activity, dateAt:date.toISOString(), memo:`[AI 추천] ${rec.type} — ${rec.reason}` });
-    Alert.alert('✅ 저장 완료', `"${rec.activity}" 플랜이 데이트 탭에 추가됐어요!`);
+  const savePlan = async (item:AiDateTimelineItem, date:Date) => {
+    await coupleService.createDatePlan({ title:item.activity, dateAt:date.toISOString(), memo:`[AI 추천] ${item.time} · ${item.place} — ${item.tip}` });
+    Alert.alert('✅ 저장 완료', `"${item.activity}" 플랜이 데이트 탭에 추가됐어요!`);
   };
 
   return (
@@ -158,15 +165,17 @@ export default function AiAnalysisScreen() {
             <Text style={s.anlTxt}>{result.analysis}</Text>
           </LinearGradient>
 
-          {(result.recommendations?.length??0)>0 && (
+          {(result.timeline?.length??0)>0 && (
             <>
               <View style={s.secHdr}>
-                <Text style={s.secTitle}>✨ 추천 데이트 코스</Text>
-                <Text style={s.secSub}>버튼을 눌러 플랜으로 바로 저장해보세요</Text>
+                <Text style={s.secTitle}>🗓 오늘의 데이트 코스</Text>
+                <Text style={s.secSub}>항목을 눌러 플랜으로 바로 저장해보세요</Text>
               </View>
-              {(result.recommendations??[]).map((rec,idx)=>(
-                <RecommendCard key={idx} rec={rec} index={idx} onSave={savePlan}/>
-              ))}
+              <View style={s.tlContainer}>
+                {(result.timeline??[]).map((item,idx)=>(
+                  <TimelineCard key={idx} item={item} isLast={idx===(result.timeline??[]).length-1} onSave={savePlan}/>
+                ))}
+              </View>
             </>
           )}
 
@@ -217,6 +226,20 @@ const s = StyleSheet.create({
   recRsn:{fontSize:FontSize.sm,color:Colors.gray[500],lineHeight:19},
   saveBtn:{flexDirection:'row',alignItems:'center',gap:6,backgroundColor:'#F5F0FF',paddingVertical:9,paddingHorizontal:14,borderRadius:10,alignSelf:'flex-start',marginTop:4},
   saveBtnTxt:{fontSize:FontSize.sm,fontWeight:FontWeight.semibold,color:'#9810FA'},
+  // Timeline
+  tlContainer:{gap:0},
+  tlRow:{flexDirection:'row',gap:10},
+  tlLeft:{width:52,alignItems:'center',gap:0},
+  tlTime:{fontSize:11,fontWeight:FontWeight.bold,color:'#9810FA',marginBottom:4,letterSpacing:0.3},
+  tlDot:{width:10,height:10,borderRadius:5,backgroundColor:'#9810FA'},
+  tlLine:{width:2,flex:1,backgroundColor:'#E9D5FF',marginTop:2,marginBottom:0},
+  tlCard:{flex:1,backgroundColor:Colors.white,borderRadius:14,padding:14,gap:6,marginBottom:12,...Shadow.sm},
+  tlTop:{flexDirection:'row',alignItems:'flex-start',gap:10},
+  tlEmojiBubble:{width:36,height:36,borderRadius:18,backgroundColor:'#F5F0FF',alignItems:'center',justifyContent:'center',flexShrink:0},
+  tlEmojiTxt:{fontSize:18},
+  tlPlace:{fontSize:FontSize.xs,color:'#9810FA',fontWeight:FontWeight.semibold},
+  tlAct:{fontSize:FontSize.sm,fontWeight:FontWeight.bold,color:Colors.gray[900],lineHeight:18},
+  tlTip:{fontSize:FontSize.xs,color:Colors.gray[500],lineHeight:17},
   doneBtn:{backgroundColor:Colors.white,borderRadius:14,paddingVertical:14,alignItems:'center',...Shadow.sm,marginTop:4},
   doneTxt:{fontSize:FontSize.base,fontWeight:FontWeight.semibold,color:Colors.gray[700]},
 });

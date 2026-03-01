@@ -820,7 +820,7 @@ function DateTab() {
           <View style={{ flex: 1 }}>
             <Text style={styles.aiInfoTitle}>AI 데이트 코스 분석</Text>
             <Text style={styles.aiInfoDesc}>
-              북마크된 장소를 기반으로 최적의 데이트 코스를 추천해드려요!
+              플랜·북마크 기반으로 오전부터 저녁까지 하루 데이트 일정을 짜드려요!
             </Text>
           </View>
         </View>

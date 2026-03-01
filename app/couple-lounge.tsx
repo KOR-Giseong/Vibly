@@ -20,7 +20,8 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, useIsFocused } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Heart, Plus, Camera, Sparkles, ChevronLeft,

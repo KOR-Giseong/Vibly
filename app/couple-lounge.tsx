@@ -20,7 +20,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useIsFocused } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Heart, Plus, Camera, Sparkles, ChevronLeft,
@@ -716,6 +716,7 @@ function DateHowToModal({ visible, onClose }: { visible: boolean; onClose: () =>
 
 function DateTab() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const [plans, setPlans] = useState<DatePlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [howToVisible, setHowToVisible] = useState(false);
@@ -723,19 +724,14 @@ function DateTab() {
   // 완료 후 추억 업로드 상태
   const [memoryUploading, setMemoryUploading] = useState(false);
 
+  // 포커스 변화(form에서 돌아올 때 포함)마다 플랜 새로고침
   useEffect(() => {
+    if (!isFocused) return;
     coupleService.getDatePlans()
       .then(setPlans)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
-
-  // 수정/삭제 후 form에서 돌아오면 자동 새로잜질
-  useFocusEffect(
-    useCallback(() => {
-      coupleService.getDatePlans().then(setPlans).catch(() => {});
-    }, []),
-  );
+  }, [isFocused]);
 
   // 예정: dateAt ASC / 완료+취소: updatedAt DESC
   const planned = [...plans]

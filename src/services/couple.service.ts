@@ -199,10 +199,10 @@ export const coupleService = {
     return data;
   },
 
-  aiRefineTimeline: async (timeline: AiDateTimelineItem[], feedback: string): Promise<AiDateAnalysisResult> => {
+  aiRefineTimeline: async (opts: { timeline: AiDateTimelineItem[]; itemIndex?: number; feedback: string }): Promise<AiDateAnalysisResult> => {
     const { data } = await apiClient.post<AiDateAnalysisResult>(
       '/couple/date-plans/ai-refine',
-      { timeline, feedback }
+      { timeline: opts.timeline, feedback: opts.feedback }
     );
     return data;
   },

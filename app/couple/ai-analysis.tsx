@@ -224,7 +224,7 @@ export default function AiAnalysisScreen() {
     setRefining(true);
     try {
       const res = await coupleService.aiRefineTimeline({ timeline, itemIndex: refineIdx, feedback });
-      setTimeline(res.timeline);
+      setTimeline(res.timeline ?? timeline);
       setCredits(res.creditsRemaining);
       setRefineVisible(false);
       setRefineIdx(null);

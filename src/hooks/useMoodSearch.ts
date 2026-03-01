@@ -3,11 +3,13 @@ import { useMutation } from '@tanstack/react-query';
 import { moodService } from '@services/mood.service';
 import { useMoodStore } from '@stores/mood.store';
 import { useCreditStore } from '@stores/credit.store';
+import { useMapFilterStore } from '@stores/mapFilter.store';
 import { analytics } from '@utils/analytics';
 
 export function useMoodSearch() {
   const { setSearchResult, setSearching } = useMoodStore();
   const { credits, isPremium, syncBalance } = useCreditStore();
+  const { limit, radius } = useMapFilterStore();
 
   const mutation = useMutation({
     mutationFn: moodService.search,
@@ -37,9 +39,9 @@ export function useMoodSearch() {
     (query: string, coords?: { lat: number; lng: number }) => {
       if (!hasEnoughCredits) return;
       const location = coords ?? DEFAULT_COORDS;
-      mutation.mutate({ query, ...location });
+      mutation.mutate({ query, ...location, limit, radius });
     },
-    [mutation, hasEnoughCredits],
+    [mutation, hasEnoughCredits, limit, radius],
   );
 
   return {

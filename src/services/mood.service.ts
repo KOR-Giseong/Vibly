@@ -5,6 +5,8 @@ interface MoodSearchParams {
   query: string;
   lat?: number;
   lng?: number;
+  limit?: number;
+  radius?: number;
 }
 
 export const moodService = {

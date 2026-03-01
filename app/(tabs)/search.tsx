@@ -149,7 +149,7 @@ export default function SearchScreen() {
   const rawPlaces: Place[] = submittedQuery.trim()
     ? (searchData?.data ?? [])
     : showMoodResults
-      ? (searchResult!.places as Place[])
+      ? (searchResult!.places as Place[]).slice(0, limit)
       : (nearbyData?.data ?? []);
   const places = sortPlaces(rawPlaces, sortBy);
 

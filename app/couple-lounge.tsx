@@ -649,10 +649,76 @@ function ScrapTab() {
 }
 
 // ── 데이트 탭 ─────────────────────────────────────────────────────────────────
+const DATE_HOW_TO_STEPS = [
+  {
+    emoji: '🔖',
+    title: '장소 스크랩',
+    desc: '홈 탭 지도나 검색에서 마음에 드는 장소를 북마크해두세요. AI 분석에도 활용돼요.',
+    color: '#9810FA',
+    bg: '#F5F0FF',
+  },
+  {
+    emoji: '➕',
+    title: '플랜 추가',
+    desc: '"플랜 추가" 버튼으로 날짜·제목을 정해 데이트 계획을 만들어보세요.',
+    color: '#E60076',
+    bg: '#FFF0F8',
+  },
+  {
+    emoji: '🤖',
+    title: 'AI 코스 추천',
+    desc: '북마크된 장소를 분석해 최적 데이트 코스를 추천해드려요. (15 크레딧)',
+    color: '#7C3AED',
+    bg: '#F3E8FF',
+  },
+  {
+    emoji: '✅',
+    title: '완료 후 추억 저장',
+    desc: '데이트 후 ✓ 버튼으로 완료 처리하면 사진을 추억 탭에 바로 저장할 수 있어요.',
+    color: '#16A34A',
+    bg: '#F0FDF4',
+  },
+];
+
+function DateHowToModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.howToSheet}>
+          <View style={styles.reportHandle} />
+          <Text style={styles.howToTitle}>📅 데이트 탭 사용법</Text>
+          <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 4 }}>
+            {DATE_HOW_TO_STEPS.map((step, i) => (
+              <View key={i} style={styles.howToItem}>
+                <View style={[styles.howToEmojiWrap, { backgroundColor: step.bg }]}>
+                  <Text style={{ fontSize: 22 }}>{step.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.howToItemHeader}>
+                    <View style={[styles.howToStep, { backgroundColor: step.bg }]}>
+                      <Text style={[styles.howToStepText, { color: step.color }]}>STEP {i + 1}</Text>
+                    </View>
+                    <Text style={styles.howToItemTitle}>{step.title}</Text>
+                  </View>
+                  <Text style={styles.howToItemDesc}>{step.desc}</Text>
+                </View>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.howToCloseBtn} onPress={onClose}>
+              <Text style={styles.howToCloseBtnText}>닫기</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 function DateTab() {
   const router = useRouter();
   const [plans, setPlans] = useState<DatePlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [howToVisible, setHowToVisible] = useState(false);
 
   // 완료 후 추억 업로드 상태
   const [memoryUploading, setMemoryUploading] = useState(false);
@@ -773,14 +839,42 @@ function DateTab() {
           <Plus size={17} color={Colors.white} />
           <Text style={styles.addBtnText}>플랜 추가</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.howToBtn} onPress={() => setHowToVisible(true)}>
+          <Text style={styles.howToBtnText}>?</Text>
+        </TouchableOpacity>
       </View>
 
+      <DateHowToModal visible={howToVisible} onClose={() => setHowToVisible(false)} />
+
       {plans.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={{ fontSize: 44 }}>📅</Text>
-          <Text style={styles.emptyTitle}>데이트 플랜을 추가해보세요</Text>
-          <Text style={styles.emptyDesc}>함께 계획하는 소중한 시간</Text>
-        </View>
+        <ScrollView contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.dateGuideWrap}>
+            <Text style={styles.dateGuideHeading}>💡 이렇게 활용해보세요</Text>
+            {DATE_HOW_TO_STEPS.map((step, i) => (
+              <View key={i} style={[styles.dateGuideCard, { borderLeftColor: step.color }]}>
+                <View style={[styles.dateGuideEmoji, { backgroundColor: step.bg }]}>
+                  <Text style={{ fontSize: 20 }}>{step.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.howToItemHeader}>
+                    <View style={[styles.howToStep, { backgroundColor: step.bg }]}>
+                      <Text style={[styles.howToStepText, { color: step.color }]}>STEP {i + 1}</Text>
+                    </View>
+                    <Text style={styles.dateGuideCardTitle}>{step.title}</Text>
+                  </View>
+                  <Text style={styles.dateGuideCardDesc}>{step.desc}</Text>
+                </View>
+              </View>
+            ))}
+            <TouchableOpacity
+              style={styles.addBtnLarge}
+              onPress={() => router.push('/couple/date-plan-form' as any)}
+            >
+              <Plus size={18} color={Colors.white} />
+              <Text style={styles.addBtnText}>첫 번째 플랜 추가하기</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.tabContent}>
           {/* 예정 섹션 */}
@@ -2022,6 +2116,140 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
     color: Colors.white,
+  },
+  howToBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.gray[200],
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.sm,
+  },
+  howToBtnText: {
+    fontSize: 15,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[500],
+  },
+  howToSheet: {
+    backgroundColor: Colors.white,
+    borderRadius: 24,
+    padding: Spacing.lg,
+    maxHeight: '80%',
+    ...Shadow.lg,
+  },
+  howToTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  howToItem: {
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'flex-start',
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray[50],
+  },
+  howToEmojiWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  howToItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  howToStep: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  howToStepText: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    letterSpacing: 0.5,
+  },
+  howToItemTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[900],
+  },
+  howToItemDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[500],
+    lineHeight: 18,
+  },
+  howToCloseBtn: {
+    backgroundColor: Colors.gray[100],
+    borderRadius: BorderRadius.xl,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: Spacing.sm,
+  },
+  howToCloseBtnText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[600],
+  },
+  dateGuideWrap: {
+    gap: 10,
+  },
+  dateGuideHeading: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[500],
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  dateGuideCard: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: 14,
+    borderLeftWidth: 3,
+    ...Shadow.sm,
+  },
+  dateGuideEmoji: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateGuideCardTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[900],
+  },
+  dateGuideCardDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[500],
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  addBtnLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#E60076',
+    borderRadius: BorderRadius.xl,
+    paddingVertical: 14,
+    marginTop: 8,
+    ...Shadow.sm,
   },
   planSectionHeader: {
     flexDirection: 'row',

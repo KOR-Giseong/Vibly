@@ -14,7 +14,7 @@ import { ChevronLeft, Sparkles, MapPin } from 'lucide-react-native';
 import {
   Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow, Gradients,
 } from '@constants/theme';
-import { coupleService, type AiDateAnalysisResult } from '@services/couple.service';
+import { coupleService, type AiDateAnalysisResult, type AiDateAnalysisRecommendation } from '@services/couple.service';
 
 export default function AiAnalysisScreen() {
   const router = useRouter();
@@ -84,10 +84,10 @@ export default function AiAnalysisScreen() {
           </View>
 
           {/* 추천 코스 */}
-          {result.recommendations.length > 0 && (
+          {(result.recommendations?.length ?? 0) > 0 && (
             <>
               <Text style={styles.sectionLabel}>추천 데이트 코스</Text>
-              {result.recommendations.map((rec, idx) => (
+              {(result.recommendations ?? []).map((rec: AiDateAnalysisRecommendation, idx: number) => (
                 <View key={idx} style={styles.recommendCard}>
                   <LinearGradient
                     colors={['#9810FA', '#E60076']}
@@ -99,7 +99,11 @@ export default function AiAnalysisScreen() {
                   </LinearGradient>
                   <View style={styles.recommendBody}>
                     <MapPin size={13} color="#E60076" style={{ marginTop: 2, flexShrink: 0 }} />
-                    <Text style={styles.recommendText}>{rec}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.recommendType}>{rec.type}</Text>
+                      <Text style={styles.recommendText}>{rec.activity}</Text>
+                      <Text style={styles.recommendReason}>{rec.reason}</Text>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -261,9 +265,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   recommendText: {
-    flex: 1,
     fontSize: FontSize.base,
-    color: Colors.gray[700],
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[800],
     lineHeight: 22,
+  },
+  recommendType: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: '#9810FA',
+    marginBottom: 2,
+    letterSpacing: 0.3,
+  },
+  recommendReason: {
+    fontSize: FontSize.sm,
+    color: Colors.gray[500],
+    lineHeight: 18,
+    marginTop: 2,
   },
 });

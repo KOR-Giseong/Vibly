@@ -20,7 +20,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Heart, Plus, Camera, Sparkles, ChevronLeft,
@@ -538,7 +538,7 @@ function HomeTab({
           <Text style={styles.sectionLabel}>다음 데이트</Text>
           <DatePlanCard
             plan={nextPlan}
-            onPress={() => router.push('/couple/date-plan-form' as any)}
+            onPress={() => router.push({ pathname: '/couple/date-plan-form' as any, params: { id: nextPlan.id, title: nextPlan.title, dateAt: nextPlan.dateAt, memo: nextPlan.memo ?? '' } })}
           />
         </View>
       )}
@@ -730,6 +730,13 @@ function DateTab() {
       .finally(() => setLoading(false));
   }, []);
 
+  // 수정/삭제 후 form에서 돌아오면 자동 새로잜질
+  useFocusEffect(
+    useCallback(() => {
+      coupleService.getDatePlans().then(setPlans).catch(() => {});
+    }, []),
+  );
+
   // 예정: dateAt ASC / 완료+취소: updatedAt DESC
   const planned = [...plans]
     .filter((p) => p.status === 'PLANNED')
@@ -890,7 +897,7 @@ function DateTab() {
                   key={plan.id}
                   plan={plan}
                   onStatusChange={handleStatusChange}
-                  onPress={() => router.push({ pathname: '/couple/date-plan-form' as any, params: { id: plan.id } })}
+                  onPress={() => router.push({ pathname: '/couple/date-plan-form' as any, params: { id: plan.id, title: plan.title, dateAt: plan.dateAt, memo: plan.memo ?? '' } })}
                 />
               ))}
             </View>
@@ -908,7 +915,7 @@ function DateTab() {
                 <DatePlanCard
                   key={plan.id}
                   plan={plan}
-                  onPress={() => router.push({ pathname: '/couple/date-plan-form' as any, params: { id: plan.id } })}
+                  onPress={() => router.push({ pathname: '/couple/date-plan-form' as any, params: { id: plan.id, title: plan.title, dateAt: plan.dateAt, memo: plan.memo ?? '' } })}
                 />
               ))}
             </View>

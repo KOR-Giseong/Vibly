@@ -53,9 +53,16 @@ export interface UploadMemoryDto {
   takenAt?: string;
 }
 
+export interface AiDateAnalysisRecommendation {
+  type: string;
+  activity: string;
+  reason: string;
+}
+
 export interface AiDateAnalysisResult {
   analysis: string;
-  recommendations: string[];
+  creditsRemaining?: number;
+  recommendations?: AiDateAnalysisRecommendation[];
   creditsRemaining: number;
 }
 

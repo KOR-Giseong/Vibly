@@ -9,12 +9,11 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, ChevronRight, Calendar, FileText, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Calendar, FileText, X, Trash2 } from 'lucide-react-native';
 import {
   Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow, Gradients,
 } from '@constants/theme';
@@ -158,33 +157,74 @@ function CalendarPicker({ visible, selectedDate, onConfirm, onClose }: CalendarP
 export default function DatePlanFormScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [title, setTitle] = useState('');
+  const params = useLocalSearchParams<{ id?: string; title?: string; dateAt?: string; memo?: string }>();
+  const isEdit = !!params.id;
+
+  const [title, setTitle] = useState(params.title ?? '');
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (params.dateAt) {
+      const d = new Date(params.dateAt);
+      if (!isNaN(d.getTime())) return d;
+    }
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
     return tomorrow;
   });
   const [calVisible, setCalVisible] = useState(false);
-  const [memo, setMemo] = useState('');
+  const [memo, setMemo] = useState(params.memo ?? '');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleSave = async () => {
     if (!title.trim()) { Alert.alert('알림', '제목을 입력해주세요.'); return; }
 
     setSaving(true);
     try {
-      await coupleService.createDatePlan({
-        title: title.trim(),
-        dateAt: selectedDate.toISOString(),
-        memo: memo.trim() || undefined,
-      });
+      if (isEdit && params.id) {
+        await coupleService.updateDatePlan(params.id, {
+          title: title.trim(),
+          dateAt: selectedDate.toISOString(),
+          memo: memo.trim() || undefined,
+        });
+      } else {
+        await coupleService.createDatePlan({
+          title: title.trim(),
+          dateAt: selectedDate.toISOString(),
+          memo: memo.trim() || undefined,
+        });
+      }
       router.back();
     } catch (e: any) {
       Alert.alert('오류', e?.response?.data?.message ?? '저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = () => {
+    if (!params.id) return;
+    Alert.alert(
+      '플랜 삭제',
+      '이 데이트 플랜을 삭제할까요?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제', style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await coupleService.deleteDatePlan(params.id!);
+              router.back();
+            } catch (e: any) {
+              Alert.alert('오류', e?.response?.data?.message ?? '삭제에 실패했습니다.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -194,17 +234,31 @@ export default function DatePlanFormScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={22} color={Colors.gray[700]} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>데이트 플랜 추가</Text>
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && { opacity: 0.5 }]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving
-            ? <ActivityIndicator color={Colors.white} size="small" />
-            : <Text style={styles.saveBtnText}>저장</Text>
-          }
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{isEdit ? '데이트 플랜 수정' : '데이트 플랜 추가'}</Text>
+        <View style={styles.headerRight}>
+          {isEdit && (
+            <TouchableOpacity
+              style={[styles.deleteBtn, deleting && { opacity: 0.5 }]}
+              onPress={handleDelete}
+              disabled={deleting || saving}
+            >
+              {deleting
+                ? <ActivityIndicator color="#EF4444" size="small" />
+                : <Trash2 size={17} color="#EF4444" />
+              }
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && { opacity: 0.5 }]}
+            onPress={handleSave}
+            disabled={saving || deleting}
+          >
+            {saving
+              ? <ActivityIndicator color={Colors.white} size="small" />
+              : <Text style={styles.saveBtnText}>{isEdit ? '수정' : '저장'}</Text>
+            }
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -287,6 +341,20 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.gray[900],
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.sm,
   },
   saveBtn: {
     backgroundColor: '#E60076',

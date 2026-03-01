@@ -57,12 +57,15 @@ export interface AiDateTimelineItem {
   time: string;
   emoji: string;
   place: string;
+  address?: string | null;
+  kakaoId?: string | null;
   activity: string;
   tip: string;
 }
 
 export interface AiDateAnalysisResult {
   analysis: string;
+  region?: string;
   creditsRemaining: number;
   timeline?: AiDateTimelineItem[];
 }

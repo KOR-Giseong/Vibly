@@ -155,6 +155,9 @@ function TimelineCard({ item, isLast, onSave, onRefine }:{
           <View style={s.tlEmojiBubble}><Text style={s.tlEmojiTxt}>{item.emoji}</Text></View>
           <View style={{ flex: 1 }}>
             <Text style={s.tlPlace}>{item.place}</Text>
+            {item.address && (
+              <Text style={s.tlAddress} numberOfLines={1}>{item.address}</Text>
+            )}
             <Text style={s.tlAct}>{item.activity}</Text>
           </View>
           <View style={s.tlActions}>
@@ -353,6 +356,7 @@ const s = StyleSheet.create({
   tlEmojiBubble: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F0FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   tlEmojiTxt: { fontSize: 18 },
   tlPlace: { fontSize: FontSize.xs, color: '#9810FA', fontWeight: FontWeight.semibold },
+  tlAddress: { fontSize: 10, color: Colors.gray[400], lineHeight: 14, marginTop: 1 },
   tlAct: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.gray[900], lineHeight: 18 },
   tlTip: { fontSize: FontSize.xs, color: Colors.gray[500], lineHeight: 17 },
   tlActions: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },

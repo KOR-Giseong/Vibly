@@ -721,6 +721,8 @@ function DateTab() {
   const [plans, setPlans] = useState<DatePlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [howToVisible, setHowToVisible] = useState(false);
+  const [aiNoteVisible, setAiNoteVisible] = useState(false);
+  const [aiNote, setAiNote] = useState('');
 
   // 완료 후 추억 업로드 상태
   const [memoryUploading, setMemoryUploading] = useState(false);
@@ -797,14 +799,14 @@ function DateTab() {
   };
 
   const handleAI = () => {
-    Alert.alert(
-      'AI 데이트 분석',
-      '15 크레딧을 소모하여 AI가 데이트 코스를 분석합니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        { text: '분석 시작', onPress: () => router.push('/couple/ai-analysis' as any) },
-      ]
-    );
+    setAiNote('');
+    setAiNoteVisible(true);
+  };
+
+  const startAI = () => {
+    setAiNoteVisible(false);
+    const params = aiNote.trim() ? `?userNote=${encodeURIComponent(aiNote.trim())}` : '';
+    router.push(`/couple/ai-analysis${params}` as any);
   };
 
   if (loading) return <ActivityIndicator color="#E60076" style={{ marginTop: 48 }} />;
@@ -849,6 +851,48 @@ function DateTab() {
       </View>
 
       <DateHowToModal visible={howToVisible} onClose={() => setHowToVisible(false)} />
+
+      {/* AI 노트 입력 모달 */}
+      <Modal visible={aiNoteVisible} transparent animationType="fade" onRequestClose={() => setAiNoteVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <TouchableOpacity style={styles.aiNoteBackdrop} activeOpacity={1} onPress={() => setAiNoteVisible(false)}>
+            <TouchableOpacity activeOpacity={1} onPress={(e: any) => e.stopPropagation()}>
+              <View style={styles.aiNoteSheet}>
+                <View style={styles.aiNoteHdr}>
+                  <LinearGradient colors={['#9810FA','#E60076']} style={styles.aiNoteIconWrap} start={{x:0,y:0}} end={{x:1,y:1}}>
+                    <Sparkles size={18} color="#fff" />
+                  </LinearGradient>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.aiNoteTitle}>AI 데이트 코스 만들기</Text>
+                    <Text style={styles.aiNoteSub}>원하는 조건을 알려주면 더 정확해져요</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setAiNoteVisible(false)}><X size={18} color={Colors.gray[400]} /></TouchableOpacity>
+                </View>
+                <TextInput
+                  style={styles.aiNoteInput}
+                  placeholder={'예) 홍대 근처, 조용한 분위기\n첫 기념일이라 특별하게 하고 싶어요'}
+                  placeholderTextColor={Colors.gray[400]}
+                  multiline
+                  maxLength={200}
+                  value={aiNote}
+                  onChangeText={setAiNote}
+                />
+                <View style={styles.aiNoteFooter}>
+                  <View style={styles.aiNoteCreditBadge}>
+                    <Coins size={12} color="#9810FA" />
+                    <Text style={styles.aiNoteCreditTxt}>15크레딧 소모</Text>
+                  </View>
+                  <TouchableOpacity style={styles.aiNoteStartBtn} onPress={startAI}>
+                    <LinearGradient colors={['#9810FA','#E60076']} start={{x:0,y:0}} end={{x:1,y:0}} style={styles.aiNoteStartGrad}>
+                      <Text style={styles.aiNoteStartTxt}>코스 만들기</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {plans.length === 0 ? (
         <ScrollView contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -2540,5 +2584,84 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.gray[300],
     textAlign: 'center',
+  },
+  // AI Note Modal
+  aiNoteBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  aiNoteSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    gap: 16,
+  },
+  aiNoteHdr: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  aiNoteIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiNoteTitle: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  aiNoteSub: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[500],
+    marginTop: 2,
+  },
+  aiNoteInput: {
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: FontSize.sm,
+    color: Colors.gray[900],
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  aiNoteFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  aiNoteCreditBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FAF5FF',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  aiNoteCreditTxt: {
+    fontSize: FontSize.xs,
+    color: '#9810FA',
+    fontWeight: FontWeight.semibold,
+  },
+  aiNoteStartBtn: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  aiNoteStartGrad: {
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiNoteStartTxt: {
+    fontSize: FontSize.sm,
+    color: '#fff',
+    fontWeight: FontWeight.bold,
   },
 });

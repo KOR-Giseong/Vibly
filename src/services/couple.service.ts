@@ -188,9 +188,18 @@ export const coupleService = {
     await apiClient.delete(`/couple/date-plans/${id}`);
   },
 
-  aiDateAnalysis: async (): Promise<AiDateAnalysisResult> => {
+  aiDateAnalysis: async (userNote?: string): Promise<AiDateAnalysisResult> => {
     const { data } = await apiClient.post<AiDateAnalysisResult>(
-      '/couple/date-plans/ai-analysis'
+      '/couple/date-plans/ai-analysis',
+      { userNote }
+    );
+    return data;
+  },
+
+  aiRefineTimeline: async (timeline: AiDateTimelineItem[], feedback: string): Promise<AiDateAnalysisResult> => {
+    const { data } = await apiClient.post<AiDateAnalysisResult>(
+      '/couple/date-plans/ai-refine',
+      { timeline, feedback }
     );
     return data;
   },

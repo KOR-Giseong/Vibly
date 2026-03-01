@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
+  Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -25,8 +25,8 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const { user } = useAuthStore();
-  const { selectedMood, setSelectedMood, rateLimitRemaining } = useMoodStore();
-  const { search } = useMoodSearch();
+  const { selectedMood, setSelectedMood } = useMoodStore();
+  const { search, credits, isPremium } = useMoodSearch();
   const { coords, status: locationStatus, canAskAgain, requestPermission, openSettings } = useLocation();
 
   const [showAIModal, setShowAIModal] = useState(false);
@@ -35,20 +35,56 @@ export default function HomeScreen() {
 
   const displayName = (user?.nickname ?? user?.name)?.split(' ')[0] ?? '게스트';
 
-  // 기분 카드 선택 → 검색 후 검색 화면으로 이동
+  // 기분 카드 선택 → 크레딧 확인 후 검색 화면으로 이동
   const handleMoodSelect = (mood: Mood) => {
     setSelectedMood(mood);
-    search(mood.label, coords ?? undefined);
-    router.push('/(tabs)/search');
+    if (isPremium) {
+      search(mood.label, coords ?? undefined);
+      router.push('/(tabs)/search');
+      return;
+    }
+    Alert.alert(
+      '크레딧 사용',
+      `5 크레딧을 사용하여 검색합니다.\n현재 보유: ${credits} 크레딧`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '검색하기',
+          onPress: () => {
+            search(mood.label, coords ?? undefined);
+            router.push('/(tabs)/search');
+          },
+        },
+      ],
+    );
   };
 
   // AI 모달에서 검색 실행
   const handleAISearch = () => {
     if (!aiQuery.trim()) return;
-    search(aiQuery.trim(), coords ?? undefined);
-    setShowAIModal(false);
-    setAiQuery('');
-    router.push('/(tabs)/search');
+    if (isPremium) {
+      search(aiQuery.trim(), coords ?? undefined);
+      setShowAIModal(false);
+      setAiQuery('');
+      router.push('/(tabs)/search');
+      return;
+    }
+    Alert.alert(
+      '크레딧 사용',
+      `10 크레딧을 사용하여 AI 검색합니다.\n현재 보유: ${credits} 크레딧`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '검색하기',
+          onPress: () => {
+            search(aiQuery.trim(), coords ?? undefined);
+            setShowAIModal(false);
+            setAiQuery('');
+            router.push('/(tabs)/search');
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -81,7 +117,7 @@ export default function HomeScreen() {
 
           {/* 검색 횟수 안내 */}
           <View style={styles.block}>
-            <RateLimitBanner remaining={rateLimitRemaining} />
+            <RateLimitBanner />
           </View>
 
           {/* 기분 선택 */}

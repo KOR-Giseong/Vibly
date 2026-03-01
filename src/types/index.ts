@@ -18,6 +18,7 @@ export interface User {
   suspendReason?: string | null;
   isPremium: boolean;
   isAdmin?: boolean;
+  credits: number;
   createdAt: string;
 }
 

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@stores/auth.store';
+import { useCreditStore } from '@stores/credit.store';
 import { authService } from '@services/auth.service';
 
 const queryClient = new QueryClient({
@@ -13,8 +14,8 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const router = useRouter();
-  const segments = useSegments();
   const { setUser, setAuthenticated } = useAuthStore();
+  const { setCredits, setPremium } = useCreditStore();
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -23,7 +24,11 @@ function RootLayoutNav() {
         const user = await authService.getMe();
         setUser(user);
         setAuthenticated(true);
-        // 정지된 계정이면 suspended 화면으로 이동
+        // getMe 응답에 포함된 크레딧 즉시 반영
+        if (user && typeof user.credits === 'number') {
+          setCredits(user.credits);
+          setPremium(user.isPremium);
+        }
         if (user?.status === 'SUSPENDED') {
           router.replace('/suspended');
         }
@@ -55,6 +60,7 @@ function RootLayoutNav() {
         <Stack.Screen name="vibe-report" />
         <Stack.Screen name="subscription" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="credits" options={{ animation: 'slide_from_bottom' }} />
       </Stack>
     </>
   );

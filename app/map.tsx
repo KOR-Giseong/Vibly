@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Search, Navigation, MapPin, Star, X } from 'lucide-react-native';
+import { ArrowLeft, Search, Navigation, MapPin, Star, X, SlidersHorizontal } from 'lucide-react-native';
 import {
   Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow,
 } from '@constants/theme';
@@ -18,7 +18,9 @@ import { placeService } from '@services/place.service';
 import { useLocation } from '@hooks/useLocation';
 import ScreenTransition from '@components/ScreenTransition';
 import MapContainer, { type MapHandle } from '@components/features/map/MapContainer';
+import { MapFilterSheet } from '@components/features/map/MapFilterSheet';
 import { LocationPermissionModal } from '@components/ui';
+import { useMapFilterStore, radiusLabel } from '@stores/mapFilter.store';
 import type { Place } from '@/types';
 
 // ─── Category constants ───────────────────────────────────────────────────────
@@ -56,11 +58,14 @@ export default function MapScreen() {
 
   const mapRef = useRef<MapHandle>(null);
 
+  const { limit, radius } = useMapFilterStore();
+
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [locationModalDismissed, setLocationModalDismissed] = useState(false);
   const [showList, setShowList] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
 
   // Animated bottom card
   const cardY = useSharedValue(320);
@@ -85,17 +90,17 @@ export default function MapScreen() {
   // ── Data ──────────────────────────────────────────────────────────────────────
 
   const { data: nearbyData, isLoading: nearbyLoading } = useQuery({
-    queryKey: ['nearby-map', coords.lat, coords.lng],
+    queryKey: ['nearby-map', coords.lat, coords.lng, radius, limit],
     queryFn: () =>
-      placeService.getNearby({ lat: coords.lat, lng: coords.lng, radius: 2000, limit: 40 }),
+      placeService.getNearby({ lat: coords.lat, lng: coords.lng, radius, limit }),
     enabled: locationReady,
     staleTime: 1000 * 60 * 5,
   });
 
   const { data: searchData, isFetching: searchLoading } = useQuery({
-    queryKey: ['map-search', submittedQuery, coords.lat, coords.lng],
+    queryKey: ['map-search', submittedQuery, coords.lat, coords.lng, limit],
     queryFn: () =>
-      placeService.search({ query: submittedQuery, lat: coords.lat, lng: coords.lng, limit: 40 }),
+      placeService.search({ query: submittedQuery, lat: coords.lat, lng: coords.lng, limit }),
     enabled: submittedQuery.trim().length > 0,
     staleTime: 1000 * 60 * 2,
   });
@@ -245,6 +250,7 @@ export default function MapScreen() {
             <Text style={styles.countText}>
               {submittedQuery ? `검색 포함 ${places.length}개` : `주변 ${places.length}개`}
             </Text>
+            <Text style={styles.countRadius}>· {radiusLabel(radius)}</Text>
           </TouchableOpacity>
         )}
 
@@ -281,6 +287,15 @@ export default function MapScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Filter button */}
+          <TouchableOpacity
+            style={styles.filterBtn}
+            onPress={() => setShowFilter(true)}
+            activeOpacity={0.8}
+          >
+            <SlidersHorizontal size={18} color={Colors.primary[600]} />
+          </TouchableOpacity>
         </View>
 
         {/* ── My location button ───────────────────────────────────────────── */}
@@ -365,7 +380,7 @@ export default function MapScreen() {
               <View style={styles.cardBtns}>
                 <TouchableOpacity
                   style={styles.btnOutline}
-                  onPress={() => router.push({ pathname: `/place/${selectedPlace.id}`, params: { source: 'home' } })}
+                  onPress={() => router.push({ pathname: '/place/[id]', params: { id: selectedPlace.id, source: 'home' } })}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.btnOutlineText}>상세보기</Text>
@@ -486,6 +501,9 @@ export default function MapScreen() {
         }}
         canAskAgain={canAskAgain}
       />
+
+      {/* ── 검색 필터 시트 ─────────────────────────────────────────────── */}
+      <MapFilterSheet visible={showFilter} onClose={() => setShowFilter(false)} />
     </ScreenTransition>
   );
 }
@@ -560,6 +578,10 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
     color: Colors.primary[700],
   },
+  countRadius: {
+    fontSize: FontSize.xs,
+    color: Colors.text.muted,
+  },
 
   // Search bar
   searchBar: {
@@ -590,6 +612,13 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     color: Colors.gray[900],
     paddingVertical: 0,
+  },
+  filterBtn: {
+    width: 44, height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center',
+    ...Shadow.md,
   },
 
   // Location button

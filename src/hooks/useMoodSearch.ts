@@ -2,45 +2,52 @@ import { useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { moodService } from '@services/mood.service';
 import { useMoodStore } from '@stores/mood.store';
+import { useCreditStore } from '@stores/credit.store';
 import { analytics } from '@utils/analytics';
 
 export function useMoodSearch() {
-  const { setSearchResult, setSearching, decrementRateLimit, rateLimitRemaining } = useMoodStore();
+  const { setSearchResult, setSearching } = useMoodStore();
+  const { credits, isPremium, syncBalance } = useCreditStore();
 
   const mutation = useMutation({
     mutationFn: moodService.search,
     onMutate: () => {
-      setSearchResult(null); // 이전 결과 초기화 (구 결과가 잠깐 보이는 현상 방지)
+      setSearchResult(null);
       setSearching(true);
-      decrementRateLimit();
     },
     onSuccess: (result) => {
       setSearchResult(result);
+      // 검색 완료 후 서버에서 실제 차감된 잔액 동기화
+      syncBalance();
       analytics.track('SEARCH', { query: result.query, resultCount: result.places.length });
     },
     onError: () => {
       setSearchResult(null);
+      syncBalance();
     },
     onSettled: () => setSearching(false),
   });
 
-  // 위치 권한 없을 때 서울 시청 기본값 사용
   const DEFAULT_COORDS = { lat: 37.5665, lng: 126.9780 };
+
+  // 구독자는 무제한, 비구독자는 최소 5 크레딧 필요
+  const hasEnoughCredits = isPremium || credits >= 5;
 
   const search = useCallback(
     (query: string, coords?: { lat: number; lng: number }) => {
-      if (rateLimitRemaining <= 0) return;
+      if (!hasEnoughCredits) return;
       const location = coords ?? DEFAULT_COORDS;
       mutation.mutate({ query, ...location });
     },
-    [mutation, rateLimitRemaining],
+    [mutation, hasEnoughCredits],
   );
 
   return {
     search,
     isLoading: mutation.isPending,
     error: mutation.error,
-    isRateLimited: rateLimitRemaining <= 0,
-    rateLimitRemaining,
+    hasEnoughCredits,
+    credits,
+    isPremium,
   };
 }

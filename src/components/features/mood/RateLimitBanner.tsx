@@ -1,88 +1,85 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Info } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Coins, Crown } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { Spacing, BorderRadius, FontSize, FontWeight } from '@constants/theme';
+import { useCreditStore } from '@stores/credit.store';
 
-const BANNER_COLORS = {
-  bg: '#EFF6FF',
-  border: '#BEDBFF',
-  icon: '#1C398E',
-  title: '#1C398E',
-  label: '#6B7280',
-  value: '#1447E6',
-  trackBg: 'rgba(255,255,255,0.5)',
-  trackFill: '#155DFC',
-} as const;
+// 크레딧 비용 안내 상수
+const SEARCH_COST_BASIC = 5;
+const SEARCH_COST_AI = 10;
 
-interface RateLimitBannerProps {
-  remaining: number;
-  total?: number;
-}
+/**
+ * 홈 화면 크레딧 안내 배너 (구 RateLimitBanner)
+ * - 구독자: 무제한 표시
+ * - 비구독자: 보유 크레딧 + 소모 비용 표시
+ */
+export function RateLimitBanner() {
+  const router = useRouter();
+  const { credits, isPremium } = useCreditStore();
 
-export function RateLimitBanner({ remaining, total = 20 }: RateLimitBannerProps) {
-  const progress = Math.max(0, Math.min(remaining / total, 1));
-
-  return (
-    <View style={styles.container}>
-      <Info size={20} color={BANNER_COLORS.icon} />
-      <View style={styles.content}>
-        <Text style={styles.title}>검색 횟수 안내</Text>
-
-        <Text style={styles.subtitle}>
-          <Text style={styles.label}>남은 검색: </Text>
-          <Text style={styles.value}>{remaining}회</Text>
-          <Text style={styles.label}> / {total}회</Text>
-        </Text>
-
-        <View style={styles.track}>
-          <View style={[styles.fill, { width: `${progress * 100}%` as any }]} />
+  if (isPremium) {
+    return (
+      <View style={[styles.container, styles.premiumContainer]}>
+        <Crown size={18} color="#7C3AED" />
+        <View style={styles.content}>
+          <Text style={[styles.title, styles.premiumTitle]}>구독 중 · 무제한 검색</Text>
+          <Text style={[styles.subtitle, { color: '#A78BFA' }]}>AI 검색을 마음껏 사용하세요!</Text>
         </View>
       </View>
-    </View>
+    );
+  }
+
+  const isLow = credits < SEARCH_COST_BASIC;
+
+  return (
+    <TouchableOpacity
+      style={[styles.container, isLow && styles.lowContainer]}
+      onPress={() => router.push('/credits')}
+      activeOpacity={0.8}
+    >
+      <Coins size={18} color={isLow ? '#DC2626' : '#D97706'} />
+      <View style={styles.content}>
+        <Text style={[styles.title, isLow && styles.lowTitle]}>
+          {isLow ? '크레딧이 부족해요' : `보유 크레딧: ${credits.toLocaleString()}`}
+        </Text>
+        <Text style={styles.subtitle}>
+          기본 검색 {SEARCH_COST_BASIC} · AI 검색 {SEARCH_COST_AI} 소모 · 탭해서 충전
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: BANNER_COLORS.bg,
-    borderWidth: 2,
-    borderColor: BANNER_COLORS.border,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
-    paddingLeft: Spacing.lg + 2,
   },
-  content: {
-    flex: 1,
-    gap: 4,
+  premiumContainer: {
+    backgroundColor: '#F3E8FF',
+    borderColor: '#E9D5FF',
   },
+  lowContainer: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  content: { flex: 1, gap: 2 },
   title: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: BANNER_COLORS.title,
+    color: '#92400E',
   },
+  premiumTitle: { color: '#7C3AED' },
+  lowTitle: { color: '#DC2626' },
   subtitle: {
     fontSize: FontSize.xs,
-  },
-  label: {
-    color: BANNER_COLORS.label,
-  },
-  value: {
-    fontWeight: FontWeight.bold,
-    color: BANNER_COLORS.value,
-  },
-  track: {
-    height: 8,
-    borderRadius: BorderRadius.full,
-    backgroundColor: BANNER_COLORS.trackBg,
-    overflow: 'hidden',
-    marginTop: Spacing.xs,
-  },
-  fill: {
-    height: 8,
-    borderRadius: BorderRadius.full,
-    backgroundColor: BANNER_COLORS.trackFill,
+    color: '#B45309',
   },
 });

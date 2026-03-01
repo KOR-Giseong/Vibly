@@ -51,7 +51,14 @@
           "color": "#7C3AED"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-4793069997129951~7979584137",
+          "androidAppId": "ca-app-pub-4793069997129951~3151451796"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

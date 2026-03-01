@@ -59,27 +59,5 @@ target 'Vibly' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
-
-    # iOS deployment target이 15.1 미만인 pod들을 15.1로 강제 상향 (빌드 경고 제거)
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
-        if current.to_f < 15.1
-          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
-        end
-      end
-    end
-
-    # Hermes run script 출력 파일 지정 (매 빌드마다 실행되는 경고 제거)
-    installer.pods_project.targets.each do |target|
-      target.build_phases.each do |phase|
-        if phase.respond_to?(:name) && phase.name&.include?('[Hermes] Replace Hermes')
-          phase.output_paths = [
-            '$(PODS_ROOT)/hermes-engine/destroot/Library/Frameworks/macosx/hermes.framework',
-            '$(PODS_ROOT)/hermes-engine/destroot/Library/Frameworks/universal/hermes.xcframework'
-          ]
-        end
-      end
-    end
   end
 end

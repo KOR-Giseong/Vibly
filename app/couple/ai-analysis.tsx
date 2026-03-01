@@ -1,286 +1,245 @@
 import { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  ActivityIndicator, Alert, Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Sparkles, MapPin } from 'lucide-react-native';
-import {
-  Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow, Gradients,
-} from '@constants/theme';
+import { ChevronLeft, ChevronRight, Sparkles, MapPin, BookmarkPlus, Check, Coins, X } from 'lucide-react-native';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow, Gradients } from '@constants/theme';
 import { coupleService, type AiDateAnalysisResult, type AiDateAnalysisRecommendation } from '@services/couple.service';
+
+const WEEKDAYS = ['일','월','화','수','목','금','토'];
+const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+function fmtDate(d: Date) { return `${d.getFullYear()}년 ${MONTHS[d.getMonth()]} ${d.getDate()}일`; }
+function sameDay(a: Date, b: Date) { return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function buildCells(y: number, m: number): (Date|null)[] {
+  const first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate(), c:(Date|null)[]=[];
+  for(let i=0;i<first;i++) c.push(null);
+  for(let d=1;d<=days;d++) c.push(new Date(y,m,d));
+  return c;
+}
+
+function DatePickerModal({ visible, onConfirm, onClose }:{ visible:boolean; onConfirm:(d:Date)=>void; onClose:()=>void; }) {
+  const now = new Date();
+  const [vy, setVy] = useState(now.getFullYear());
+  const [vm, setVm] = useState(now.getMonth());
+  const [sel, setSel] = useState<Date>(()=>{ const t=new Date(); t.setHours(0,0,0,0); return t; });
+  const prev = () => { if(vm===0){setVy(y=>y-1);setVm(11);}else setVm(m=>m-1); };
+  const next = () => { if(vm===11){setVy(y=>y+1);setVm(0);}else setVm(m=>m+1); };
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={dp.backdrop} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} onPress={(e:any)=>e.stopPropagation()}>
+          <View style={dp.sheet}>
+            <View style={dp.hdr}>
+              <Text style={dp.hdrTitle}>날짜 선택</Text>
+              <TouchableOpacity onPress={onClose}><X size={18} color={Colors.gray[500]} /></TouchableOpacity>
+            </View>
+            <View style={dp.mRow}>
+              <TouchableOpacity onPress={prev} style={dp.nav}><ChevronLeft size={20} color={Colors.gray[600]} /></TouchableOpacity>
+              <Text style={dp.mTxt}>{vy}년 {MONTHS[vm]}</Text>
+              <TouchableOpacity onPress={next} style={dp.nav}><ChevronRight size={20} color={Colors.gray[600]} /></TouchableOpacity>
+            </View>
+            <View style={dp.wRow}>
+              {WEEKDAYS.map((w,i)=>(<Text key={w} style={[dp.wd,i===0&&{color:'#EF4444'},i===6&&{color:'#3B82F6'}]}>{w}</Text>))}
+            </View>
+            <View style={dp.grid}>
+              {buildCells(vy,vm).map((d,idx)=>{
+                if(!d) return <View key={`e${idx}`} style={dp.cell}/>;
+                const isSel=sameDay(d,sel), sun=idx%7===0, sat=idx%7===6;
+                return (
+                  <TouchableOpacity key={d.toISOString()} style={[dp.cell,isSel&&dp.cellS]} onPress={()=>setSel(d)} activeOpacity={0.7}>
+                    <Text style={[dp.cTxt,isSel&&dp.cTxtS,!isSel&&sun&&{color:'#EF4444'},!isSel&&sat&&{color:'#3B82F6'}]}>{d.getDate()}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={dp.selRow}><Text style={dp.selTxt}>{fmtDate(sel)} 선택됨</Text></View>
+            <TouchableOpacity style={dp.cfmBtn} onPress={()=>{onConfirm(sel);onClose();}}>
+              <LinearGradient colors={['#9810FA','#E60076']} start={{x:0,y:0}} end={{x:1,y:0}} style={dp.cfmGrad}>
+                <Text style={dp.cfmTxt}>이 날짜로 저장</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+function RecommendCard({ rec, index, onSave }:{ rec:AiDateAnalysisRecommendation; index:number; onSave:(r:AiDateAnalysisRecommendation,d:Date)=>Promise<void>; }) {
+  const [picker, setPicker] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const confirm = async (date:Date) => { setSaving(true); try { await onSave(rec,date); setSaved(true); } finally { setSaving(false); } };
+  return (
+    <View style={s.recCard}>
+      <View style={s.recTop}>
+        <LinearGradient colors={['#9810FA','#E60076']} style={s.recNum} start={{x:0,y:0}} end={{x:1,y:1}}>
+          <Text style={s.recNumTxt}>{index+1}</Text>
+        </LinearGradient>
+        <View style={s.typeBadge}><MapPin size={11} color="#9810FA"/><Text style={s.typeTxt}>{rec.type}</Text></View>
+        {saved && <View style={s.savedBadge}><Check size={11} color="#10B981"/><Text style={s.savedTxt}>저장됨</Text></View>}
+      </View>
+      <Text style={s.recAct}>{rec.activity}</Text>
+      <Text style={s.recRsn}>{rec.reason}</Text>
+      {!saved && (
+        <TouchableOpacity style={[s.saveBtn,saving&&{opacity:0.5}]} onPress={()=>setPicker(true)} disabled={saving} activeOpacity={0.8}>
+          {saving ? <ActivityIndicator size="small" color="#9810FA"/> : <><BookmarkPlus size={14} color="#9810FA"/><Text style={s.saveBtnTxt}>데이트 플랜으로 저장</Text></>}
+        </TouchableOpacity>
+      )}
+      <DatePickerModal visible={picker} onConfirm={confirm} onClose={()=>setPicker(false)}/>
+    </View>
+  );
+}
 
 export default function AiAnalysisScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [result, setResult] = useState<AiDateAnalysisResult | null>(null);
+  const [result, setResult] = useState<AiDateAnalysisResult|null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     coupleService.aiDateAnalysis()
       .then(setResult)
-      .catch((e: any) => setError(e?.response?.data?.message ?? 'AI 분석에 실패했습니다.'))
-      .finally(() => setLoading(false));
+      .catch((e:any)=>setError(e?.response?.data?.message??'AI 분석에 실패했습니다.'))
+      .finally(()=>setLoading(false));
   }, []);
 
+  const savePlan = async (rec:AiDateAnalysisRecommendation, date:Date) => {
+    await coupleService.createDatePlan({ title:rec.activity, dateAt:date.toISOString(), memo:`[AI 추천] ${rec.type} — ${rec.reason}` });
+    Alert.alert('✅ 저장 완료', `"${rec.activity}" 플랜이 데이트 탭에 추가됐어요!`);
+  };
+
   return (
-    <LinearGradient colors={Gradients.background} style={styles.container}>
-      {/* 헤더 */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ChevronLeft size={22} color={Colors.gray[700]} />
+    <LinearGradient colors={Gradients.background} style={s.container}>
+      <View style={[s.header,{paddingTop:insets.top+8}]}>
+        <TouchableOpacity style={s.backBtn} onPress={()=>router.back()}>
+          <ChevronLeft size={22} color={Colors.gray[700]}/>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI 데이트 분석</Text>
-        <View style={{ width: 38 }} />
+        <Text style={s.headerTxt}>AI 데이트 분석</Text>
+        <View style={{width:38}}/>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <View style={styles.loadingCard}>
-            <ActivityIndicator color="#9810FA" size="large" />
-            <Text style={styles.loadingText}>AI가 최적의 데이트 코스를{'\n'}분석 중입니다...</Text>
+        <View style={s.center}>
+          <View style={s.ldCard}>
+            <LinearGradient colors={['#9810FA','#E60076']} style={s.ldIcon} start={{x:0,y:0}} end={{x:1,y:1}}>
+              <Sparkles size={28} color={Colors.white}/>
+            </LinearGradient>
+            <ActivityIndicator color="#9810FA" size="large"/>
+            <Text style={s.ldTitle}>AI가 분석 중이에요</Text>
+            <Text style={s.ldDesc}>{'북마크와 데이트 기록을 바탕으로\n최적의 코스를 찾고 있어요...'}</Text>
           </View>
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={{ fontSize: 48 }}>😥</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => router.back()}>
-            <Text style={styles.retryBtnText}>돌아가기</Text>
+        <View style={s.center}>
+          <Text style={{fontSize:52}}>😥</Text>
+          <Text style={s.errTitle}>분석에 실패했어요</Text>
+          <Text style={s.errDesc}>{error}</Text>
+          <TouchableOpacity style={s.retryBtn} onPress={()=>router.back()}>
+            <Text style={s.retryTxt}>돌아가기</Text>
           </TouchableOpacity>
         </View>
       ) : result ? (
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* 크레딧 */}
-          <View style={styles.creditBadge}>
-            <Sparkles size={13} color="#9810FA" />
-            <Text style={styles.creditText}>남은 크레딧: {result.creditsRemaining}</Text>
-          </View>
-
-          {/* 분석 카드 */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <LinearGradient
-                colors={['#9810FA', '#E60076']}
-                style={styles.cardIconWrap}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Sparkles size={18} color={Colors.white} />
-              </LinearGradient>
-              <Text style={styles.cardTitle}>AI 분석 결과</Text>
+        <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+          <View style={s.creditRow}>
+            <View style={s.creditBadge}>
+              <Coins size={13} color="#9810FA"/>
+              <Text style={s.creditTxt}>남은 크레딧: <Text style={s.creditNum}>{result.creditsRemaining??'—'}</Text></Text>
             </View>
-            <Text style={styles.analysisText}>{result.analysis}</Text>
           </View>
 
-          {/* 추천 코스 */}
-          {(result.recommendations?.length ?? 0) > 0 && (
+          <LinearGradient colors={['#9810FA','#E60076']} style={s.anlCard} start={{x:0,y:0}} end={{x:1,y:1}}>
+            <View style={s.anlHdr}><Sparkles size={18} color="#FDE68A"/><Text style={s.anlLabel}>AI 데이트 패턴 분석</Text></View>
+            <Text style={s.anlTxt}>{result.analysis}</Text>
+          </LinearGradient>
+
+          {(result.recommendations?.length??0)>0 && (
             <>
-              <Text style={styles.sectionLabel}>추천 데이트 코스</Text>
-              {(result.recommendations ?? []).map((rec: AiDateAnalysisRecommendation, idx: number) => (
-                <View key={idx} style={styles.recommendCard}>
-                  <LinearGradient
-                    colors={['#9810FA', '#E60076']}
-                    style={styles.recommendNum}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Text style={styles.recommendNumText}>{idx + 1}</Text>
-                  </LinearGradient>
-                  <View style={styles.recommendBody}>
-                    <MapPin size={13} color="#E60076" style={{ marginTop: 2, flexShrink: 0 }} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.recommendType}>{rec.type}</Text>
-                      <Text style={styles.recommendText}>{rec.activity}</Text>
-                      <Text style={styles.recommendReason}>{rec.reason}</Text>
-                    </View>
-                  </View>
-                </View>
+              <View style={s.secHdr}>
+                <Text style={s.secTitle}>✨ 추천 데이트 코스</Text>
+                <Text style={s.secSub}>버튼을 눌러 플랜으로 바로 저장해보세요</Text>
+              </View>
+              {(result.recommendations??[]).map((rec,idx)=>(
+                <RecommendCard key={idx} rec={rec} index={idx} onSave={savePlan}/>
               ))}
             </>
           )}
+
+          <TouchableOpacity style={s.doneBtn} onPress={()=>router.back()}>
+            <Text style={s.doneTxt}>데이트 탭에서 확인하기</Text>
+          </TouchableOpacity>
         </ScrollView>
       ) : null}
     </LinearGradient>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadow.sm,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-    color: Colors.gray[900],
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.lg,
-    paddingHorizontal: Spacing['2xl'],
-  },
-  loadingCard: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius['3xl'],
-    padding: Spacing['3xl'],
-    alignItems: 'center',
-    gap: Spacing.lg,
-    ...Shadow.md,
-  },
-  loadingText: {
-    fontSize: FontSize.base,
-    color: Colors.gray[500],
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  errorText: {
-    fontSize: FontSize.base,
-    color: Colors.gray[600],
-    textAlign: 'center',
-  },
-  retryBtn: {
-    backgroundColor: Colors.white,
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.xl,
-    ...Shadow.sm,
-  },
-  retryBtnText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.gray[700],
-  },
-  content: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: 48,
-  },
-  creditBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-end',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    ...Shadow.sm,
-  },
-  creditText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
-    color: '#9810FA',
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius['3xl'],
-    padding: Spacing['2xl'],
-    gap: Spacing.lg,
-    ...Shadow.md,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  cardIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-    color: Colors.gray[900],
-  },
-  analysisText: {
-    fontSize: FontSize.base,
-    color: Colors.gray[700],
-    lineHeight: 24,
-  },
-  sectionLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: Colors.gray[500],
-    letterSpacing: 0.5,
-    marginTop: Spacing.sm,
-  },
-  recommendCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.md,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius['2xl'],
-    padding: Spacing.lg,
-    ...Shadow.sm,
-  },
-  recommendNum: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  recommendNumText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-  },
-  recommendBody: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'flex-start',
-  },
-  recommendText: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Colors.gray[800],
-    lineHeight: 22,
-  },
-  recommendType: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: '#9810FA',
-    marginBottom: 2,
-    letterSpacing: 0.3,
-  },
-  recommendReason: {
-    fontSize: FontSize.sm,
-    color: Colors.gray[500],
-    lineHeight: 18,
-    marginTop: 2,
-  },
+const s = StyleSheet.create({
+  container:{flex:1},
+  header:{flexDirection:'row',alignItems:'center',paddingHorizontal:Spacing.lg,paddingBottom:Spacing.md},
+  backBtn:{width:38,height:38,borderRadius:19,backgroundColor:Colors.white,alignItems:'center',justifyContent:'center',...Shadow.sm},
+  headerTxt:{flex:1,textAlign:'center',fontSize:FontSize.lg,fontWeight:FontWeight.bold,color:Colors.gray[900]},
+  center:{flex:1,alignItems:'center',justifyContent:'center',gap:Spacing.lg,paddingHorizontal:Spacing['2xl']},
+  ldCard:{backgroundColor:Colors.white,borderRadius:28,padding:Spacing['3xl'],alignItems:'center',gap:Spacing.md,...Shadow.md,width:'100%'},
+  ldIcon:{width:60,height:60,borderRadius:30,alignItems:'center',justifyContent:'center',marginBottom:4},
+  ldTitle:{fontSize:FontSize.lg,fontWeight:FontWeight.bold,color:Colors.gray[900]},
+  ldDesc:{fontSize:FontSize.sm,color:Colors.gray[500],textAlign:'center',lineHeight:20},
+  errTitle:{fontSize:FontSize.lg,fontWeight:FontWeight.bold,color:Colors.gray[800]},
+  errDesc:{fontSize:FontSize.sm,color:Colors.gray[500],textAlign:'center'},
+  retryBtn:{backgroundColor:Colors.white,paddingHorizontal:Spacing['2xl'],paddingVertical:Spacing.md,borderRadius:BorderRadius.xl,...Shadow.sm},
+  retryTxt:{fontSize:FontSize.base,fontWeight:FontWeight.semibold,color:Colors.gray[700]},
+  content:{padding:Spacing.lg,gap:Spacing.md,paddingBottom:48},
+  creditRow:{alignItems:'flex-end'},
+  creditBadge:{flexDirection:'row',alignItems:'center',gap:5,backgroundColor:Colors.white,paddingHorizontal:12,paddingVertical:6,borderRadius:BorderRadius.full,borderWidth:1,borderColor:'#E9D5FF',...Shadow.sm},
+  creditTxt:{fontSize:FontSize.xs,color:Colors.gray[600]},
+  creditNum:{fontWeight:FontWeight.bold,color:'#9810FA'},
+  anlCard:{borderRadius:20,padding:20,gap:10},
+  anlHdr:{flexDirection:'row',alignItems:'center',gap:7},
+  anlLabel:{fontSize:FontSize.sm,fontWeight:FontWeight.bold,color:'#FDE68A',letterSpacing:0.3},
+  anlTxt:{fontSize:FontSize.base,color:Colors.white,lineHeight:24,opacity:0.95},
+  secHdr:{gap:3,marginTop:4},
+  secTitle:{fontSize:FontSize.base,fontWeight:FontWeight.bold,color:Colors.gray[900]},
+  secSub:{fontSize:FontSize.xs,color:Colors.gray[400]},
+  recCard:{backgroundColor:Colors.white,borderRadius:18,padding:18,gap:8,...Shadow.sm},
+  recTop:{flexDirection:'row',alignItems:'center',gap:8},
+  recNum:{width:26,height:26,borderRadius:13,alignItems:'center',justifyContent:'center'},
+  recNumTxt:{fontSize:FontSize.xs,fontWeight:FontWeight.bold,color:Colors.white},
+  typeBadge:{flexDirection:'row',alignItems:'center',gap:4,backgroundColor:'#F5F0FF',paddingHorizontal:10,paddingVertical:4,borderRadius:20},
+  typeTxt:{fontSize:FontSize.xs,fontWeight:FontWeight.bold,color:'#9810FA'},
+  savedBadge:{flexDirection:'row',alignItems:'center',gap:4,backgroundColor:'#ECFDF5',paddingHorizontal:10,paddingVertical:4,borderRadius:20,marginLeft:'auto' as any},
+  savedTxt:{fontSize:FontSize.xs,fontWeight:FontWeight.bold,color:'#10B981'},
+  recAct:{fontSize:FontSize.base,fontWeight:FontWeight.bold,color:Colors.gray[900],lineHeight:22},
+  recRsn:{fontSize:FontSize.sm,color:Colors.gray[500],lineHeight:19},
+  saveBtn:{flexDirection:'row',alignItems:'center',gap:6,backgroundColor:'#F5F0FF',paddingVertical:9,paddingHorizontal:14,borderRadius:10,alignSelf:'flex-start',marginTop:4},
+  saveBtnTxt:{fontSize:FontSize.sm,fontWeight:FontWeight.semibold,color:'#9810FA'},
+  doneBtn:{backgroundColor:Colors.white,borderRadius:14,paddingVertical:14,alignItems:'center',...Shadow.sm,marginTop:4},
+  doneTxt:{fontSize:FontSize.base,fontWeight:FontWeight.semibold,color:Colors.gray[700]},
+});
+
+const CELL=40;
+const dp=StyleSheet.create({
+  backdrop:{flex:1,backgroundColor:'rgba(0,0,0,0.45)',justifyContent:'center',alignItems:'center',padding:Spacing.lg},
+  sheet:{backgroundColor:Colors.white,borderRadius:24,padding:Spacing.lg,width:'100%',maxWidth:360,...Shadow.sm},
+  hdr:{flexDirection:'row',alignItems:'center',marginBottom:Spacing.md},
+  hdrTitle:{flex:1,fontSize:FontSize.base,fontWeight:FontWeight.bold,color:Colors.gray[900]},
+  mRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:Spacing.sm},
+  nav:{width:36,height:36,borderRadius:18,backgroundColor:Colors.gray[100],alignItems:'center',justifyContent:'center'},
+  mTxt:{fontSize:FontSize.base,fontWeight:FontWeight.bold,color:Colors.gray[800]},
+  wRow:{flexDirection:'row',marginBottom:4},
+  wd:{width:CELL,textAlign:'center',fontSize:FontSize.xs,fontWeight:FontWeight.semibold,color:Colors.gray[500],paddingVertical:4},
+  grid:{flexDirection:'row',flexWrap:'wrap'},
+  cell:{width:CELL,height:CELL,alignItems:'center',justifyContent:'center',borderRadius:CELL/2,marginBottom:2},
+  cellS:{backgroundColor:'#9810FA'},
+  cTxt:{fontSize:FontSize.sm,color:Colors.gray[800]},
+  cTxtS:{color:Colors.white,fontWeight:FontWeight.bold},
+  selRow:{alignItems:'center',paddingVertical:Spacing.sm,borderTopWidth:1,borderTopColor:Colors.gray[100],marginTop:Spacing.sm},
+  selTxt:{fontSize:FontSize.sm,color:Colors.gray[600],fontWeight:FontWeight.semibold},
+  cfmBtn:{borderRadius:12,overflow:'hidden',marginTop:Spacing.sm},
+  cfmGrad:{paddingVertical:13,alignItems:'center'},
+  cfmTxt:{color:Colors.white,fontSize:FontSize.base,fontWeight:FontWeight.bold},
 });

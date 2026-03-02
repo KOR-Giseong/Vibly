@@ -116,7 +116,17 @@ export type EmotionMatch = { label: string; value: number }[];
 
 // ─── Notification ────────────────────────────────────────────────────────────
 
-export type NotificationType = 'recommendation' | 'like' | 'nearby' | 'promo' | 'report';
+export type NotificationType =
+  | 'RECOMMEND'
+  | 'LIKE'
+  | 'NEARBY'
+  | 'PROMO'
+  | 'REPORT'
+  | 'COUPLE_INVITE'
+  | 'COUPLE_ACCEPT'
+  | 'COMMENT'
+  | 'CREDIT'
+  | 'SUPPORT';
 
 export interface AppNotification {
   id: string;
@@ -124,6 +134,7 @@ export interface AppNotification {
   title: string;
   body: string;
   isRead: boolean;
+  payload?: Record<string, unknown>;
   createdAt: string;
 }
 

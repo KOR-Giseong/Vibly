@@ -1,13 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { useAuthStore } from '@stores/auth.store';
 import { useCreditStore } from '@stores/credit.store';
 import { useCoupleStore } from '@stores/couple.store';
 import { authService } from '@services/auth.service';
+import { notificationApi } from '@services/notification.service';
+
+// 포그라운드 알림 표시 설정
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 1000 * 60 * 5 } },
@@ -15,10 +30,11 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const router = useRouter();
-  const { setUser, setAuthenticated } = useAuthStore();
+  const { setUser, setAuthenticated, isAuthenticated } = useAuthStore();
   const { setCredits, setPremium } = useCreditStore();
   const { setCoupleInfo } = useCoupleStore();
   const [isLoaded, setIsLoaded] = useState(false);
+  const notifResponseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -43,6 +59,52 @@ function RootLayoutNav() {
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── 푸시 토큰 등록 + 알림 응답 핸들러 ─────────────────────────────────────
+  useEffect(() => {
+    if (!isLoaded || !isAuthenticated) return;
+
+    void (async () => {
+      try {
+        const { status: existing } = await Notifications.getPermissionsAsync();
+        const { status } =
+          existing !== 'granted'
+            ? await Notifications.requestPermissionsAsync()
+            : { status: existing };
+
+        if (status !== 'granted') return;
+
+        const projectId =
+          (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas
+            ?.projectId ?? Constants.easConfig?.projectId;
+
+        const tokenData = await Notifications.getExpoPushTokenAsync(
+          projectId ? { projectId } : undefined,
+        );
+        const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+        await notificationApi.registerToken(tokenData.data, platform).catch(() => {});
+      } catch {
+        // 토큰 등록 실패 시 무시 (시뮬레이터 등 환경)
+      }
+    })();
+
+    // 알림 탭 → 화면 이동 핸들러
+    notifResponseListener.current = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data as Record<string, unknown>;
+        if (data?.screen) {
+          router.push(data.screen as Parameters<typeof router.push>[0]);
+        } else {
+          router.push('/notifications');
+        }
+      },
+    );
+
+    return () => {
+      notifResponseListener.current?.remove();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isAuthenticated]);
 
   if (!isLoaded) return null;
 

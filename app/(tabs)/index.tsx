@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bell, Sparkles, X } from 'lucide-react-native';
+import { notificationApi } from '@services/notification.service';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useAuthStore } from '@stores/auth.store';
 import { useMoodStore } from '@stores/mood.store';
@@ -32,6 +34,14 @@ export default function HomeScreen() {
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiQuery, setAiQuery] = useState('');
   const [locationModalDismissed, setLocationModalDismissed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // 탭 포커스마다 미읽음 수 갱신
+  useFocusEffect(
+    useCallback(() => {
+      notificationApi.getUnreadCount().then(setUnreadCount).catch(() => {});
+    }, []),
+  );
 
   const displayName = (user?.nickname ?? user?.name)?.split(' ')[0] ?? '게스트';
 
@@ -112,6 +122,13 @@ export default function HomeScreen() {
               style={styles.bellBtn}
             >
               <Bell size={22} color={Colors.gray[700]} />
+              {unreadCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>
+                    {unreadCount > 99 ? '99+' : String(unreadCount)}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -289,6 +306,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadow.sm,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+  },
+  bellBadgeText: {
+    fontSize: 9,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+    lineHeight: 13,
   },
   block: { gap: Spacing.lg },
   sectionTitle: {

@@ -82,11 +82,6 @@ export default function SubscriptionScreen() {
             <Text style={styles.pricePeriod}>/{currentPlan.period}</Text>
           </View>
           <Text style={styles.priceTotal}>{currentPlan.total}</Text>
-          {'badge' in currentPlan && (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>{(currentPlan as typeof SUBSCRIPTION_PLANS.yearly).badge}</Text>
-            </View>
-          )}
         </View>
 
         {/* Features */}

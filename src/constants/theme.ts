@@ -139,6 +139,5 @@ export const SUBSCRIPTION_PLANS = {
     period: '년',
     label: '연간 구독',
     total: '연간 ₩99,000',
-    badge: '20% 할인',
   },
 } as const;

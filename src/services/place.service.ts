@@ -156,8 +156,8 @@ export const placeService = {
     return data;
   },
 
-  async smartRecommend(lat: number, lng: number): Promise<SmartRecommendResult> {
-    const { data } = await apiClient.post<SmartRecommendResult>('/places/smart-recommend', { lat, lng });
+  async smartRecommend(lat: number, lng: number, mode: 'nearby' | 'wide' = 'nearby'): Promise<SmartRecommendResult> {
+    const { data } = await apiClient.post<SmartRecommendResult>('/places/smart-recommend', { lat, lng, mode });
     return data;
   },
 };

@@ -419,6 +419,7 @@ export interface SmartRecommendResult {
   timeOfDay: string;
   keywords: string[];
   places: Place[];
+  mode?: 'nearby' | 'wide';
 }
 
 // ─── AI Date Chat ─────────────────────────────────────────────────────────────

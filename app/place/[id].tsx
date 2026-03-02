@@ -86,6 +86,72 @@ function anonymizeName(name: string): string {
   return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
 }
 
+// ─── 인라인 리뷰 아이템 (좋아요 버튼 포함) ──────────────────────────────────
+function InlineReviewItem({ review, placeId }: { review: PlaceReview; placeId: string }) {
+  const [liked, setLiked] = useState(review.isLiked ?? false);
+  const [likesCount, setLikesCount] = useState(review.likesCount ?? 0);
+
+  const handleLike = async () => {
+    const next = !liked;
+    setLiked(next);
+    setLikesCount((c) => c + (next ? 1 : -1));
+    try {
+      if (next) {
+        const res = await placeService.likeReview(placeId, review.id);
+        setLikesCount(res.likesCount);
+      } else {
+        const res = await placeService.unlikeReview(placeId, review.id);
+        setLikesCount(res.likesCount);
+      }
+    } catch {
+      setLiked(!next);
+      setLikesCount((c) => c + (next ? -1 : 1));
+    }
+  };
+
+  return (
+    <View key={review.id} style={styles.reviewItem}>
+      <View style={styles.reviewItemHeader}>
+        <Text style={styles.reviewAuthor}>{anonymizeName(review.user.name)}</Text>
+        <View style={{ flexDirection: 'row', gap: 2 }}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star
+              key={n}
+              size={12}
+              color="#FACC15"
+              fill={n <= review.rating ? '#FACC15' : 'transparent'}
+            />
+          ))}
+        </View>
+      </View>
+      <Text style={styles.reviewBody} numberOfLines={3}>
+        {review.body}
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+        <Text style={styles.reviewDate}>
+          {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+        </Text>
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4 }}
+          onPress={handleLike}
+          activeOpacity={0.7}
+        >
+          <Heart
+            size={14}
+            color={liked ? Colors.primary[500] : Colors.gray[400]}
+            fill={liked ? Colors.primary[500] : 'transparent'}
+          />
+          {likesCount > 0 && (
+            <Text style={{ fontSize: 11, color: liked ? Colors.primary[500] : Colors.gray[400] }}>
+              {likesCount}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 // ─── 별점 선택 ────────────────────────────────────────────────────────────────
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
@@ -674,27 +740,7 @@ export default function PlaceDetailScreen() {
               {place.reviews && place.reviews.length > 0 ? (
                 <>
                   {place.reviews.map((review: PlaceReview) => (
-                    <View key={review.id} style={styles.reviewItem}>
-                      <View style={styles.reviewItemHeader}>
-                        <Text style={styles.reviewAuthor}>{anonymizeName(review.user.name)}</Text>
-                        <View style={{ flexDirection: 'row', gap: 2 }}>
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <Star
-                              key={n}
-                              size={12}
-                              color="#FACC15"
-                              fill={n <= review.rating ? '#FACC15' : 'transparent'}
-                            />
-                          ))}
-                        </View>
-                      </View>
-                      <Text style={styles.reviewBody} numberOfLines={3}>
-                        {review.body}
-                      </Text>
-                      <Text style={styles.reviewDate}>
-                        {new Date(review.createdAt).toLocaleDateString('ko-KR')}
-                      </Text>
-                    </View>
+                    <InlineReviewItem key={review.id} review={review} placeId={id} />
                   ))}
 
                   {place.reviewCount > place.reviews.length && (

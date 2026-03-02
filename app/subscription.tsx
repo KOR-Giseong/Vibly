@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Crown, Check, Shield, Zap, BarChart2, Image, MapPin, Star, MessageCircle, Sparkles, Ban } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow, SUBSCRIPTION_PLANS } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
+import { useCreditStore } from '@stores/credit.store';
+import { creditService } from '@services/credit.service';
 
 type Plan = 'monthly' | 'yearly';
 
@@ -26,11 +28,40 @@ export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<Plan>('yearly');
   const [isLoading, setIsLoading] = useState(false);
+  const { isPremium, syncBalance } = useCreditStore();
 
   const handleSubscribe = () => {
     Alert.alert('업데이트 예정', '인앱결제 기능은 현재 업데이트 중입니다.\n곧 만나보실 수 있어요! 😊', [
       { text: '확인' },
     ]);
+  };
+
+  const handleCancel = () => {
+    Alert.alert(
+      '구독 취소',
+      '정말로 구독을 취소하시겠어요?\n취소 후에는 프리미엄 기능을 사용할 수 없어요.',
+      [
+        { text: '유지하기', style: 'cancel' },
+        {
+          text: '취소하기',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              await creditService.cancelSubscription();
+              await syncBalance();
+              Alert.alert('구독 취소 완료', '구독이 취소되었어요. 프리미엄 혜택이 종료됩니다.', [
+                { text: '확인', onPress: () => router.back() },
+              ]);
+            } catch {
+              Alert.alert('오류', '구독 취소 중 오류가 발생했어요. 다시 시도해주세요.');
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const currentPlan = SUBSCRIPTION_PLANS[plan];
@@ -109,11 +140,28 @@ export default function SubscriptionScreen() {
 
       {/* CTA */}
       <View style={[styles.ctaWrap, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <TouchableOpacity style={[styles.ctaBtn, isLoading && { opacity: 0.7 }]} activeOpacity={0.85} onPress={handleSubscribe} disabled={isLoading}>
-          <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-          <Crown size={20} color={Colors.white} />
-          <Text style={styles.ctaBtnText}>{isLoading ? '처리 중...' : '지금 시작하기'}</Text>
-        </TouchableOpacity>
+        {isPremium ? (
+          <>
+            <View style={[styles.activeBadge]}>
+              <Crown size={16} color={Colors.primary[600]} />
+              <Text style={styles.activeBadgeText}>현재 프리미엄 구독 중</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              activeOpacity={0.7}
+              onPress={handleCancel}
+              disabled={isLoading}
+            >
+              <Text style={styles.cancelBtnText}>{isLoading ? '처리 중...' : '구독 취소하기'}</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity style={[styles.ctaBtn, isLoading && { opacity: 0.7 }]} activeOpacity={0.85} onPress={handleSubscribe} disabled={isLoading}>
+            <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+            <Crown size={20} color={Colors.white} />
+            <Text style={styles.ctaBtnText}>{isLoading ? '처리 중...' : '지금 시작하기'}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </LinearGradient>
     </ScreenTransition>
@@ -153,4 +201,8 @@ const styles = StyleSheet.create({
   ctaWrap: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing['2xl'], paddingTop: Spacing.lg, backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.gray[100] },
   ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, borderRadius: BorderRadius['2xl'], paddingVertical: Spacing.xl, overflow: 'hidden' },
   ctaBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.white },
+  activeBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, backgroundColor: Colors.primary[50], borderRadius: BorderRadius.xl, paddingVertical: Spacing.md, marginBottom: Spacing.sm },
+  activeBadgeText: { fontSize: FontSize.sm, color: Colors.primary[600], fontWeight: FontWeight.semibold },
+  cancelBtn: { alignItems: 'center', paddingVertical: Spacing.md },
+  cancelBtnText: { fontSize: FontSize.sm, color: Colors.gray[400], textDecorationLine: 'underline' },
 });

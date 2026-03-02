@@ -64,4 +64,9 @@ export const creditService = {
     const { data } = await apiClient.get('/credits/history', { params: { page, limit: 20 } });
     return data;
   },
+
+  cancelSubscription: async (): Promise<{ ok: boolean; message: string }> => {
+    const { data } = await apiClient.delete('/credits/subscription');
+    return data;
+  },
 };

@@ -32,8 +32,9 @@ export const authService = {
     idToken: string,
     redirectUri?: string,
     name?: string,
+    codeVerifier?: string,
   ): Promise<AuthTokens> {
-    const { data } = await apiClient.post<AuthTokens>(`/auth/${provider}`, { idToken, redirectUri, name });
+    const { data } = await apiClient.post<AuthTokens>(`/auth/${provider}`, { idToken, redirectUri, name, codeVerifier });
     await saveTokens(data);
     return data;
   },

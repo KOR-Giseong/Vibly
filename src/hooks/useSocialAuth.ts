@@ -25,12 +25,13 @@ const KAKAO_DISCOVERY = {
 export const SOCIAL_REDIRECT_URI = makeRedirectUri({ scheme: 'vibly', path: 'auth' });
 
 // Google redirect URI
-// Desktop 앱 유형 OAuth 클라이언트는 custom scheme을 허용함
-// 네이티브(iOS/Android): vibly://auth
-// Web: vibly://auth (또는 webRedirectUri 별도)
-const GOOGLE_REDIRECT_URI = Platform.OS === 'web'
-  ? SOCIAL_REDIRECT_URI
-  : makeRedirectUri({ scheme: 'vibly', path: 'auth' });
+// iOS: iOS 타입 클라이언트의 리버스 클라이언트 ID 스킴 (Google이 자동 허용)
+// Android: Android 타입 클라이언트 사용 (패키지명+SHA-1 기반, 별도 redirect 불필요)
+// Web: Web 타입 클라이언트
+const IOS_GOOGLE_REDIRECT_URI = 'com.googleusercontent.apps.506939484809-5b9mm794vt3hhdo5p95qho4ksi7gstv8:/';
+const GOOGLE_REDIRECT_URI = Platform.OS === 'ios'
+  ? IOS_GOOGLE_REDIRECT_URI
+  : SOCIAL_REDIRECT_URI; // web / android
 
 export function useSocialAuth() {
   const { setUser } = useAuthStore();
@@ -45,9 +46,10 @@ export function useSocialAuth() {
     token: string,
     redirectUri?: string,
     name?: string,
+    codeVerifier?: string,
   ) => {
     try {
-      await authService.socialLogin(provider, token, redirectUri, name);
+      await authService.socialLogin(provider, token, redirectUri, name, codeVerifier);
       const user = await authService.getMe();
       setUser(user);
       if (typeof user.credits === 'number') {
@@ -72,9 +74,11 @@ export function useSocialAuth() {
   // Web: Web 유형 클라이언트
   const googleClientId = Platform.OS === 'web'
     ? (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '')
-    : (process.env.EXPO_PUBLIC_GOOGLE_NATIVE_CLIENT_ID ?? '');
+    : Platform.OS === 'ios'
+    ? (process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '')
+    : (process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '');
 
-  const [, googleResponse, googlePromptAsync] = useAuthRequest(
+  const [googleRequest, googleResponse, googlePromptAsync] = useAuthRequest(
     {
       clientId: googleClientId,
       scopes: ['openid', 'profile', 'email'],
@@ -87,7 +91,7 @@ export function useSocialAuth() {
     if (!googleResponse) return;
     if (googleResponse.type === 'success') {
       const code = googleResponse.params.code;
-      if (code) finalizeSocialLogin('google', code, GOOGLE_REDIRECT_URI);
+      if (code) finalizeSocialLogin('google', code, GOOGLE_REDIRECT_URI, undefined, googleRequest?.codeVerifier);
     } else if (googleResponse.type === 'error') {
       setError('Google 로그인에 실패했어요.');
       setLoading(null);

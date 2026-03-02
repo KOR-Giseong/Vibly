@@ -1,27 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Crown, Check, Shield, Zap, BarChart2, Tag, Brain, Ban } from 'lucide-react-native';
+import { ArrowLeft, Crown, Check, Shield, Zap, BarChart2, Image, MapPin, Star, MessageCircle, Sparkles, Ban } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow, SUBSCRIPTION_PLANS } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
 
 type Plan = 'monthly' | 'yearly';
 
 const FEATURES = [
-  { icon: Zap,      text: '무제한 AI 추천'          },
-  { icon: BarChart2,text: '프리미엄 바이브 리포트'   },
-  { icon: Crown,    text: '우선 예약'               },
-  { icon: Tag,      text: '파트너 할인 혜택'         },
-  { icon: Brain,    text: '상세 감정 분석'            },
-  { icon: Ban,      text: '광고 없는 경험'            },
+  { icon: Zap,          text: 'AI 기분 검색 무제한',        desc: '크레딧 소모 없이 무제한 검색' },
+  { icon: Star,         text: 'AI 데이트 플랜 분석 무제한', desc: '크레딧 없이 AI 분석 무제한' },
+  { icon: Image,        text: '추억 사진 무제한 업로드',    desc: '무료 100장 → 무제한' },
+  { icon: MapPin,       text: '검색 반경 최대 10km',        desc: '무료 3km → 최대 10km' },
+  { icon: BarChart2,    text: '월간 바이브 리포트',          desc: '무료 주간 → 주간 + 월간' },
+  { icon: Sparkles,     text: 'AI 리뷰 요약',               desc: '장소 상세에서 AI 리뷰 분석' },
+  { icon: Zap,          text: '실시간 상황 기반 추천',       desc: '날씨·시간 기반 장소 추천' },
+  { icon: MessageCircle,text: 'AI 대화형 데이트 비서',       desc: '커플 전용 AI 채팅 비서' },
+  { icon: Ban,          text: '광고 없는 경험',              desc: '모든 광고 제거' },
 ];
 
 export default function SubscriptionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<Plan>('yearly');
+
+  const handleSubscribe = () => {
+    Alert.alert('업데이트 예정', '인앱결제 기능은 현재 업데이트 중입니다.\n곧 만나보실 수 있어요! 😊', [
+      { text: '확인' },
+    ]);
+  };
 
   const currentPlan = SUBSCRIPTION_PLANS[plan];
 
@@ -81,12 +90,15 @@ export default function SubscriptionScreen() {
 
         {/* Features */}
         <View style={styles.featuresCard}>
-          {FEATURES.map(({ icon: Icon, text }) => (
+          {FEATURES.map(({ icon: Icon, text, desc }) => (
             <View key={text} style={styles.featureRow}>
               <View style={styles.featureIcon}>
                 <Icon size={16} color={Colors.primary[600]} />
               </View>
-              <Text style={styles.featureText}>{text}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featureText}>{text}</Text>
+                <Text style={styles.featureDesc}>{desc}</Text>
+              </View>
               <Check size={16} color={Colors.primary[600]} />
             </View>
           ))}
@@ -101,10 +113,10 @@ export default function SubscriptionScreen() {
 
       {/* CTA */}
       <View style={[styles.ctaWrap, { paddingBottom: insets.bottom + Spacing.md }]}>
-        <TouchableOpacity style={styles.ctaBtn} activeOpacity={0.85}>
+        <TouchableOpacity style={[styles.ctaBtn, isLoading && { opacity: 0.7 }]} activeOpacity={0.85} onPress={handleSubscribe} disabled={isLoading}>
           <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
           <Crown size={20} color={Colors.white} />
-          <Text style={styles.ctaBtnText}>지금 시작하기</Text>
+          <Text style={styles.ctaBtnText}>{isLoading ? '처리 중...' : '지금 시작하기'}</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -138,7 +150,8 @@ const styles = StyleSheet.create({
   featuresCard: { backgroundColor: Colors.white, borderRadius: BorderRadius['2xl'], padding: Spacing.xl, marginBottom: Spacing.lg, ...Shadow.sm },
   featureRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.gray[50] },
   featureIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary[50], alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
-  featureText: { flex: 1, fontSize: FontSize.base, color: Colors.gray[700], fontWeight: FontWeight.medium },
+  featureText: { fontSize: FontSize.base, color: Colors.gray[700], fontWeight: FontWeight.medium },
+  featureDesc: { fontSize: FontSize.xs, color: Colors.gray[400], marginTop: 1 },
   securityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, marginBottom: Spacing.lg },
   securityText: { fontSize: FontSize.xs, color: Colors.gray[400] },
   ctaWrap: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing['2xl'], paddingTop: Spacing.lg, backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.gray[100] },

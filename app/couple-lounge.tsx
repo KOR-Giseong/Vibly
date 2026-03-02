@@ -948,6 +948,7 @@ function AiCoursePlanGroup({ group, onStatusChange, onOpenDetail }: {
 function DateTab() {
   const router = useRouter();
   const isFocused = useIsFocused();
+  const { isPremium } = useCreditStore();
   const [plans, setPlans] = useState<DatePlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [howToVisible, setHowToVisible] = useState(false);
@@ -1116,6 +1117,22 @@ function DateTab() {
           </View>
         </View>
       </View>
+
+      {/* AI 대화형 데이트 비서 (프리미엄 전용) */}
+      <TouchableOpacity
+        style={[styles.aiChatBtn, !isPremium && styles.aiChatBtnLocked]}
+        onPress={() => {
+          if (!isPremium) { router.push('/subscription'); return; }
+          router.push('/couple/ai-date-chat');
+        }}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.aiChatBtnIcon}>💬</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.aiChatBtnTitle}>AI 대화형 데이트 비서{!isPremium ? ' 👑' : ''}</Text>
+          <Text style={styles.aiChatBtnSub}>자유롭게 대화하며 데이트를 계획해봐요</Text>
+        </View>
+      </TouchableOpacity>
 
       <View style={styles.dateActionRow}>
         <TouchableOpacity
@@ -2398,6 +2415,27 @@ const styles = StyleSheet.create({
     color: Colors.gray[400],
     marginTop: 2,
   },
+
+  // ── AI 대화형 데이트 비서 버튼
+  aiChatBtn: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    backgroundColor: '#EDE9FE',
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  aiChatBtnLocked: {
+    backgroundColor: '#F9FAFB',
+    borderColor: Colors.gray[200],
+  },
+  aiChatBtnIcon: { fontSize: 24 },
+  aiChatBtnTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: '#6D28D9' },
+  aiChatBtnSub: { fontSize: FontSize.xs, color: Colors.gray[500], marginTop: 2 },
 
   // ── 데이트 탭 - AI 안내 카드
   aiInfoCard: {

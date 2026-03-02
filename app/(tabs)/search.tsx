@@ -22,8 +22,10 @@ import {
   useMapFilterStore,
   LIMIT_OPTIONS, RADIUS_OPTIONS,
   radiusLabel,
+  isPremiumLimit, isPremiumRadius,
   type LimitOption, type RadiusOption,
 } from '@stores/mapFilter.store';
+import { useCreditStore } from '@stores/credit.store';
 import type { Place } from '@/types';
 
 type ViewMode = 'list' | 'grid';
@@ -69,6 +71,7 @@ export default function SearchScreen() {
 
   const queryClient = useQueryClient();
   const { limit, radius, setLimit, setRadius } = useMapFilterStore();
+  const { isPremium } = useCreditStore();
 
   const [input, setInput] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
@@ -349,17 +352,25 @@ export default function SearchScreen() {
               <Text style={styles.filterCurrentVal}>{limit}개</Text>
             </View>
             <View style={styles.chipRow}>
-              {LIMIT_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.chip, limit === opt && styles.chipSelected]}
-                  onPress={() => setLimit(opt as LimitOption)}
-                  activeOpacity={0.75}
-                >
-                  {limit === opt && <Check size={10} color={Colors.white} strokeWidth={3} />}
-                  <Text style={[styles.chipText, limit === opt && styles.chipTextSelected]}>{opt}개</Text>
-                </TouchableOpacity>
-              ))}
+              {LIMIT_OPTIONS.map((opt) => {
+                const needsPremium = isPremiumLimit(opt as LimitOption);
+                const locked = needsPremium && !isPremium;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.chip, limit === opt && styles.chipSelected, locked && styles.chipLocked]}
+                    onPress={() => {
+                      if (locked) { router.push('/subscription'); return; }
+                      setLimit(opt as LimitOption);
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    {limit === opt && !locked && <Check size={10} color={Colors.white} strokeWidth={3} />}
+                    {locked && <Text style={styles.crownIcon}>👑</Text>}
+                    <Text style={[styles.chipText, limit === opt && styles.chipTextSelected, locked && styles.chipTextLocked]}>{opt}개</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* ── 검색 반경 ── */}
@@ -369,17 +380,25 @@ export default function SearchScreen() {
               <Text style={styles.filterCurrentVal}>{radiusLabel(radius)}</Text>
             </View>
             <View style={styles.chipRow}>
-              {RADIUS_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.chip, radius === opt && styles.chipSelected]}
-                  onPress={() => setRadius(opt as RadiusOption)}
-                  activeOpacity={0.75}
-                >
-                  {radius === opt && <Check size={10} color={Colors.white} strokeWidth={3} />}
-                  <Text style={[styles.chipText, radius === opt && styles.chipTextSelected]}>{radiusLabel(opt)}</Text>
-                </TouchableOpacity>
-              ))}
+              {RADIUS_OPTIONS.map((opt) => {
+                const needsPremium = isPremiumRadius(opt as RadiusOption);
+                const locked = needsPremium && !isPremium;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.chip, radius === opt && styles.chipSelected, locked && styles.chipLocked]}
+                    onPress={() => {
+                      if (locked) { router.push('/subscription'); return; }
+                      setRadius(opt as RadiusOption);
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    {radius === opt && !locked && <Check size={10} color={Colors.white} strokeWidth={3} />}
+                    {locked && <Text style={styles.crownIcon}>👑</Text>}
+                    <Text style={[styles.chipText, radius === opt && styles.chipTextSelected, locked && styles.chipTextLocked]}>{radiusLabel(opt)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* ── 적용 버튼 ── */}
@@ -602,6 +621,17 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.white,
     letterSpacing: 0.3,
+  },
+  chipLocked: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
+  crownIcon: {
+    fontSize: 10,
+    marginRight: 2,
+  },
+  chipTextLocked: {
+    color: '#9CA3AF',
   },
 });
 

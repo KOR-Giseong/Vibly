@@ -10,13 +10,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, MapPin, Clock, Phone, Star, Users,
-  Navigation, Heart, MessageSquare, X,
+  Navigation, Heart, MessageSquare, X, Sparkles, Lock,
+  ThumbsUp, ThumbsDown,
 } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
 import { placeService } from '@services/place.service';
 import { usePlaceCacheStore } from '@stores/placeCache.store';
 import { useAuthStore } from '@stores/auth.store';
+import { useCreditStore } from '@stores/credit.store';
 import ShareIcon from '@assets/Share.svg';
 import ThumsIcon from '@assets/Thums.svg';
 import type { PlaceDetail, PlaceReview } from '@/types';
@@ -210,6 +212,7 @@ export default function PlaceDetailScreen() {
 
   const cachedPlace = usePlaceCacheStore((s) => s.places[id as string]);
   const { user } = useAuthStore();
+  const { isPremium } = useCreditStore();
 
   // ── 데이터 패치 ────────────────────────────────────────────────────────
   // 진입 경로별 AI 분석 컨텍스트 구성
@@ -251,6 +254,14 @@ export default function PlaceDetailScreen() {
       setIsBookmarked(data.isBookmarked);
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
     },
+  });
+
+  // ── AI 리뷰 요약 (프리미엄) ────────────────────────────────────────────
+  const { data: reviewSummary, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ['review-summary', id],
+    queryFn: () => placeService.getReviewSummary(id),
+    enabled: !!id && isPremium,
+    staleTime: 10 * 60 * 1000,
   });
 
   // ── 리뷰 작성 ──────────────────────────────────────────────────────────
@@ -559,6 +570,60 @@ export default function PlaceDetailScreen() {
                 <Text style={styles.descText}>{place.description}</Text>
               </View>
             )}
+
+            {/* AI 리뷰 요약 카드 */}
+            <View style={styles.aiSummaryCard}>
+              <View style={styles.aiSummaryHeader}>
+                <Sparkles size={16} color="#7C3AED" />
+                <Text style={styles.aiSummaryTitle}>AI 리뷰 요약</Text>
+                {!isPremium && (
+                  <View style={styles.premiumBadge}>
+                    <Text style={styles.premiumBadgeText}>👑 프리미엄</Text>
+                  </View>
+                )}
+              </View>
+              {isPremium ? (
+                isSummaryLoading ? (
+                  <ActivityIndicator size="small" color="#7C3AED" style={{ marginVertical: 12 }} />
+                ) : reviewSummary ? (
+                  <View>
+                    <Text style={styles.aiSummaryText}>{reviewSummary.summary}</Text>
+                    {reviewSummary.pros.length > 0 && (
+                      <View style={styles.aiSummarySection}>
+                        <View style={styles.aiSummaryRow}>
+                          <ThumbsUp size={13} color="#16A34A" />
+                          <Text style={[styles.aiSummarySectionTitle, { color: '#16A34A' }]}>장점</Text>
+                        </View>
+                        {reviewSummary.pros.map((p, i) => (
+                          <Text key={i} style={styles.aiSummaryItem}>• {p}</Text>
+                        ))}
+                      </View>
+                    )}
+                    {reviewSummary.cons.length > 0 && (
+                      <View style={styles.aiSummarySection}>
+                        <View style={styles.aiSummaryRow}>
+                          <ThumbsDown size={13} color="#DC2626" />
+                          <Text style={[styles.aiSummarySectionTitle, { color: '#DC2626' }]}>단점</Text>
+                        </View>
+                        {reviewSummary.cons.map((c, i) => (
+                          <Text key={i} style={styles.aiSummaryItem}>• {c}</Text>
+                        ))}
+                      </View>
+                    )}
+                    {reviewSummary.targetAudience && (
+                      <Text style={styles.aiSummaryAudience}>💡 {reviewSummary.targetAudience}</Text>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={styles.aiSummaryEmpty}>리뷰 데이터가 없어요.</Text>
+                )
+              ) : (
+                <TouchableOpacity style={styles.aiSummaryLocked} onPress={() => router.push('/subscription')} activeOpacity={0.8}>
+                  <Lock size={20} color="#9CA3AF" />
+                  <Text style={styles.aiSummaryLockedText}>프리미엄으로 AI 요약 보기</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {/* 리뷰 */}
             <View style={styles.reviewCard}>
@@ -925,6 +990,29 @@ const styles = StyleSheet.create({
   // 소개
   descCard: { backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: BorderRadius.lg, padding: Spacing.xl },
   descText: { fontSize: FontSize.base, color: '#364153', lineHeight: 23 },
+
+  // AI 리뷰 요약 카드
+  aiSummaryCard: {
+    backgroundColor: '#FAF5FF',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    marginBottom: Spacing.md,
+  },
+  aiSummaryHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
+  aiSummaryTitle: { flex: 1, fontSize: FontSize.base, fontWeight: FontWeight.semibold, color: '#6D28D9' },
+  premiumBadge: { backgroundColor: '#7C3AED', borderRadius: BorderRadius.full, paddingHorizontal: 8, paddingVertical: 2 },
+  premiumBadgeText: { fontSize: FontSize.xs, color: Colors.white, fontWeight: FontWeight.bold },
+  aiSummaryText: { fontSize: FontSize.sm, color: Colors.gray[700], lineHeight: 20, marginBottom: Spacing.md },
+  aiSummarySection: { marginBottom: Spacing.sm },
+  aiSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  aiSummarySectionTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
+  aiSummaryItem: { fontSize: FontSize.sm, color: Colors.gray[600], marginLeft: 4, marginBottom: 2 },
+  aiSummaryAudience: { fontSize: FontSize.xs, color: '#7C3AED', marginTop: Spacing.sm, fontStyle: 'italic' },
+  aiSummaryEmpty: { fontSize: FontSize.sm, color: Colors.gray[400], textAlign: 'center', paddingVertical: Spacing.md },
+  aiSummaryLocked: { alignItems: 'center', paddingVertical: Spacing.xl, gap: Spacing.sm },
+  aiSummaryLockedText: { fontSize: FontSize.sm, color: '#7C3AED', fontWeight: FontWeight.medium },
 
   // 리뷰 카드
   reviewCard: {

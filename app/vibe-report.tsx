@@ -34,6 +34,7 @@ import {
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
 import { useVibeReport, usePrefetchVibeReport } from '@hooks/useVibeReport';
+import { useCreditStore } from '@stores/credit.store';
 import type { DailyMoodEntry, VibeInsight } from '@/types';
 
 type Period = 'weekly' | 'monthly';
@@ -130,10 +131,15 @@ export default function VibeReportScreen() {
   const insets = useSafeAreaInsets();
   const [period, setPeriod] = useState<Period>('weekly');
   const prefetch = usePrefetchVibeReport();
+  const { isPremium } = useCreditStore();
 
   const { data, isLoading, isError, refetch, isRefetching } = useVibeReport(period);
 
   const handlePeriodChange = (p: Period) => {
+    if (p === 'monthly' && !isPremium) {
+      router.push('/subscription');
+      return;
+    }
     setPeriod(p);
     prefetch(p === 'weekly' ? 'monthly' : 'weekly');
   };
@@ -173,7 +179,7 @@ export default function VibeReportScreen() {
             <TouchableOpacity key={p} style={[styles.toggleBtn, period === p && styles.toggleActive]} onPress={() => handlePeriodChange(p)} activeOpacity={0.8}>
               {period === p && <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />}
               <Text style={[styles.toggleText, period === p && styles.toggleTextActive]}>
-                {p === 'weekly' ? '주간' : '월간'}
+                {p === 'weekly' ? '주간' : `월간${!isPremium ? ' 👑' : ''}`}
               </Text>
             </TouchableOpacity>
           ))}

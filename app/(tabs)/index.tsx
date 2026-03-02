@@ -120,6 +120,30 @@ export default function HomeScreen() {
             <RateLimitBanner />
           </View>
 
+          {/* 실시간 추천 카드 (프리미엄 전용) */}
+          {isPremium && (
+            <TouchableOpacity
+              style={styles.smartRecommendCard}
+              onPress={() => router.push('/smart-recommend')}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={['#7C3AED', '#A855F7']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <View style={styles.smartRecommendContent}>
+                <Text style={styles.smartRecommendEmoji}>🌤</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.smartRecommendTitle}>지금 어디 갈까?</Text>
+                  <Text style={styles.smartRecommendSub}>날씨와 시간대에 맞는 장소를 AI가 추천해드려요</Text>
+                </View>
+                <Sparkles size={20} color="rgba(255,255,255,0.8)" />
+              </View>
+            </TouchableOpacity>
+          )}
+
           {/* 기분 선택 */}
           <View style={styles.block}>
             <Text style={styles.sectionTitle}>지금 기분</Text>
@@ -341,6 +365,31 @@ const styles = StyleSheet.create({
   },
   modalBtnTextDisabled: {
     color: Colors.gray[400],
+  },
+  smartRecommendCard: {
+    marginHorizontal: Spacing['2xl'],
+    borderRadius: BorderRadius['2xl'],
+    overflow: 'hidden',
+    ...Shadow.md,
+  },
+  smartRecommendContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  smartRecommendEmoji: {
+    fontSize: 28,
+  },
+  smartRecommendTitle: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  },
+  smartRecommendSub: {
+    fontSize: FontSize.xs,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
 });
 

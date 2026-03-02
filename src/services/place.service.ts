@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { Place, PlaceDetail, PlaceReview, PaginatedResponse } from '@/types';
+import type { Place, PlaceDetail, PlaceReview, PaginatedResponse, ReviewSummary, SmartRecommendResult } from '@/types';
 
 export interface MyCheckIn {
   id: string;
@@ -135,5 +135,15 @@ export const placeService = {
 
   async addReview(placeId: string, rating: number, body: string): Promise<void> {
     await apiClient.post(`/places/${placeId}/reviews`, { rating, body });
+  },
+
+  async getReviewSummary(placeId: string): Promise<ReviewSummary> {
+    const { data } = await apiClient.get<ReviewSummary>(`/places/${placeId}/review-summary`);
+    return data;
+  },
+
+  async smartRecommend(lat: number, lng: number): Promise<SmartRecommendResult> {
+    const { data } = await apiClient.post<SmartRecommendResult>('/places/smart-recommend', { lat, lng });
+    return data;
   },
 };

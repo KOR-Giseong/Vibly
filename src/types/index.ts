@@ -381,3 +381,41 @@ export interface NoticesResponse {
   page: number;
   hasNext: boolean;
 }
+
+// ─── Subscription ─────────────────────────────────────────────────────────────
+
+export type SubscriptionType = 'MONTHLY' | 'YEARLY' | 'TRIAL' | 'ADMIN_GRANT';
+
+// ─── AI Review Summary ────────────────────────────────────────────────────────
+
+export interface ReviewSummary {
+  placeId: string;
+  summary: string;
+  pros: string[];
+  cons: string[];
+  targetAudience?: string | null;
+  reviewCount: number;
+  generatedAt: string;
+}
+
+// ─── Smart Recommend ─────────────────────────────────────────────────────────
+
+export interface SmartRecommendResult {
+  message: string;
+  weather: string;
+  timeOfDay: string;
+  keywords: string[];
+  places: Place[];
+}
+
+// ─── AI Date Chat ─────────────────────────────────────────────────────────────
+
+export interface AiChatMessage {
+  role: 'user' | 'model';
+  text: string;
+}
+
+export interface AiChatResponse {
+  text: string;
+  places?: Place[];
+}

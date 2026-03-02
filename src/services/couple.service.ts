@@ -9,6 +9,8 @@ import type {
   CoupleCreditHistory,
   PartnerProfile,
   Place,
+  AiChatMessage,
+  AiChatResponse,
 } from '@types';
 
 // 백엔드가 localhost URL을 반환할 경우 실제 서버 IP로 교체
@@ -270,5 +272,10 @@ export const coupleService = {
 
   markMessagesRead: async (): Promise<void> => {
     await apiClient.patch('/couple/messages/read');
+  },
+
+  aiDateChat: async (messages: AiChatMessage[], lat?: number, lng?: number): Promise<AiChatResponse> => {
+    const { data } = await apiClient.post<AiChatResponse>('/couple/date-plans/ai-chat', { messages, lat, lng }, { timeout: 60000 });
+    return data;
   },
 };

@@ -26,9 +26,15 @@ export const authService = {
     return data;
   },
 
-  async logout(): Promise<void> {
+  async logout(pushToken?: string): Promise<void> {
     try {
       const refreshToken = await storage.getItem('refreshToken');
+      // 디바이스 푸시 토큰 삭제 (로그아웃 후 알림 수신 차단)
+      await apiClient
+        .delete('/notifications/register-token', {
+          params: pushToken ? { pushToken } : undefined,
+        })
+        .catch(() => {});
       await apiClient.post('/auth/logout', { refreshToken });
     } finally {
       await clearTokens();

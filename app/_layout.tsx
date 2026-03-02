@@ -66,6 +66,19 @@ function RootLayoutNav() {
 
     void (async () => {
       try {
+        // Android 알림 채널 생성 (Android 8+ 필수)
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'Vibly 알림',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            sound: 'default',
+            lightColor: '#7C3AED',
+            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+            bypassDnd: false,
+          });
+        }
+
         const { status: existing } = await Notifications.getPermissionsAsync();
         const { status } =
           existing !== 'granted'
@@ -86,9 +99,20 @@ function RootLayoutNav() {
       } catch {
         // 토큰 등록 실패 시 무시 (시뮬레이터 등 환경)
       }
+
+      // Cold start: 앱이 종료된 상태에서 알림 탭으로 실행된 경우
+      const lastResponse = await Notifications.getLastNotificationResponseAsync();
+      if (lastResponse) {
+        const data = lastResponse.notification.request.content.data as Record<string, unknown>;
+        if (data?.screen) {
+          router.push(data.screen as Parameters<typeof router.push>[0]);
+        } else {
+          router.push('/notifications');
+        }
+      }
     })();
 
-    // 알림 탭 → 화면 이동 핸들러
+    // 포그라운드/백그라운드에서 알림 탭 → 화면 이동 핸들러
     notifResponseListener.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data as Record<string, unknown>;

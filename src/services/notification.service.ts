@@ -47,6 +47,14 @@ export const notificationApi = {
   /** 단건 삭제 */
   deleteOne: (id: string) =>
     apiClient.delete<void>(`/notifications/${id}`).then((r) => r.data),
+
+  /** 디바이스 토큰 삭제 (로그아웃 시) */
+  removeToken: (pushToken?: string) =>
+    apiClient
+      .delete<void>('/notifications/register-token', {
+        params: pushToken ? { pushToken } : undefined,
+      })
+      .then((r) => r.data),
 };
 
 // ─── 알림 타입별 표시 정보 ────────────────────────────────────────────────────

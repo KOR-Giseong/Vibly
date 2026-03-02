@@ -6,7 +6,7 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 70000, // Render free tier 깨우는 데 최대 60초 → 70초로 여유 확보
   headers: { 'Content-Type': 'application/json' },
 });
 

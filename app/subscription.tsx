@@ -25,6 +25,7 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<Plan>('yearly');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubscribe = () => {
     Alert.alert('업데이트 예정', '인앱결제 기능은 현재 업데이트 중입니다.\n곧 만나보실 수 있어요! 😊', [

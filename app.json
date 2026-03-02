@@ -18,7 +18,8 @@
       "bundleIdentifier": "com.vibly.mobile",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "프로필 사진을 변경하려면 사진 접근 권한이 필요합니다.",
-        "NSCameraUsageDescription": "프로필 사진 촬영을 위해 카메라 접근 권한이 필요합니다."
+        "NSCameraUsageDescription": "프로필 사진 촬영을 위해 카메라 접근 권한이 필요합니다.",
+        "UIBackgroundModes": ["remote-notification", "fetch"]
       }
     },
     "android": {
@@ -62,6 +63,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList,
   TouchableOpacity, ActivityIndicator,
@@ -6,8 +6,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { ArrowLeft, Star } from 'lucide-react-native';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Star, Heart } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { placeService } from '@services/place.service';
 import ScreenTransition from '@components/ScreenTransition';
@@ -18,7 +18,29 @@ function anonymizeName(name: string): string {
   return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
 }
 
-function ReviewItem({ review }: { review: PlaceReview }) {
+function ReviewItem({ review, placeId }: { review: PlaceReview; placeId: string }) {
+  const [liked, setLiked] = useState(review.isLiked);
+  const [likesCount, setLikesCount] = useState(review.likesCount);
+
+  const handleLike = async () => {
+    const next = !liked;
+    setLiked(next);
+    setLikesCount((c) => c + (next ? 1 : -1));
+    try {
+      if (next) {
+        const res = await placeService.likeReview(placeId, review.id);
+        setLikesCount(res.likesCount);
+      } else {
+        const res = await placeService.unlikeReview(placeId, review.id);
+        setLikesCount(res.likesCount);
+      }
+    } catch {
+      // 실패 시 롤백
+      setLiked(!next);
+      setLikesCount((c) => c + (next ? -1 : 1));
+    }
+  };
+
   return (
     <View style={styles.reviewItem}>
       <View style={styles.reviewItemHeader}>
@@ -35,9 +57,23 @@ function ReviewItem({ review }: { review: PlaceReview }) {
         </View>
       </View>
       <Text style={styles.reviewBody}>{review.body}</Text>
-      <Text style={styles.reviewDate}>
-        {new Date(review.createdAt).toLocaleDateString('ko-KR')}
-      </Text>
+      <View style={styles.reviewFooter}>
+        <Text style={styles.reviewDate}>
+          {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+        </Text>
+        <TouchableOpacity style={styles.likeBtn} onPress={handleLike} activeOpacity={0.7}>
+          <Heart
+            size={15}
+            color={liked ? Colors.primary[500] : Colors.gray[400]}
+            fill={liked ? Colors.primary[500] : 'transparent'}
+          />
+          {likesCount > 0 && (
+            <Text style={[styles.likesCount, liked && { color: Colors.primary[500] }]}>
+              {likesCount}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -90,7 +126,7 @@ export default function PlaceReviewsScreen() {
           <FlatList
             data={reviews}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <ReviewItem review={item} />}
+            renderItem={({ item }) => <ReviewItem review={item} placeId={placeId!} />}
             contentContainerStyle={[
               styles.listContent,
               { paddingBottom: insets.bottom + Spacing['2xl'] },
@@ -178,6 +214,23 @@ const styles = StyleSheet.create({
   reviewDate: {
     fontSize: FontSize.xs,
     color: Colors.gray[400],
+  },
+  reviewFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  likeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 4,
+  },
+  likesCount: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[400],
+    fontWeight: FontWeight.medium,
   },
 
   empty: {

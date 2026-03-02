@@ -78,6 +78,8 @@ export interface PlaceReview {
   rating: number;
   body: string;
   createdAt: string;
+  likesCount: number;
+  isLiked: boolean;
 }
 
 export interface PlaceDetail extends Place {

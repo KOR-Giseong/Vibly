@@ -137,6 +137,20 @@ export const placeService = {
     await apiClient.post(`/places/${placeId}/reviews`, { rating, body });
   },
 
+  async likeReview(placeId: string, reviewId: string): Promise<{ likesCount: number }> {
+    const { data } = await apiClient.post<{ likesCount: number }>(
+      `/places/${placeId}/reviews/${reviewId}/like`,
+    );
+    return data;
+  },
+
+  async unlikeReview(placeId: string, reviewId: string): Promise<{ likesCount: number }> {
+    const { data } = await apiClient.delete<{ likesCount: number }>(
+      `/places/${placeId}/reviews/${reviewId}/like`,
+    );
+    return data;
+  },
+
   async getReviewSummary(placeId: string): Promise<ReviewSummary> {
     const { data } = await apiClient.get<ReviewSummary>(`/places/${placeId}/review-summary`);
     return data;

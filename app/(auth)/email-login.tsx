@@ -130,17 +130,10 @@ export default function EmailLoginScreen() {
 
     setLoading(true);
     try {
-      let result: any;
       if (mode === 'login') {
-        result = await authService.emailLogin(email, password);
+        await authService.emailLogin(email, password);
       } else {
-        result = await authService.emailSignup(email, password, name);
-      }
-
-      // 이메일 인증 필요
-      if (result?.requireVerification) {
-        router.push({ pathname: '/(auth)/verify-email', params: { email: result.email } } as any);
-        return;
+        await authService.emailSignup(email, password, name);
       }
 
       const user = await authService.getMe();

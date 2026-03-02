@@ -636,7 +636,6 @@ const styles = StyleSheet.create({
   },
   coupleBadgeText: {
     fontSize: FontSize.xs, color: Colors.gray[500], fontWeight: FontWeight.medium,
-    flex: 1,
   },
   coupleBadgeTextActive: {
     color: '#E60076',

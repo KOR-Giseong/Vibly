@@ -96,6 +96,7 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -123,7 +124,12 @@ export default function NotificationsScreen() {
     void loadNotifications();
   }, [loadNotifications]);
 
-  const handleMarkRead = useCallback(async (item: AppNotification) => {
+  const handleItemPress = useCallback(async (item: AppNotification) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+      return next;
+    });
     if (item.isRead) return;
     setSections((prev) =>
       prev.map((sec) => ({
@@ -131,10 +137,7 @@ export default function NotificationsScreen() {
         data: sec.data.map((n) => (n.id === item.id ? { ...n, isRead: true } : n)),
       })),
     );
-    setHasUnread((prev) => {
-      const stillUnread = sections.some((s) => s.data.some((n) => n.id !== item.id && !n.isRead));
-      return stillUnread;
-    });
+    setHasUnread(sections.some((s) => s.data.some((n) => n.id !== item.id && !n.isRead)));
     await notificationApi.markRead(item.id).catch(() => {});
   }, [sections]);
 
@@ -196,11 +199,12 @@ export default function NotificationsScreen() {
             renderItem={({ item }) => {
               const Icon = getIconForType(item.type);
               const gradient = getGradientForType(item.type);
+              const expanded = expandedIds.has(item.id);
               return (
                 <TouchableOpacity
                   style={[styles.item, !item.isRead && styles.itemUnread]}
                   activeOpacity={0.8}
-                  onPress={() => { void handleMarkRead(item); }}
+                  onPress={() => { void handleItemPress(item); }}
                 >
                   <View style={styles.iconWrap}>
                     <LinearGradient
@@ -213,7 +217,7 @@ export default function NotificationsScreen() {
                   </View>
                   <View style={styles.textWrap}>
                     <Text style={styles.itemTitle}>{item.title}</Text>
-                    <Text style={styles.itemBody} numberOfLines={2}>{item.body}</Text>
+                    <Text style={styles.itemBody} numberOfLines={expanded ? undefined : 2}>{item.body}</Text>
                     <Text style={styles.itemTime}>{formatTime(item.createdAt)}</Text>
                   </View>
                   {!item.isRead && <View style={styles.unreadDot} />}

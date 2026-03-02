@@ -211,7 +211,7 @@ export default function VerifyEmailScreen() {
                   disabled={resendCooldown > 0 || resending}
                 >
                   {resending ? (
-                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <ActivityIndicator size="small" color={Colors.primary[600]} />
                   ) : resendCooldown > 0 ? (
                     <Text style={styles.resendCooldown}>{resendCooldown}초 후 재전송</Text>
                   ) : (
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   emailHighlight: {
-    color: Colors.primary,
+    color: Colors.primary[600],
     fontWeight: FontWeight.semibold,
   },
   codeRow: {
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     color: Colors.gray[900],
   },
   codeInputFilled: {
-    borderColor: Colors.primary,
+    borderColor: Colors.primary[600],
     backgroundColor: 'rgba(124,58,237,0.04)',
   },
   codeInputError: {
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   resendBtn: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
-    color: Colors.primary,
+    color: Colors.primary[600],
   },
   resendCooldown: {
     fontSize: FontSize.sm,

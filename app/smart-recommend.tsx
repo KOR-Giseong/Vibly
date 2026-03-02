@@ -21,8 +21,8 @@ export default function SmartRecommendScreen() {
   const { setPlace } = usePlaceCacheStore();
 
   const DEFAULT_COORDS = { lat: 37.5665, lng: 126.9780 };
-  const lat = coords?.latitude ?? DEFAULT_COORDS.lat;
-  const lng = coords?.longitude ?? DEFAULT_COORDS.lng;
+  const lat = coords?.lat ?? DEFAULT_COORDS.lat;
+  const lng = coords?.lng ?? DEFAULT_COORDS.lng;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['smart-recommend', lat, lng],
@@ -85,9 +85,9 @@ export default function SmartRecommendScreen() {
 
               {/* 추천 장소 목록 */}
               <Text style={styles.sectionTitle}>추천 장소</Text>
-              {data.places.map((place) => (
+              {data.places.map((place, idx) => (
                 <TouchableOpacity
-                  key={place.id}
+                  key={`${place.id}_${idx}`}
                   style={styles.placeCard}
                   onPress={() => handlePlacePress(place)}
                   activeOpacity={0.85}

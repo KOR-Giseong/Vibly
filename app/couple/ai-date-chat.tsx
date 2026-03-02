@@ -56,8 +56,8 @@ export default function AiDateChatScreen() {
 
       const res = await coupleService.aiDateChat(
         history,
-        coords?.latitude,
-        coords?.longitude,
+        coords?.lat,
+        coords?.lng,
       );
 
       const modelMsg: ChatBubble = {

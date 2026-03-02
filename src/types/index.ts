@@ -123,6 +123,7 @@ export type NotificationType =
   | 'LIKE'
   | 'NEARBY'
   | 'PROMO'
+  | 'NOTICE'
   | 'REPORT'
   | 'COUPLE_INVITE'
   | 'COUPLE_ACCEPT'

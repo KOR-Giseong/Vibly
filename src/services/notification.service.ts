@@ -69,6 +69,7 @@ export const NOTIF_DISPLAY: Record<string, NotifDisplayInfo> = {
   LIKE:          { label: '좋아요',      gradient: ['#EF4444', '#F97316'] },
   NEARBY:        { label: '주변 장소',   gradient: ['#2563EB', '#7C3AED'] },
   PROMO:         { label: '혜택',        gradient: ['#F59E0B', '#EF4444'] },
+  NOTICE:        { label: '공지',        gradient: ['#475569', '#64748B'] },
   REPORT:        { label: '리포트',      gradient: ['#10B981', '#2563EB'] },
   COUPLE_INVITE: { label: '커플 초대',   gradient: ['#EC4899', '#F97316'] },
   COUPLE_ACCEPT: { label: '커플 수락',   gradient: ['#10B981', '#06B6D4'] },
@@ -82,6 +83,7 @@ export type NotifIconKey =
   | 'heart'
   | 'map-pin'
   | 'gift'
+  | 'bell'
   | 'heart-handshake'
   | 'users'
   | 'message-circle'
@@ -93,6 +95,7 @@ export const NOTIF_ICON: Record<string, NotifIconKey> = {
   LIKE:          'heart',
   NEARBY:        'map-pin',
   PROMO:         'gift',
+  NOTICE:        'bell',
   REPORT:        'sparkles',
   COUPLE_INVITE: 'users',
   COUPLE_ACCEPT: 'heart-handshake',

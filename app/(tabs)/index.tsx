@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Alert,
+  Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Alert, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -35,6 +35,29 @@ export default function HomeScreen() {
   const [aiQuery, setAiQuery] = useState('');
   const [locationModalDismissed, setLocationModalDismissed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // 실시간 추천 카드 애니메이션
+  const cardScale  = useRef(new Animated.Value(0.92)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const shimmerX   = useRef(new Animated.Value(-1)).current;
+
+  useEffect(() => {
+    if (!isPremium) return;
+    // 진입 애니메이션
+    Animated.parallel([
+      Animated.spring(cardScale,   { toValue: 1, tension: 120, friction: 7, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start(() => {
+      // shimmer 루프
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(shimmerX, { toValue: 2, duration: 1800, useNativeDriver: true }),
+          Animated.timing(shimmerX, { toValue: -1, duration: 0, useNativeDriver: true }),
+          Animated.delay(2400),
+        ]),
+      ).start();
+    });
+  }, [isPremium]);
 
   // 탭 포커스마다 미읽음 수 갱신
   useFocusEffect(
@@ -139,26 +162,50 @@ export default function HomeScreen() {
 
           {/* 실시간 추천 카드 (프리미엄 전용) */}
           {isPremium && (
-            <TouchableOpacity
-              style={styles.smartRecommendCard}
-              onPress={() => router.push('/smart-recommend')}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={['#7C3AED', '#A855F7']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-              <View style={styles.smartRecommendContent}>
-                <Text style={styles.smartRecommendEmoji}>🌤</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.smartRecommendTitle}>지금 어디 갈까?</Text>
-                  <Text style={styles.smartRecommendSub}>날씨와 시간대에 맞는 장소를 AI가 추천해드려요</Text>
+            <Animated.View style={{ opacity: cardOpacity, transform: [{ scale: cardScale }] }}>
+              <TouchableOpacity
+                style={styles.smartRecommendCard}
+                onPress={() => router.push('/smart-recommend')}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#7C3AED', '#A855F7']}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
+                {/* shimmer 레이어 */}
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    StyleSheet.absoluteFill,
+                    {
+                      transform: [{
+                        translateX: shimmerX.interpolate({
+                          inputRange: [-1, 2],
+                          outputRange: [-300, 300],
+                        }),
+                      }],
+                    },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={['transparent', 'rgba(255,255,255,0.15)', 'transparent']}
+                    style={{ flex: 1, width: 120 }}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  />
+                </Animated.View>
+                <View style={styles.smartRecommendContent}>
+                  <Text style={styles.smartRecommendEmoji}>🌤</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.smartRecommendTitle}>지금 어디 갈까?</Text>
+                    <Text style={styles.smartRecommendSub}>날씨와 시간대에 맞는 장소를 AI가 추천해드려요</Text>
+                  </View>
+                  <Sparkles size={20} color="rgba(255,255,255,0.8)" />
                 </View>
-                <Sparkles size={20} color="rgba(255,255,255,0.8)" />
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </Animated.View>
           )}
 
           {/* 기분 선택 */}

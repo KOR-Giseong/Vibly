@@ -3,16 +3,28 @@ import { storage } from '@utils/storage';
 import type { AuthTokens, User } from '@/types';
 
 export const authService = {
-  async emailLogin(email: string, password: string): Promise<AuthTokens> {
-    const { data } = await apiClient.post<AuthTokens>('/auth/email/login', { email, password });
+  async emailLogin(email: string, password: string): Promise<AuthTokens | { requireVerification: true; email: string }> {
+    const { data } = await apiClient.post<AuthTokens | { requireVerification: true; email: string }>('/auth/email/login', { email, password });
+    if ('requireVerification' in data) return data;
     await saveTokens(data);
     return data;
   },
 
-  async emailSignup(email: string, password: string, name: string): Promise<AuthTokens> {
-    const { data } = await apiClient.post<AuthTokens>('/auth/email/signup', { email, password, name });
+  async emailSignup(email: string, password: string, name: string): Promise<AuthTokens | { requireVerification: true; email: string }> {
+    const { data } = await apiClient.post<AuthTokens | { requireVerification: true; email: string }>('/auth/email/signup', { email, password, name });
+    if ('requireVerification' in data) return data;
     await saveTokens(data);
     return data;
+  },
+
+  async verifyEmail(email: string, code: string): Promise<AuthTokens> {
+    const { data } = await apiClient.post<AuthTokens>('/auth/email/verify', { email, code });
+    await saveTokens(data);
+    return data;
+  },
+
+  async resendVerification(email: string): Promise<void> {
+    await apiClient.post('/auth/email/resend', { email });
   },
 
   async socialLogin(

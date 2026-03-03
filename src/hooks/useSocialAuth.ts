@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { useAuthRequest, makeRedirectUri } from 'expo-auth-session';
+import { useAuthRequest, makeRedirectUri, exchangeCodeAsync } from 'expo-auth-session';
 import { router } from 'expo-router';
 import { useAuthStore } from '@stores/auth.store';
 import { useCreditStore } from '@stores/credit.store';
@@ -91,7 +91,30 @@ export function useSocialAuth() {
     if (!googleResponse) return;
     if (googleResponse.type === 'success') {
       const code = googleResponse.params.code;
-      if (code) finalizeSocialLogin('google', code, GOOGLE_REDIRECT_URI, undefined, googleRequest?.codeVerifier);
+      if (code && googleRequest) {
+        // 프론트에서 직접 code → id_token 교환 (PKCE codeVerifier 보유)
+        exchangeCodeAsync(
+          {
+            clientId: googleClientId,
+            redirectUri: GOOGLE_REDIRECT_URI,
+            code,
+            extraParams: googleRequest.codeVerifier
+              ? { code_verifier: googleRequest.codeVerifier }
+              : {},
+          },
+          GOOGLE_DISCOVERY,
+        ).then((tokenResult) => {
+          if (tokenResult.idToken) {
+            void finalizeSocialLogin('google', tokenResult.idToken);
+          } else {
+            setError('Google 로그인에 실패했어요.');
+            setLoading(null);
+          }
+        }).catch(() => {
+          setError('Google 로그인에 실패했어요.');
+          setLoading(null);
+        });
+      }
     } else if (googleResponse.type === 'error') {
       setError('Google 로그인에 실패했어요.');
       setLoading(null);

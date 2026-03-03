@@ -17,6 +17,13 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.vibly.mobile",
       "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.506939484809-5b9mm794vt3hhdo5p95qho4ksi7gstv8"
+            ]
+          }
+        ],
         "NSPhotoLibraryUsageDescription": "프로필 사진을 변경하려면 사진 접근 권한이 필요합니다.",
         "NSCameraUsageDescription": "프로필 사진 촬영을 위해 카메라 접근 권한이 필요합니다.",
         "UIBackgroundModes": [
@@ -60,6 +67,12 @@
         }
       ],
       "expo-web-browser",
+      [
+        "@react-native-seoul/kakao-login",
+        {
+          "kakaoAppKey": "ac833c12281b79a59bbe05f0f44ecd4c"
+        }
+      ],
       [
         "react-native-google-mobile-ads",
         {

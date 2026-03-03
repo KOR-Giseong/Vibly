@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { useAuthRequest, makeRedirectUri, exchangeCodeAsync } from 'expo-auth-session';
+import { AuthRequest, makeRedirectUri } from 'expo-auth-session';
 import { router } from 'expo-router';
 import { useAuthStore } from '@stores/auth.store';
 import { useCreditStore } from '@stores/credit.store';
@@ -16,12 +16,7 @@ const GOOGLE_DISCOVERY = {
   tokenEndpoint: 'https://oauth2.googleapis.com/token',
 };
 
-const KAKAO_DISCOVERY = {
-  authorizationEndpoint: 'https://kauth.kakao.com/oauth/authorize',
-  tokenEndpoint: 'https://kauth.kakao.com/oauth/token',
-};
-
-// 카카오 등 다른 소셜 로그인용 (vibly:// 스킴)
+// Google 웹/Android fallback redirect URI
 export const SOCIAL_REDIRECT_URI = makeRedirectUri({ scheme: 'vibly', path: 'auth' });
 
 // Google redirect URI
@@ -64,63 +59,19 @@ export function useSocialAuth() {
         router.replace('/(tabs)');
       }
     } catch (e: any) {
+      console.error(`[${provider}] finalizeSocialLogin 실패:`, e?.response?.data, e?.message, e?.response?.status);
       setError(e?.response?.data?.message ?? `${provider} 로그인에 실패했어요.`);
       setLoading(null);
     }
   };
 
   // ─── Google ──────────────────────────────────────────────────────────────
-  // 네이티브(iOS/Android): Desktop 앱 유형 클라이언트 → vibly:// 커스텀 스킴 허용
-  // Web: Web 유형 클라이언트
+  // AuthRequest를 직접 생성해 codeVerifier 타이밍 문제 방지
   const googleClientId = Platform.OS === 'web'
     ? (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '')
     : Platform.OS === 'ios'
     ? (process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '')
     : (process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '');
-
-  const [googleRequest, googleResponse, googlePromptAsync] = useAuthRequest(
-    {
-      clientId: googleClientId,
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri: GOOGLE_REDIRECT_URI,
-    },
-    GOOGLE_DISCOVERY,
-  );
-
-  useEffect(() => {
-    if (!googleResponse) return;
-    if (googleResponse.type === 'success') {
-      const code = googleResponse.params.code;
-      if (code && googleRequest) {
-        // 프론트에서 직접 code → id_token 교환 (PKCE codeVerifier 보유)
-        exchangeCodeAsync(
-          {
-            clientId: googleClientId,
-            redirectUri: GOOGLE_REDIRECT_URI,
-            code,
-            codeVerifier: googleRequest.codeVerifier,
-          },
-          GOOGLE_DISCOVERY,
-        ).then((tokenResult) => {
-          if (tokenResult.idToken) {
-            void finalizeSocialLogin('google', tokenResult.idToken);
-          } else {
-            setError('Google 로그인에 실패했어요.');
-            setLoading(null);
-          }
-        }).catch((err) => {
-          console.error('[Google OAuth] exchangeCodeAsync 실패:', err);
-          setError('Google 로그인에 실패했어요.');
-          setLoading(null);
-        });
-      }
-    } else if (googleResponse.type === 'error') {
-      setError('Google 로그인에 실패했어요.');
-      setLoading(null);
-    } else if (googleResponse.type === 'dismiss') {
-      setLoading(null);
-    }
-  }, [googleResponse]);
 
   const signInWithGoogle = async () => {
     if (!googleClientId) {
@@ -142,7 +93,67 @@ export function useSocialAuth() {
       return;
     }
 
-    await googlePromptAsync();
+    try {
+      // AuthRequest를 직접 생성 → promptAsync 호출 시점에 codeVerifier가 확정됨
+      const request = new AuthRequest({
+        clientId: googleClientId,
+        scopes: ['openid', 'profile', 'email'],
+        redirectUri: GOOGLE_REDIRECT_URI,
+        usePKCE: true,
+      });
+
+      const result = await request.promptAsync(GOOGLE_DISCOVERY);
+
+      if (result.type === 'success') {
+        const code = result.params.code;
+        const codeVerifier = request.codeVerifier;
+
+        console.log('[Google OAuth] result params:', JSON.stringify(result.params));
+        console.log('[Google OAuth] codeVerifier:', codeVerifier ? '있음' : '없음');
+        if (!code || !codeVerifier) {
+          console.error('[Google OAuth] code/codeVerifier 없음 - code:', !!code, 'codeVerifier:', !!codeVerifier);
+          setError('Google 로그인에 실패했어요.');
+          setLoading(null);
+          return;
+        }
+
+        // 직접 fetch로 code → id_token 교환 (code_verifier 확실히 포함)
+        const params = new URLSearchParams({
+          code,
+          client_id: googleClientId,
+          redirect_uri: GOOGLE_REDIRECT_URI,
+          grant_type: 'authorization_code',
+          code_verifier: codeVerifier,
+        });
+
+        console.log('[Google OAuth] token fetch 시작');
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString(),
+        });
+        const tokenData = await tokenRes.json();
+        console.log('[Google OAuth] token response:', JSON.stringify(tokenData));
+
+        if (tokenData.id_token) {
+          await finalizeSocialLogin('google', tokenData.id_token);
+        } else {
+          console.error('[Google OAuth] token exchange 실패:', JSON.stringify(tokenData));
+          setError('Google 로그인에 실패했어요.');
+          setLoading(null);
+        }
+      } else if (result.type === 'error') {
+        console.error('[Google OAuth] error result:', JSON.stringify(result));
+        setError('Google 로그인에 실패했어요.');
+        setLoading(null);
+      } else if (result.type === 'dismiss') {
+        setLoading(null);
+      }
+    } catch (err) {
+      console.error('[Google OAuth] 실패:', err);
+      setError('Google 로그인에 실패했어요.');
+      setLoading(null);
+    }
   };
 
   // ─── Apple (iOS 전용) ────────────────────────────────────────────────────
@@ -174,46 +185,28 @@ export function useSocialAuth() {
     }
   };
 
-  // ─── Kakao ───────────────────────────────────────────────────────────────
-  const [, kakaoResponse, kakaoPromptAsync] = useAuthRequest(
-    {
-      clientId: process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY ?? '',
-      scopes: ['profile_nickname', 'account_email'],
-      redirectUri: SOCIAL_REDIRECT_URI,
-      usePKCE: false,
-    },
-    KAKAO_DISCOVERY,
-  );
-
-  useEffect(() => {
-    if (!kakaoResponse) return;
-    if (kakaoResponse.type === 'success') {
-      const code = kakaoResponse.params.code;
-      if (code) finalizeSocialLogin('kakao', code, SOCIAL_REDIRECT_URI);
-    } else if (kakaoResponse.type === 'error') {
-      setError('카카오 로그인에 실패했어요.');
-      setLoading(null);
-    } else if (kakaoResponse.type === 'dismiss') {
-      setLoading(null);
-    }
-  }, [kakaoResponse]);
-
+  // ─── Kakao (네이티브 SDK) ────────────────────────────────────────────────
   const signInWithKakao = async () => {
     setError('');
     setLoading('kakao');
 
-    // 웹: 페이지 리다이렉트 방식 사용
     if (Platform.OS === 'web') {
-      const url = new URL('https://kauth.kakao.com/oauth/authorize');
-      url.searchParams.set('client_id', process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY ?? '');
-      url.searchParams.set('redirect_uri', SOCIAL_REDIRECT_URI);
-      url.searchParams.set('response_type', 'code');
-      sessionStorage.setItem('oauthProvider', 'kakao');
-      window.location.href = url.toString();
+      setError('웹에서는 카카오 로그인을 지원하지 않아요.');
+      setLoading(null);
       return;
     }
 
-    await kakaoPromptAsync();
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { login } = require('@react-native-seoul/kakao-login');
+      const token = await login();
+      await finalizeSocialLogin('kakao', token.accessToken);
+    } catch (e: any) {
+      if (e?.code !== 'ERR_CANCELED') {
+        setError('카카오 로그인에 실패했어요.');
+      }
+      setLoading(null);
+    }
   };
 
   return {

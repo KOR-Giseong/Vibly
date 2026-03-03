@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight, Sparkles, BookmarkPlus, Check, Coins, X, Edit2, CalendarDays } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow, Gradients } from '@constants/theme';
 import { coupleService, type AiDateAnalysisResult, type AiDateTimelineItem } from '@services/couple.service';
+import { useAiAd } from '@hooks/useAiAd';
 
 const WEEKDAYS = ['일','월','화','수','목','금','토'];
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -183,6 +184,7 @@ export default function AiAnalysisScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userNote } = useLocalSearchParams<{ userNote?: string }>();
+  const { maybeShowAd } = useAiAd();
 
   const [result, setResult] = useState<AiDateAnalysisResult | null>(null);
   const [timeline, setTimeline] = useState<AiDateTimelineItem[]>([]);
@@ -204,6 +206,8 @@ export default function AiAnalysisScreen() {
         setResult(res);
         setTimeline(res.timeline ?? []);
         setCredits(res.creditsRemaining);
+        // 비프리미엄 유저: AI 분석 완료 후 35% 확률 광고
+        maybeShowAd();
       })
       .catch((e: any) => setError(e?.response?.data?.message ?? 'AI 분석에 실패했습니다.'))
       .finally(() => setLoading(false));
@@ -257,6 +261,8 @@ export default function AiAnalysisScreen() {
       setCredits(res.creditsRemaining);
       setRefineVisible(false);
       setRefineIdx(null);
+      // 비프리미엄 유저: AI 수정 완료 후 35% 확률 광고
+      maybeShowAd();
     } catch (e: any) {
       Alert.alert('수정 실패', e?.response?.data?.message ?? '다시 시도해주세요.');
     } finally {

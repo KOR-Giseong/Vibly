@@ -5,11 +5,13 @@ import { useMoodStore } from '@stores/mood.store';
 import { useCreditStore } from '@stores/credit.store';
 import { useMapFilterStore } from '@stores/mapFilter.store';
 import { analytics } from '@utils/analytics';
+import { useAiAd } from '@hooks/useAiAd';
 
 export function useMoodSearch() {
   const { setSearchResult, setSearching } = useMoodStore();
   const { credits, isPremium, syncBalance } = useCreditStore();
   const { limit, radius } = useMapFilterStore();
+  const { maybeShowAd } = useAiAd();
 
   const mutation = useMutation({
     mutationFn: moodService.search,
@@ -22,6 +24,8 @@ export function useMoodSearch() {
       // 검색 완료 후 서버에서 실제 차감된 잔액 동기화
       syncBalance();
       analytics.track('SEARCH', { query: result.query, resultCount: result.places.length });
+      // 비프리미엄 유저: 35% 확률로 전면 광고 노출
+      maybeShowAd();
     },
     onError: () => {
       setSearchResult(null);

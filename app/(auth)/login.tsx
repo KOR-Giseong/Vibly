@@ -6,6 +6,7 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -66,6 +67,8 @@ type LoginButtonProps = {
   backgroundColor: string;
   textColor: string;
   borderColor?: string;
+  loading?: boolean;
+  disabled?: boolean;
 };
 
 const LoginButton = ({
@@ -75,20 +78,30 @@ const LoginButton = ({
   backgroundColor,
   textColor,
   borderColor,
+  loading,
+  disabled,
 }: LoginButtonProps) => (
   <TouchableOpacity
     style={[
       styles.loginBtn,
       { backgroundColor },
       borderColor ? { borderWidth: 1, borderColor } : null,
+      disabled ? { opacity: 0.6 } : null,
     ]}
     onPress={onPress}
     activeOpacity={0.85}
+    disabled={disabled}
   >
-    <View style={styles.loginBtnIcon}>
-      <Icon width={20} height={20} />
-    </View>
-    <Text style={[styles.loginBtnText, { color: textColor }]}>{label}</Text>
+    {loading ? (
+      <ActivityIndicator color={textColor} size="small" />
+    ) : (
+      <>
+        <View style={styles.loginBtnIcon}>
+          <Icon width={20} height={20} />
+        </View>
+        <Text style={[styles.loginBtnText, { color: textColor }]}>{label}</Text>
+      </>
+    )}
   </TouchableOpacity>
 );
 
@@ -96,9 +109,12 @@ const LoginButton = ({
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signInWithKakao, signInWithGoogle, signInWithApple, error, clearError } = useSocialAuth();
+  const { signInWithKakao, signInWithGoogle, signInWithApple, loading, error, clearError } = useSocialAuth();
+
+  const isAnyLoading = loading !== null;
 
   const handleEmail = () => {
+    if (isAnyLoading) return;
     router.push('/(auth)/email-login');
   };
 
@@ -143,6 +159,8 @@ export default function LoginScreen() {
           onPress={signInWithKakao}
           backgroundColor="#FEE500"
           textColor="#101828"
+          loading={loading === 'kakao'}
+          disabled={isAnyLoading}
         />
         <LoginButton
           icon={EmailIcon}
@@ -151,6 +169,7 @@ export default function LoginScreen() {
           backgroundColor={Colors.white}
           textColor="#101828"
           borderColor="#E5E7EB"
+          disabled={isAnyLoading}
         />
         <LoginButton
           icon={GoogleIcon}
@@ -159,6 +178,8 @@ export default function LoginScreen() {
           backgroundColor={Colors.white}
           textColor="#101828"
           borderColor="#E5E7EB"
+          loading={loading === 'google'}
+          disabled={isAnyLoading}
         />
         {Platform.OS === 'ios' && (
           <LoginButton
@@ -167,6 +188,8 @@ export default function LoginScreen() {
             onPress={signInWithApple}
             backgroundColor="#000000"
             textColor={Colors.white}
+            loading={loading === 'apple'}
+            disabled={isAnyLoading}
           />
         )}
 

@@ -72,22 +72,32 @@ type SocialButtonProps = {
   backgroundColor: string;
   textColor: string;
   borderColor?: string;
+  loading?: boolean;
+  disabled?: boolean;
 };
 
 const SocialButton = ({
-  icon: Icon, label, onPress, backgroundColor, textColor, borderColor,
+  icon: Icon, label, onPress, backgroundColor, textColor, borderColor, loading, disabled,
 }: SocialButtonProps) => (
   <TouchableOpacity
     style={[
       styles.socialBtn,
       { backgroundColor },
       borderColor ? { borderWidth: 1, borderColor } : null,
+      disabled ? { opacity: 0.6 } : null,
     ]}
     onPress={onPress}
     activeOpacity={0.85}
+    disabled={disabled}
   >
-    <View style={styles.socialBtnIcon}><Icon width={20} height={20} /></View>
-    <Text style={[styles.socialBtnText, { color: textColor }]}>{label}</Text>
+    {loading ? (
+      <ActivityIndicator color={textColor} size="small" />
+    ) : (
+      <>
+        <View style={styles.socialBtnIcon}><Icon width={20} height={20} /></View>
+        <Text style={[styles.socialBtnText, { color: textColor }]}>{label}</Text>
+      </>
+    )}
   </TouchableOpacity>
 );
 
@@ -107,7 +117,9 @@ export default function EmailLoginScreen() {
   const { setUser } = useAuthStore();
   const { setCredits, setPremium } = useCreditStore();
   const { setCoupleInfo } = useCoupleStore();
-  const { signInWithKakao, signInWithGoogle, signInWithApple } = useSocialAuth();
+  const { signInWithKakao, signInWithGoogle, signInWithApple, loading: socialLoading } = useSocialAuth();
+
+  const isAnyLoading = loading || socialLoading !== null;
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -282,9 +294,9 @@ export default function EmailLoginScreen() {
 
           {/* 제출 버튼 */}
           <TouchableOpacity
-            style={[styles.submitBtn, loading && { opacity: 0.7 }]}
+            style={[styles.submitBtn, isAnyLoading && { opacity: 0.7 }]}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={isAnyLoading}
             activeOpacity={0.85}
           >
             <LinearGradient
@@ -293,7 +305,7 @@ export default function EmailLoginScreen() {
               end={{ x: 1, y: 0 }}
               style={[StyleSheet.absoluteFill, { borderRadius: BorderRadius.lg }]}
             />
-            {loading
+            {isAnyLoading && !socialLoading
               ? <ActivityIndicator color={Colors.white} size="small" />
               : <Text style={styles.submitText}>{mode === 'login' ? '로그인' : '회원가입'}</Text>
             }
@@ -321,6 +333,8 @@ export default function EmailLoginScreen() {
               onPress={signInWithKakao}
               backgroundColor="#FEE500"
               textColor="#101828"
+              loading={socialLoading === 'kakao'}
+              disabled={isAnyLoading}
             />
             <SocialButton
               icon={GoogleIcon}
@@ -329,6 +343,8 @@ export default function EmailLoginScreen() {
               backgroundColor={Colors.white}
               textColor="#101828"
               borderColor="#E5E7EB"
+              loading={socialLoading === 'google'}
+              disabled={isAnyLoading}
             />
             {Platform.OS === 'ios' && (
               <SocialButton
@@ -337,6 +353,8 @@ export default function EmailLoginScreen() {
                 onPress={signInWithApple}
                 backgroundColor="#000000"
                 textColor={Colors.white}
+                loading={socialLoading === 'apple'}
+                disabled={isAnyLoading}
               />
             )}
           </View>

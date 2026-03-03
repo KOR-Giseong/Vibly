@@ -98,9 +98,7 @@ export function useSocialAuth() {
             clientId: googleClientId,
             redirectUri: GOOGLE_REDIRECT_URI,
             code,
-            extraParams: googleRequest.codeVerifier
-              ? { code_verifier: googleRequest.codeVerifier }
-              : {},
+            codeVerifier: googleRequest.codeVerifier,
           },
           GOOGLE_DISCOVERY,
         ).then((tokenResult) => {
@@ -110,7 +108,8 @@ export function useSocialAuth() {
             setError('Google 로그인에 실패했어요.');
             setLoading(null);
           }
-        }).catch(() => {
+        }).catch((err) => {
+          console.error('[Google OAuth] exchangeCodeAsync 실패:', err);
           setError('Google 로그인에 실패했어요.');
           setLoading(null);
         });

@@ -48,7 +48,7 @@ export const authService = {
           params: pushToken ? { pushToken } : undefined,
         })
         .catch(() => {});
-      await apiClient.post('/auth/logout', { refreshToken });
+      await apiClient.post('/auth/logout', { refreshToken }).catch(() => {});
     } finally {
       await clearTokens();
     }

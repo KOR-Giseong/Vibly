@@ -9,7 +9,7 @@ export function useAuth() {
   const { setCredits, setPremium, reset: resetCredit, syncBalance } = useCreditStore();
 
   const logout = useCallback(async () => {
-    await authService.logout();
+    await authService.logout().catch(() => {});
     resetAuth();
     resetCredit();
     router.replace('/(auth)/login');

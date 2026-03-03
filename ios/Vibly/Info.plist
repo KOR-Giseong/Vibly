@@ -29,8 +29,13 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>vibly</string>
-          <string>com.vibly.mobile</string>
+          <string>com.googleusercontent.apps.506939484809-5b9mm794vt3hhdo5p95qho4ksi7gstv8</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>kakaoac833c12281b79a59bbe05f0f44ecd4c</string>
         </array>
       </dict>
       <dict>
@@ -46,6 +51,14 @@
     <string>ca-app-pub-4793069997129951~7979584137</string>
     <key>GADDelayAppMeasurementInit</key>
     <false/>
+    <key>KAKAO_APP_KEY</key>
+    <string>ac833c12281b79a59bbe05f0f44ecd4c</string>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>kakaokompassauth</string>
+      <string>storykompassauth</string>
+      <string>kakaolink</string>
+    </array>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
@@ -77,6 +90,11 @@
     </array>
     <key>RCTNewArchEnabled</key>
     <true/>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>remote-notification</string>
+      <string>fetch</string>
+    </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>
@@ -96,10 +114,5 @@
     <string>Light</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
-    <key>UIBackgroundModes</key>
-    <array>
-      <string>remote-notification</string>
-      <string>fetch</string>
-    </array>
   </dict>
 </plist>

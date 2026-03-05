@@ -142,6 +142,7 @@ export default function SettingsScreen() {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -204,26 +205,25 @@ export default function SettingsScreen() {
   }, [logout]);
 
   const handleDeleteAccount = useCallback(() => {
-    Alert.alert('계정 삭제', '모든 데이터가 영구적으로 삭제되며, 탈퇴 후 30일간 동일 계정으로 재가입이 제한됩니다. 정말 삭제하시겠어요?', [
+    // 1단계: 개인정보 안내 모달 표시
+    setShowDeleteModal(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(() => {
+    // 2단계: 최종 확인 Alert
+    setShowDeleteModal(false);
+    Alert.alert('최종 확인', '탈퇴 시 모든 데이터가 삭제되고 30일간 재가입이 불가능합니다. 계속하시겠어요?', [
       { text: '취소', style: 'cancel' },
       {
-        text: '삭제하기',
+        text: '영구 삭제',
         style: 'destructive',
-        onPress: () =>
-          Alert.alert('최종 확인', '탈퇴 시 모든 데이터가 삭제되고 30일간 재가입이 불가능합니다. 계속하시겠어요?', [
-            { text: '취소', style: 'cancel' },
-            {
-              text: '영구 삭제',
-              style: 'destructive',
-              onPress: async () => {
-                try {
-                  await authService.deleteAccount();
-                  reset();
-                  router.replace('/(auth)/login');
-                } catch { Alert.alert('오류', '계정 삭제에 실패했어요.'); }
-              },
-            },
-          ]),
+        onPress: async () => {
+          try {
+            await authService.deleteAccount();
+            reset();
+            router.replace('/(auth)/login');
+          } catch { Alert.alert('오류', '계정 삭제에 실패했어요.'); }
+        },
       },
     ]);
   }, [router, reset]);
@@ -344,6 +344,51 @@ export default function SettingsScreen() {
       </LinearGradient>
 
       <ChangePasswordModal visible={showPasswordModal} onClose={() => setShowPasswordModal(false)} />
+
+      {/* 회원 탈퇴 개인정보 안내 모달 */}
+      <Modal visible={showDeleteModal} animationType="slide" transparent onRequestClose={() => setShowDeleteModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { paddingBottom: Platform.OS === 'ios' ? 40 : 24 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>회원 탈퇴 안내</Text>
+              <TouchableOpacity onPress={() => setShowDeleteModal(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <X size={20} color={Colors.gray[600]} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 개인정보 처리 안내 박스 */}
+            <View style={styles.deleteInfoBox}>
+              <Text style={styles.deleteInfoTitle}>개인정보 처리 안내</Text>
+              <Text style={styles.deleteInfoBody}>
+                탈퇴 즉시 회원 정보는 삭제 처리됩니다.{"\n"}
+                단, 다음의 경우 일부 정보가 일정 기간 보관될 수 있습니다.
+              </Text>
+              <View style={styles.deleteInfoItems}>
+                <Text style={styles.deleteInfoItem}>• 관련 법령에 따른 보관 의무</Text>
+                <Text style={styles.deleteInfoItem}>• 서비스 이용 기록 확인 및 분쟁 대응</Text>
+                <Text style={styles.deleteInfoItem}>• 부정 이용 방지 및 서비스 안정성 유지{"\n"}  (탈퇴 후 30일)</Text>
+              </View>
+              <Text style={styles.deleteInfoFooter}>
+                보관 기간이 종료되면 해당 정보는 즉시 파기됩니다.
+              </Text>
+            </View>
+
+            {/* 30일 재가입 제한 경고 */}
+            <View style={styles.deleteWarningBox}>
+              <Text style={styles.deleteWarningText}>
+                ⚠️  탈퇴 후 30일간 동일 계정(이메일/소셜)으로 재가입이 제한됩니다.
+              </Text>
+            </View>
+
+            <TouchableOpacity style={styles.deleteConfirmBtn} onPress={handleDeleteConfirm}>
+              <Text style={styles.deleteConfirmText}>확인했습니다 · 탈퇴 진행</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteCancelBtn} onPress={() => setShowDeleteModal(false)}>
+              <Text style={styles.deleteCancelText}>취소</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -424,6 +469,69 @@ const styles = StyleSheet.create({
 
   deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: Spacing.md },
   deleteText: { fontSize: FontSize.xs, color: Colors.gray[400] },
+
+  // 탈퇴 안내 모달
+  deleteInfoBox: {
+    backgroundColor: '#F8F9FF',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary[100],
+  },
+  deleteInfoTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.primary[700],
+    marginBottom: 8,
+  },
+  deleteInfoBody: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[700],
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  deleteInfoItems: { gap: 4, marginBottom: 10 },
+  deleteInfoItem: { fontSize: FontSize.xs, color: Colors.gray[600], lineHeight: 17 },
+  deleteInfoFooter: {
+    fontSize: FontSize.xs,
+    color: Colors.primary[600],
+    fontWeight: FontWeight.medium,
+  },
+  deleteWarningBox: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  deleteWarningText: {
+    fontSize: FontSize.xs,
+    color: '#DC2626',
+    lineHeight: 17,
+  },
+  deleteConfirmBtn: {
+    backgroundColor: '#EF4444',
+    borderRadius: BorderRadius.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  deleteConfirmText: {
+    color: Colors.white,
+    fontWeight: FontWeight.semibold,
+    fontSize: FontSize.sm,
+  },
+  deleteCancelBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  deleteCancelText: {
+    color: Colors.gray[500],
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+  },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: {

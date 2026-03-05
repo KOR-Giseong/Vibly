@@ -58,6 +58,7 @@ export default function AnimatedSplash() {
       end={{ x: 0.8, y: 1 }}
     >
       <MaskedView
+        style={styles.maskedView}
         maskElement={
           <View style={styles.lettersRow}>
             {LETTERS.map((letter, i) => (
@@ -84,7 +85,7 @@ export default function AnimatedSplash() {
           colors={['#9810FA', '#E60076']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={styles.gradientBox}
+          style={StyleSheet.absoluteFill}
         />
       </MaskedView>
 
@@ -101,6 +102,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  maskedView: {
+    alignSelf: 'center',
+  },
   lettersRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -111,10 +115,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#000',
     includeFontPadding: false,
-  },
-  gradientBox: {
-    width: 260,
-    height: 80,
   },
   tagline: {
     marginTop: 12,

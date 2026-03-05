@@ -358,15 +358,15 @@ export default function SettingsScreen() {
 
             {/* 개인정보 처리 안내 박스 */}
             <View style={styles.deleteInfoBox}>
-              <Text style={styles.deleteInfoTitle}>개인정보 처리 안내</Text>
+              <Text style={styles.deleteInfoTitle}>회원 탈퇴 시 개인정보 처리 안내</Text>
               <Text style={styles.deleteInfoBody}>
                 탈퇴 즉시 회원 정보는 삭제 처리됩니다.{"\n"}
                 단, 다음의 경우 일부 정보가 일정 기간 보관될 수 있습니다.
               </Text>
               <View style={styles.deleteInfoItems}>
-                <Text style={styles.deleteInfoItem}>• 관련 법령에 따른 보관 의무</Text>
-                <Text style={styles.deleteInfoItem}>• 서비스 이용 기록 확인 및 분쟁 대응</Text>
-                <Text style={styles.deleteInfoItem}>• 부정 이용 방지 및 서비스 안정성 유지{"\n"}  (탈퇴 후 30일)</Text>
+                <Text style={styles.deleteInfoItem}>• 관련 법령에 따른 보관 의무{"\n"}  (소비자 불만·분쟁 기록: 3년, 전자상거래법)</Text>
+                <Text style={styles.deleteInfoItem}>• 서비스 이용 기록 확인 및 분쟁 대응{"\n"}  (로그 기록: 최대 1년)</Text>
+                <Text style={styles.deleteInfoItem}>• 부정 이용 방지 및 서비스 안정성 유지{"\n"}  (재가입 제한 식별 정보: 30일)</Text>
               </View>
               <Text style={styles.deleteInfoFooter}>
                 보관 기간이 종료되면 해당 정보는 즉시 파기됩니다.

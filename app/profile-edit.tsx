@@ -92,55 +92,61 @@ export default function ProfileEditScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {/* 이름 */}
-            <Text style={styles.label}>이름</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="이름을 입력하세요"
-              placeholderTextColor={Colors.gray[400]}
-              maxLength={20}
-            />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>이름</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="이름을 입력하세요"
+                placeholderTextColor={Colors.gray[400]}
+                maxLength={20}
+              />
+            </View>
 
             {/* 닉네임 */}
-            <Text style={styles.label}>닉네임</Text>
-            <TextInput
-              style={styles.input}
-              value={nickname}
-              onChangeText={setNickname}
-              placeholder="닉네임을 입력하세요 (선택)"
-              placeholderTextColor={Colors.gray[400]}
-              maxLength={30}
-              autoCapitalize="none"
-            />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>닉네임</Text>
+              <TextInput
+                style={styles.input}
+                value={nickname}
+                onChangeText={setNickname}
+                placeholder="닉네임을 입력하세요 (선택)"
+                placeholderTextColor={Colors.gray[400]}
+                maxLength={30}
+                autoCapitalize="none"
+              />
+            </View>
 
             {/* 선호 바이브 */}
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: Spacing.lg }}>
-              <Text style={styles.label}>선호 바이브</Text>
-              <Text style={styles.labelSub}>{vibes.length}/{MAX_VIBES}</Text>
-            </View>
-            <View style={styles.vibeGrid}>
-              {VIBE_OPTIONS.map(({ emoji, label }) => {
-                const selected = vibes.includes(label);
-                const disabled = !selected && vibes.length >= MAX_VIBES;
-                return (
-                  <TouchableOpacity
-                    key={label}
-                    style={[styles.vibePill, selected && styles.vibePillSelected, disabled && styles.vibePillDisabled]}
-                    onPress={() => toggleVibe(label)}
-                    activeOpacity={disabled ? 1 : 0.8}
-                  >
-                    <Text style={[styles.vibeEmoji, disabled && { opacity: 0.35 }]}>{emoji}</Text>
-                    <Text style={[
-                      styles.vibePillText,
-                      selected && styles.vibePillTextSelected,
-                      disabled && { color: Colors.gray[400] },
-                    ]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={styles.fieldGroup}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                <Text style={styles.label}>선호 바이브</Text>
+                <Text style={styles.labelSub}>{vibes.length}/{MAX_VIBES}</Text>
+              </View>
+              <View style={styles.vibeGrid}>
+                {VIBE_OPTIONS.map(({ emoji, label }) => {
+                  const selected = vibes.includes(label);
+                  const disabled = !selected && vibes.length >= MAX_VIBES;
+                  return (
+                    <TouchableOpacity
+                      key={label}
+                      style={[styles.vibePill, selected && styles.vibePillSelected, disabled && styles.vibePillDisabled]}
+                      onPress={() => toggleVibe(label)}
+                      activeOpacity={disabled ? 1 : 0.8}
+                    >
+                      <Text style={[styles.vibeEmoji, disabled && { opacity: 0.35 }]}>{emoji}</Text>
+                      <Text style={[
+                        styles.vibePillText,
+                        selected && styles.vibePillTextSelected,
+                        disabled && { color: Colors.gray[400] },
+                      ]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             {/* 저장 버튼 */}
@@ -175,10 +181,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center', ...Shadow.sm,
   },
   headerTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.gray[900] },
-  scroll: { paddingHorizontal: Spacing['2xl'], paddingBottom: Spacing['4xl'] },
+  scroll: { paddingHorizontal: Spacing['2xl'], paddingTop: Spacing.lg, paddingBottom: Spacing['4xl'] },
+  fieldGroup: {
+    gap: Spacing.xs,
+    marginBottom: Spacing.xl,
+  },
   label: {
     fontSize: FontSize.sm, fontWeight: FontWeight.semibold,
-    color: Colors.gray[700], marginTop: Spacing.lg, marginBottom: Spacing.xs,
+    color: Colors.gray[700],
   },
   labelSub: { fontSize: FontSize.xs, color: Colors.gray[400], fontWeight: FontWeight.medium },
   input: {
@@ -187,7 +197,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md, color: Colors.gray[900],
     borderWidth: 1, borderColor: Colors.gray[200], ...Shadow.sm,
   },
-  vibeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.sm },
+  vibeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   vibePill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     borderRadius: BorderRadius.full, paddingHorizontal: Spacing.md, paddingVertical: 9,

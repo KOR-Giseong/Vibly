@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '@stores/auth.store';
 import { useCreditStore } from '@stores/credit.store';
 import { useCoupleStore } from '@stores/couple.store';
@@ -89,7 +89,7 @@ function RootLayoutNav() {
         if (status !== 'granted') return;
 
         // 수동으로 알림을 끌 경우 토큰 재등록 안 함
-        const notifPref = await AsyncStorage.getItem('vibly_push_enabled');
+        const notifPref = await SecureStore.getItemAsync('vibly_push_enabled');
         if (notifPref === 'false') {
           // 알림 꺼진 경우 토큰 재등록 스킵, Cold start 처리만
           const lastResponse = await Notifications.getLastNotificationResponseAsync();

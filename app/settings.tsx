@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import * as ExpoNotifications from 'expo-notifications';
+import * as SecureStore from 'expo-secure-store';
 import {
   ArrowLeft,
   ChevronRight,
@@ -36,7 +37,6 @@ import {
   X,
 } from 'lucide-react-native';
 import { Colors, Gradients, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@constants/theme';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@hooks/useAuth';
 import { useAuthStore } from '@stores/auth.store';
 import { authService } from '@services/auth.service';
@@ -153,7 +153,7 @@ export default function SettingsScreen() {
         setNotificationsEnabled(false);
         return;
       }
-      const saved = await AsyncStorage.getItem(NOTIF_ENABLED_KEY);
+      const saved = await SecureStore.getItemAsync(NOTIF_ENABLED_KEY);
       setNotificationsEnabled(saved !== 'false');
     })();
   }, []);
@@ -179,7 +179,7 @@ export default function SettingsScreen() {
         const platform = Platform.OS === 'ios' ? 'ios' : 'android';
         await notificationApi.registerToken(tokenData.data, platform);
       } catch { /* 시뮬레이터 등 환경에서 무시 */ }
-      await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'true');
+      await SecureStore.setItemAsync(NOTIF_ENABLED_KEY, 'true');
     } else {
       // 끄기: 서버에서 디바이스 토큰 삭제 → 서버가 이 기기로 푸시 발송 중단
       try {
@@ -191,7 +191,7 @@ export default function SettingsScreen() {
         );
         await notificationApi.removeToken(tokenData.data);
       } catch { /* 토큰 없는 경우 무시 */ }
-      await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'false');
+      await SecureStore.setItemAsync(NOTIF_ENABLED_KEY, 'false');
     }
     setNotificationsEnabled(value);
   }, []);

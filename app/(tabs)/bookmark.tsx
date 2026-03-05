@@ -54,7 +54,6 @@ function GridCard({
   onRemove: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
-  console.log('[GridCard]', place.name, '| imageUrl:', place.imageUrl);
   return (
     <TouchableOpacity style={styles.gridCard} onPress={onPress} activeOpacity={0.85}>
       {/* 이미지 */}

@@ -108,8 +108,6 @@ export function useSocialAuth() {
         const code = result.params.code;
         const codeVerifier = request.codeVerifier;
 
-        console.log('[Google OAuth] result params:', JSON.stringify(result.params));
-        console.log('[Google OAuth] codeVerifier:', codeVerifier ? '있음' : '없음');
         if (!code || !codeVerifier) {
           console.error('[Google OAuth] code/codeVerifier 없음 - code:', !!code, 'codeVerifier:', !!codeVerifier);
           setError('Google 로그인에 실패했어요.');

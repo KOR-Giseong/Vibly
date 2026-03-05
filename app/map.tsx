@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   Image, ActivityIndicator, useWindowDimensions, FlatList, Keyboard,
@@ -136,6 +136,14 @@ export default function MapScreen() {
 
   const isLoading = nearbyLoading || searchLoading;
 
+  // 파트너 장소 ID 집합 (지도 마커 + 리스트 배지에서 공용)
+  const partnerPlaceIds = useMemo(
+    () => (showPartnerScrap && partnerPlaces.length > 0
+      ? new Set(partnerPlaces.map((p) => p.id))
+      : undefined),
+    [showPartnerScrap, partnerPlaces],
+  );
+
   // ── Handlers ──────────────────────────────────────────────────────────────────
 
   const showCard = useCallback(() => {
@@ -243,6 +251,7 @@ export default function MapScreen() {
             selectedId={selectedPlace?.id ?? null}
             coords={coords}
             onMarkerPress={handleMarkerPress}
+            partnerPlaceIds={partnerPlaceIds}
             onMapPress={() => {
               if (showList) { closeList(); return; }
               if (selectedPlace) handleDismissCard();
@@ -502,19 +511,25 @@ export default function MapScreen() {
                     activeOpacity={0.7}
                   >
                     {/* Icon */}
-                    <View style={[styles.listIcon, { backgroundColor: (CATEGORY_COLOR[item.category] ?? '#9810FA') + '18' }]}>
-                      <Text style={styles.listIconEmoji}>{CATEGORY_EMOJI[item.category] ?? '📍'}</Text>
+                    <View style={[styles.listIcon, { backgroundColor: (partnerPlaceIds?.has(item.id) ? '#E60076' : (CATEGORY_COLOR[item.category] ?? '#9810FA')) + '18' }]}>
+                      <Text style={styles.listIconEmoji}>{partnerPlaceIds?.has(item.id) ? '💕' : (CATEGORY_EMOJI[item.category] ?? '📍')}</Text>
                     </View>
 
                     {/* Info */}
                     <View style={styles.listInfo}>
                       <Text style={styles.listName} numberOfLines={1}>{item.name}</Text>
                       <View style={styles.listMetaRow}>
-                        <View style={[styles.listCatBadge, { backgroundColor: (CATEGORY_COLOR[item.category] ?? '#9810FA') + '20' }]}>
-                          <Text style={[styles.listCatText, { color: CATEGORY_COLOR[item.category] ?? '#9810FA' }]}>
-                            {item.category}
-                          </Text>
-                        </View>
+                        {partnerPlaceIds?.has(item.id) ? (
+                          <View style={[styles.listCatBadge, { backgroundColor: '#E6007618' }]}>
+                            <Text style={[styles.listCatText, { color: '#E60076' }]}>파트너 스크랩</Text>
+                          </View>
+                        ) : (
+                          <View style={[styles.listCatBadge, { backgroundColor: (CATEGORY_COLOR[item.category] ?? '#9810FA') + '20' }]}>
+                            <Text style={[styles.listCatText, { color: CATEGORY_COLOR[item.category] ?? '#9810FA' }]}>
+                              {item.category}
+                            </Text>
+                          </View>
+                        )}
                         {item.distance && (
                           <Text style={styles.listDist}>· {item.distance}</Text>
                         )}

@@ -35,22 +35,28 @@ export interface MapContainerProps {
   coords: { lat: number; lng: number };
   onMarkerPress: (place: Place) => void;
   onMapPress: () => void;
+  partnerPlaceIds?: Set<string>;
 }
+
+// 파트너 스크랩 마커 색상
+const PARTNER_COLOR = '#E60076';
+const PARTNER_BG    = '#FFF0F7';
 
 // ─── 개별 마커 핀 컴포넌트 (각각 독립적인 둥둥 애니메이션) ──────────────────
 
 interface MarkerPinProps {
   place: Place;
   isSelected: boolean;
+  isPartner?: boolean;
 }
 
-const MarkerPin = memo(({ place, isSelected }: MarkerPinProps) => {
+const MarkerPin = memo(({ place, isSelected, isPartner }: MarkerPinProps) => {
   const floatAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const floatLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  const color = CATEGORY_COLOR[place.category] ?? '#6B7280';
-  const label = (place.name ?? '').slice(0, 6);
+  const color = isPartner ? PARTNER_COLOR : (CATEGORY_COLOR[place.category] ?? '#6B7280');
+  const label = (isPartner ? '♥ ' : '') + (place.name ?? '').slice(0, 5);
 
   // 둥둥 뜨는 루프 애니메이션
   useEffect(() => {
@@ -106,7 +112,8 @@ const MarkerPin = memo(({ place, isSelected }: MarkerPinProps) => {
       {/* 핀 버블 */}
       <View style={[
         styles.pinBubble,
-        { backgroundColor: isSelected ? color : Colors.white },
+        { backgroundColor: isSelected ? color : (isPartner ? PARTNER_BG : Colors.white) },
+        isPartner && !isSelected && styles.pinBubblePartner,
         isSelected && styles.pinBubbleSelected,
       ]}>
         <View style={[styles.pinDot, { backgroundColor: color }]} />
@@ -138,7 +145,7 @@ MarkerPin.displayName = 'MarkerPin';
 // ─── MapContainer ─────────────────────────────────────────────────────────────
 
 const MapContainer = forwardRef<MapHandle, MapContainerProps>(
-  ({ places, selectedId, coords, onMarkerPress, onMapPress }, ref) => {
+  ({ places, selectedId, coords, onMarkerPress, onMapPress, partnerPlaceIds }, ref) => {
     const mapRef = useRef<MapView>(null);
 
     useImperativeHandle(ref, () => ({
@@ -175,6 +182,7 @@ const MapContainer = forwardRef<MapHandle, MapContainerProps>(
             <MarkerPin
               place={place}
               isSelected={selectedId === place.id}
+              isPartner={partnerPlaceIds?.has(place.id)}
             />
           </Marker>
         ))}
@@ -210,6 +218,10 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     elevation: 8,
     shadowOpacity: 0.3,
+  },
+  pinBubblePartner: {
+    borderColor: PARTNER_COLOR,
+    borderWidth: 1.5,
   },
   pinDot: {
     width: 7,

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import { View, Animated, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { Gradients } from '@constants/theme';
 
 const LETTERS = ['V', 'i', 'b', 'l', 'y'];
@@ -8,9 +9,9 @@ const LETTERS = ['V', 'i', 'b', 'l', 'y'];
 export default function AnimatedSplash() {
   const anims = useRef(
     LETTERS.map(() => ({
-      translateY: new Animated.Value(50),
+      translateY: new Animated.Value(80),
       opacity: new Animated.Value(0),
-      scale: new Animated.Value(0.6),
+      scale: new Animated.Value(0.3),
     })),
   ).current;
 
@@ -21,29 +22,29 @@ export default function AnimatedSplash() {
       Animated.parallel([
         Animated.spring(anims[i].translateY, {
           toValue: 0,
-          friction: 5,
-          tension: 90,
+          friction: 3,      // 낮을수록 더 많이 튀김
+          tension: 120,     // 높을수록 빠르게 반응
           useNativeDriver: true,
         }),
         Animated.timing(anims[i].opacity, {
           toValue: 1,
-          duration: 180,
+          duration: 80,
           useNativeDriver: true,
         }),
         Animated.spring(anims[i].scale, {
           toValue: 1,
-          friction: 5,
-          tension: 90,
+          friction: 3,
+          tension: 120,
           useNativeDriver: true,
         }),
       ]),
     );
 
     Animated.sequence([
-      Animated.stagger(90, letterAnims),
+      Animated.stagger(110, letterAnims),
       Animated.timing(taglineOpacity, {
         toValue: 1,
-        duration: 400,
+        duration: 500,
         useNativeDriver: true,
       }),
     ]).start();
@@ -58,21 +59,29 @@ export default function AnimatedSplash() {
     >
       <View style={styles.lettersRow}>
         {LETTERS.map((letter, i) => (
-          <Animated.Text
+          <Animated.View
             key={letter + i}
-            style={[
-              styles.letter,
-              {
-                opacity: anims[i].opacity,
-                transform: [
-                  { translateY: anims[i].translateY },
-                  { scale: anims[i].scale },
-                ],
-              },
-            ]}
+            style={{
+              opacity: anims[i].opacity,
+              transform: [
+                { translateY: anims[i].translateY },
+                { scale: anims[i].scale },
+              ],
+            }}
           >
-            {letter}
-          </Animated.Text>
+            <MaskedView
+              maskElement={
+                <Text style={styles.letter}>{letter}</Text>
+              }
+            >
+              <LinearGradient
+                colors={['#9810FA', '#E60076']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.gradientBox}
+              />
+            </MaskedView>
+          </Animated.View>
         ))}
       </View>
 
@@ -94,17 +103,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   letter: {
-    fontSize: 58,
+    fontSize: 64,
     fontWeight: '800',
-    color: '#7C3AED',
-    letterSpacing: 1,
+    letterSpacing: 2,
+    color: '#000', // MaskedView mask는 색상 무관, 투명도만 사용
+  },
+  gradientBox: {
+    width: 70,
+    height: 80,
   },
   tagline: {
-    marginTop: 10,
-    fontSize: 14,
+    marginTop: 12,
+    fontSize: 13,
     fontWeight: '500',
     color: '#A78BFA',
-    letterSpacing: 4,
+    letterSpacing: 5,
     textTransform: 'uppercase',
   },
 });

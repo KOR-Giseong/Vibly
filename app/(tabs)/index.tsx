@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, Sparkles, X } from 'lucide-react-native';
+import { Bell, Sparkles, X, MapPin, ChevronDown } from 'lucide-react-native';
 import { notificationApi } from '@services/notification.service';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useAuthStore } from '@stores/auth.store';
@@ -22,6 +22,28 @@ import { LocationPermissionModal } from '@components/ui';
 import ScreenTransition from '@components/ScreenTransition';
 import type { Mood } from '@/types';
 
+// ── 지역 목록 ─────────────────────────────────────────────────────────────────
+type Region = {
+  id: string;
+  label: string;
+  coords: { lat: number; lng: number } | null; // null = 현재 위치 사용
+  radius: number | null; // null = 반경 제한 없음
+};
+
+const REGIONS: Region[] = [
+  { id: 'nearby',   label: '내 위치',  coords: null,                          radius: undefined as any },
+  { id: 'all',      label: '전체',     coords: { lat: 37.5665, lng: 126.9780 }, radius: null },
+  { id: 'seoul',    label: '서울',     coords: { lat: 37.5665, lng: 126.9780 }, radius: null },
+  { id: 'gyeonggi', label: '경기',    coords: { lat: 37.4138, lng: 127.5183 }, radius: null },
+  { id: 'incheon',  label: '인천',    coords: { lat: 37.4563, lng: 126.7052 }, radius: null },
+  { id: 'busan',    label: '부산',    coords: { lat: 35.1796, lng: 129.0756 }, radius: null },
+  { id: 'daegu',    label: '대구',    coords: { lat: 35.8714, lng: 128.6014 }, radius: null },
+  { id: 'gwangju',  label: '광주',    coords: { lat: 35.1595, lng: 126.8526 }, radius: null },
+  { id: 'daejeon',  label: '대전',    coords: { lat: 36.3504, lng: 127.3845 }, radius: null },
+  { id: 'ulsan',    label: '울산',    coords: { lat: 35.5384, lng: 129.3114 }, radius: null },
+  { id: 'jeju',     label: '제주',    coords: { lat: 33.4996, lng: 126.5312 }, radius: null },
+];
+
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -35,6 +57,16 @@ export default function HomeScreen() {
   const [aiQuery, setAiQuery] = useState('');
   const [locationModalDismissed, setLocationModalDismissed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedRegion, setSelectedRegion] = useState<Region>(REGIONS[0]);
+  const [showRegionModal, setShowRegionModal] = useState(false);
+
+  // 선택된 지역 기준 검색 좌표/반경 결정
+  const getSearchParams = () => {
+    if (selectedRegion.id === 'nearby') {
+      return { searchCoords: coords ?? undefined, searchRadius: undefined as number | null | undefined };
+    }
+    return { searchCoords: selectedRegion.coords ?? undefined, searchRadius: selectedRegion.radius };
+  };
 
   // 실시간 추천 카드 애니메이션
   const cardScale  = useRef(new Animated.Value(0.92)).current;
@@ -71,8 +103,9 @@ export default function HomeScreen() {
   // 기분 카드 선택 → 크레딧 확인 후 검색 화면으로 이동
   const handleMoodSelect = (mood: Mood) => {
     setSelectedMood(mood);
+    const { searchCoords, searchRadius } = getSearchParams();
     if (isPremium) {
-      search(mood.label, coords ?? undefined);
+      search(mood.label, searchCoords, searchRadius);
       router.push('/(tabs)/search');
       return;
     }
@@ -84,7 +117,7 @@ export default function HomeScreen() {
         {
           text: '검색하기',
           onPress: () => {
-            search(mood.label, coords ?? undefined);
+            search(mood.label, searchCoords, searchRadius);
             router.push('/(tabs)/search');
           },
         },
@@ -95,8 +128,9 @@ export default function HomeScreen() {
   // AI 모달에서 검색 실행
   const handleAISearch = () => {
     if (!aiQuery.trim()) return;
+    const { searchCoords, searchRadius } = getSearchParams();
     if (isPremium) {
-      search(aiQuery.trim(), coords ?? undefined);
+      search(aiQuery.trim(), searchCoords, searchRadius);
       setShowAIModal(false);
       setAiQuery('');
       router.push('/(tabs)/search');
@@ -110,7 +144,8 @@ export default function HomeScreen() {
         {
           text: '검색하기',
           onPress: () => {
-            search(aiQuery.trim(), coords ?? undefined);
+            const { searchCoords: sc, searchRadius: sr } = getSearchParams();
+            search(aiQuery.trim(), sc, sr);
             setShowAIModal(false);
             setAiQuery('');
             router.push('/(tabs)/search');
@@ -208,6 +243,20 @@ export default function HomeScreen() {
             </Animated.View>
           )}
 
+          {/* 지역 선택 */}
+          <View style={styles.regionRow}>
+            <Text style={styles.regionGuide} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요</Text>
+            <TouchableOpacity
+              style={styles.regionPill}
+              onPress={() => setShowRegionModal(true)}
+              activeOpacity={0.75}
+            >
+              <MapPin size={14} color="#9810FA" />
+              <Text style={styles.regionPillText}>{selectedRegion.label}</Text>
+              <ChevronDown size={14} color={Colors.gray[500]} />
+            </TouchableOpacity>
+          </View>
+
           {/* 기분 선택 */}
           <View style={styles.block}>
             <Text style={styles.sectionTitle}>지금 기분</Text>
@@ -297,6 +346,44 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </Pressable>
           </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
+
+      {/* 지역 선택 모달 */}
+      <Modal
+        visible={showRegionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRegionModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowRegionModal(false)}>
+          <Pressable style={styles.regionModalCard}>
+            <View style={styles.regionModalHeader}>
+              <Text style={styles.regionModalTitle}>지역 선택</Text>
+              <TouchableOpacity onPress={() => setShowRegionModal(false)}>
+                <X size={20} color={Colors.gray[500]} />
+              </TouchableOpacity>
+            </View>
+            {REGIONS.map((region) => {
+              const isActive = selectedRegion.id === region.id;
+              return (
+                <TouchableOpacity
+                  key={region.id}
+                  style={[styles.regionItem, isActive && styles.regionItemActive]}
+                  onPress={() => {
+                    setSelectedRegion(region);
+                    setShowRegionModal(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.regionItemText, isActive && styles.regionItemTextActive]}>
+                    {region.label}
+                  </Text>
+                  {isActive && <View style={styles.regionItemDot} />}
+                </TouchableOpacity>
+              );
+            })}
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -470,6 +557,77 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.white,
   },
+  // ── 지역 선택 ────────────────────────────────────────────────────────────────
+  regionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  regionGuide: {
+    flex: 1,
+    fontSize: FontSize.xs,
+    color: Colors.gray[500],
+  },
+  regionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 7,
+    ...Shadow.sm,
+  },
+  regionPillText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[700],
+  },
+  regionModalCard: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: Spacing['2xl'],
+    paddingBottom: Spacing['4xl'],
+  },
+  regionModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  regionModalTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  regionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+  },
+  regionItemActive: {
+    backgroundColor: '#F3E8FF',
+  },
+  regionItemText: {
+    fontSize: FontSize.base,
+    color: Colors.gray[700],
+  },
+  regionItemTextActive: {
+    fontWeight: FontWeight.semibold,
+    color: '#9810FA',
+  },
+  regionItemDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#9810FA',
+  },
+  // ─────────────────────────────────────────────────────────────────────────────
   smartRecommendSub: {
     fontSize: FontSize.xs,
     color: 'rgba(255,255,255,0.8)',

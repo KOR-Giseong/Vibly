@@ -202,8 +202,10 @@ export function useSocialAuth() {
       const token = await login();
       await finalizeSocialLogin('kakao', token.accessToken);
     } catch (e: any) {
-      if (e?.code !== 'ERR_CANCELED') {
-        setError('카카오 로그인에 실패했어요.');
+      console.error('[Kakao] 로그인 에러 code:', e?.code, 'message:', e?.message, 'detail:', JSON.stringify(e));
+      const cancelCodes = ['ERR_CANCELED', 'E_CANCELLED', 'user_cancel'];
+      if (!cancelCodes.includes(e?.code)) {
+        setError(`카카오 로그인에 실패했어요. (${e?.code ?? e?.message ?? '알 수 없는 오류'})`);
       }
       setLoading(null);
     }

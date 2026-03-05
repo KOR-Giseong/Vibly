@@ -10,7 +10,7 @@ export default function AuthLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       <Stack.Screen name="login" />
       <Stack.Screen name="email-login" />
       <Stack.Screen name="verify-email" />

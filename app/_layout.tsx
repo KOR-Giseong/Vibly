@@ -155,7 +155,7 @@ function RootLayoutNav() {
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
         <Stack.Screen name="auth" />
         <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="welcome" />
         <Stack.Screen name="suspended" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="place/[id]" />

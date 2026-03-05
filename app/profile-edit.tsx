@@ -183,12 +183,12 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.gray[900] },
   scroll: { paddingHorizontal: Spacing['2xl'], paddingTop: Spacing.lg, paddingBottom: Spacing['4xl'] },
   fieldGroup: {
-    gap: Spacing.xs,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing['5xl'],
   },
   label: {
     fontSize: FontSize.sm, fontWeight: FontWeight.semibold,
     color: Colors.gray[700],
+    marginBottom: Spacing.sm,
   },
   labelSub: { fontSize: FontSize.xs, color: Colors.gray[400], fontWeight: FontWeight.medium },
   input: {

@@ -245,7 +245,7 @@ export default function HomeScreen() {
 
           {/* 지역 선택 */}
           <View style={styles.regionRow}>
-            <Text style={styles.regionGuide} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요</Text>
+            <Text style={styles.regionGuide} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요!</Text>
             <TouchableOpacity
               style={styles.regionPill}
               onPress={() => setShowRegionModal(true)}

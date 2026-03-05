@@ -29,7 +29,7 @@
     </scenes>
     <resources>
         <namedColor name="SplashScreenBackground">
-            <color red="0.88180482387542725" green="0.80167508125305176" blue="0.94525736570358276" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color red="0.96078431372549022" green="0.95294117647058818" blue="1.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>

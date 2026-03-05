@@ -19,11 +19,18 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
   return config;
 });
 
-// ─── Response: 401 시 토큰 갱신 ─────────────────────────────────────────────
+// ─── Response: 401 토큰 갱신 / 503 콜드 스타트 재시도 ──────────────────────────
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean; _retry503?: boolean };
+
+    // 503: Render 콜드 스타트 등 일시적 서버 불가 → 5초 대기 후 1회 자동 재시도
+    if (error.response?.status === 503 && !original._retry503) {
+      original._retry503 = true;
+      await new Promise((res) => setTimeout(res, 5000));
+      return apiClient(original);
+    }
 
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;

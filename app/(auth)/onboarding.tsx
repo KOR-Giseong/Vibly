@@ -27,19 +27,20 @@ const SLIDES: {
   {
     icon: TwinkleIcon,
     title: '당신의 감정을\n이해합니다',
-    desc: 'AI가 당신의 기분을 분석하고\n완벽한 장소를 추천해드려요',
+    desc: 'AI가 당신의 기분을 분석하고\n완벽한 장소를 추천해드려요!',
+
     gradient: ['#F3E8FF', '#FCE7F3', '#FAF5FF'],
   },
   {
     icon: PositionPointIcon,
     title: '새로운 장소를\n발견하세요',
-    desc: '주변의 숨겨진 명소와\n감성 넘치는 공간을 찾아보세요',
+    desc: '주변의 숨겨진 명소와\n감성 넘치는 공간을 찾아보세요!',
     gradient: ['#DBEAFE', '#F3E8FF', '#FDF2F8'],
   },
   {
     icon: LoveIcon,
     title: '당신만의\n바이브 저장하기',
-    desc: '특별한 순간을 기록하고\n감정의 여정을 저장하세요',
+    desc: '특별한 순간을 기록하고\n감정의 여정을 저장하세요!',
     gradient: ['#FCE7F3', '#FFE4E6', '#FAF5FF'],
   },
 ];

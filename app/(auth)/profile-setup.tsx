@@ -131,9 +131,9 @@ export default function ProfileSetupScreen() {
                 <Sparkles size={28} color="#fff" />
               </LinearGradient>
             </View>
-            <Text style={styles.title}>당신만의 바이브를{'\n'}알려주세요</Text>
+            <Text style={styles.title}>당신만의 바이브를{'\n'}알려주세요!</Text>
             <Text style={styles.subtitle}>
-              취향에 꼭 맞는 장소를 추천해드릴게요
+              취향에 꼭 맞는 장소를 추천해드릴게요!
             </Text>
           </View>
 

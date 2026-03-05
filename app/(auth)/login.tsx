@@ -140,9 +140,9 @@ export default function LoginScreen() {
         />
 
         {/* 환영 문구 */}
-        <Text style={styles.welcomeTitle}>환영합니다</Text>
+        <Text style={styles.welcomeTitle}>환영합니다!</Text>
         <Text style={styles.welcomeDesc}>
-          {'AI가 당신의 감정을 이해하고\n완벽한 장소를 추천해드려요'}
+          {'AI가 당신의 감정을 이해하고\n완벽한 장소를 추천해드려요!'}
         </Text>
       </View>
 

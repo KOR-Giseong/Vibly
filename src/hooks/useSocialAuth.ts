@@ -43,7 +43,7 @@ export function useSocialAuth() {
     name?: string,
     codeVerifier?: string,
   ) => {
-    try {
+    const attempt = async () => {
       await authService.socialLogin(provider, token, redirectUri, name, codeVerifier);
       const user = await authService.getMe();
       setUser(user);
@@ -52,13 +52,29 @@ export function useSocialAuth() {
         setPremium(user.isPremium);
       }
       setCoupleInfo(user?.couple ?? null);
-      // 신규 사용자(프로필 미완성) → 프로필 설정, 기존 사용자 → 홈
       if (!user.isProfileComplete) {
         router.replace('/(auth)/profile-setup');
       } else {
         router.replace('/(tabs)');
       }
+    };
+
+    try {
+      await attempt();
     } catch (e: any) {
+      // 503: 서버 콜드 스타트 중 → 5초 대기 후 1회 재시도
+      if (e?.response?.status === 503) {
+        try {
+          await new Promise((res) => setTimeout(res, 5000));
+          await attempt();
+          return;
+        } catch (retryErr: any) {
+          console.error(`[${provider}] finalizeSocialLogin 재시도 실패:`, retryErr?.response?.data, retryErr?.message);
+          setError(retryErr?.response?.data?.message ?? `${provider} 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.`);
+          setLoading(null);
+          return;
+        }
+      }
       console.error(`[${provider}] finalizeSocialLogin 실패:`, e?.response?.data, e?.message, e?.response?.status);
       setError(e?.response?.data?.message ?? `${provider} 로그인에 실패했어요.`);
       setLoading(null);

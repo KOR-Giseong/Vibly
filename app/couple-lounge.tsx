@@ -444,9 +444,11 @@ function LandingView({
         <View style={styles.featureGrid}>
           {[
             { icon: '📍', label: '스크랩 공유', desc: '서로의 관심 장소 공유' },
-            { icon: '📅', label: 'AI 데이트 플랜', desc: 'AI가 최적 코스 추천' },
-            { icon: '📸', label: '추억 앨범', desc: '소중한 순간을 기록' },
+            { icon: '📅', label: 'AI 데이트 플랜', desc: '스크랩 장소 기반 코스 추천' },
+            { icon: '📸', label: '추억 앨범', desc: '데이트 사진을 함께 기록' },
             { icon: '💎', label: '크레딧 선물', desc: '파트너에게 크레딧 전송' },
+            { icon: '💬', label: '1:1 채팅', desc: '파트너와 실시간 대화' },
+            { icon: '💕', label: '기념일 D-DAY', desc: '커플 기념일 카운트다운' },
           ].map(({ icon, label, desc }) => (
             <View key={label} style={styles.featureCard}>
               <Text style={styles.featureIcon}>{icon}</Text>
@@ -455,6 +457,23 @@ function LandingView({
             </View>
           ))}
         </View>
+
+        {/* 구독 전용 AI 비서 카드 */}
+        <LinearGradient
+          colors={['#F3E8FF', '#FFF0F8']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.featurePremiumCard}
+        >
+          <View style={styles.featurePremiumLeft}>
+            <View style={styles.featurePremiumBadge}>
+              <Text style={styles.featurePremiumBadgeText}>👑 구독 전용</Text>
+            </View>
+            <Text style={styles.featurePremiumLabel}>AI 대화형 데이트 비서</Text>
+            <Text style={styles.featurePremiumDesc}>우리 커플의 취향을 분석해{`\n`}완벽한 데이트를 설계해드려요</Text>
+          </View>
+          <Text style={styles.featurePremiumEmoji}>🤖</Text>
+        </LinearGradient>
       </View>
 
       {/* 초대 섹션 */}
@@ -2399,6 +2418,50 @@ const styles = StyleSheet.create({
     color: Colors.gray[400],
     textAlign: 'center',
     lineHeight: 16,
+  },
+
+  // ── 구독 전용 AI 카드
+  featurePremiumCard: {
+    borderRadius: BorderRadius['2xl'],
+    padding: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: '#E9D5FF',
+    ...Shadow.sm,
+  },
+  featurePremiumLeft: {
+    flex: 1,
+    gap: 5,
+  },
+  featurePremiumBadge: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    backgroundColor: '#9810FA',
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: 2,
+  },
+  featurePremiumBadgeText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  },
+  featurePremiumLabel: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  featurePremiumDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[500],
+    lineHeight: 17,
+  },
+  featurePremiumEmoji: {
+    fontSize: 42,
+    marginLeft: Spacing.md,
   },
 
   // ── 초대 섹션

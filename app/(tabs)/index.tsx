@@ -247,16 +247,18 @@ export default function HomeScreen() {
           {/* 지역 선택 */}
           <View style={styles.regionRow}>
             <MaskedView
-              style={{ flex: 1 }}
+              style={{ flex: 1, justifyContent: 'center' }}
               maskElement={
-                <Text style={styles.regionGuide} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요!</Text>
+                <View style={{ justifyContent: 'center' }}>
+                  <Text style={styles.regionGuide} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요!</Text>
+                </View>
               }
             >
               <LinearGradient
                 colors={['#9810FA', '#E60076']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={{ flex: 1 }}
+                style={{ justifyContent: 'center' }}
               >
                 <Text style={[styles.regionGuide, { opacity: 0 }]} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요!</Text>
               </LinearGradient>

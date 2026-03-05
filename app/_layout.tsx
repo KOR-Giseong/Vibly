@@ -13,6 +13,7 @@ import { useCreditStore } from '@stores/credit.store';
 import { useCoupleStore } from '@stores/couple.store';
 import { authService } from '@services/auth.service';
 import { notificationApi } from '@services/notification.service';
+import AnimatedSplash from '@components/AnimatedSplash';
 
 // 포그라운드 알림 표시 설정
 Notifications.setNotificationHandler({
@@ -147,7 +148,7 @@ function RootLayoutNav() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isAuthenticated]);
 
-  if (!isLoaded) return null;
+  if (!isLoaded) return <AnimatedSplash />;
 
   return (
     <>

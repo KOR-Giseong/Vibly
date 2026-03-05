@@ -1,20 +1,20 @@
 {
-  "colors": [
+  "colors" : [
     {
-      "color": {
-        "components": {
-          "alpha": "1.000",
-          "blue": "1.00000000000000",
-          "green": "0.952941176470588",
-          "red": "0.960784313725490"
-        },
-        "color-space": "srgb"
+      "color" : {
+        "color-space" : "srgb",
+        "components" : {
+          "alpha" : "1.000",
+          "blue" : "0.945",
+          "green" : "0.802",
+          "red" : "0.882"
+        }
       },
-      "idiom": "universal"
+      "idiom" : "universal"
     }
   ],
-  "info": {
-    "version": 1,
-    "author": "expo"
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
   }
 }

@@ -126,14 +126,12 @@ export function useSocialAuth() {
           code_verifier: codeVerifier,
         });
 
-        console.log('[Google OAuth] token fetch 시작');
         const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: params.toString(),
         });
         const tokenData = await tokenRes.json();
-        console.log('[Google OAuth] token response:', JSON.stringify(tokenData));
 
         if (tokenData.id_token) {
           await finalizeSocialLogin('google', tokenData.id_token);

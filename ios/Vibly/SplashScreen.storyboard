@@ -17,16 +17,9 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="SplashScreenLogo" translatesAutoresizingMaskIntoConstraints="NO" id="EXPO-SplashScreen" userLabel="SplashScreenLogo">
-                                <rect key="frame" x="46.666666666666657" y="276" width="300" height="300"/>
-                            </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Rmq-lb-GrQ"/>
                         <color key="backgroundColor" name="SplashScreenBackground"/>
-                        <constraints>
-                            <constraint firstItem="EXPO-SplashScreen" firstAttribute="centerY" secondItem="EXPO-ContainerView" secondAttribute="centerY" id="1a145271b085b6ce89b1405a310f5b1bb7656595"/>
-                            <constraint firstItem="EXPO-SplashScreen" firstAttribute="centerX" secondItem="EXPO-ContainerView" secondAttribute="centerX" id="cad2ab56f97c5429bf29decf850647a4216861d4"/>
-                        </constraints>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="EXPO-PLACEHOLDER-1" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -35,7 +28,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="SplashScreenLogo" width="300" height="300"/>
         <namedColor name="SplashScreenBackground">
             <color red="0.88180482387542725" green="0.80167508125305176" blue="0.94525736570358276" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>

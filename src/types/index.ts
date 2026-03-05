@@ -345,6 +345,7 @@ export interface PartnerProfile {
   gender?: string;
   preferredVibes: string[];
   credits: number;
+  isPremium?: boolean;
   stats: {
     checkinCount: number;
     bookmarkCount: number;

@@ -444,7 +444,7 @@ function LandingView({
         <View style={styles.featureGrid}>
           {[
             { icon: '📍', label: '스크랩 공유', desc: '서로의 관심 장소 공유' },
-            { icon: '📅', label: 'AI 데이트 플랜', desc: '스크랩 장소 기반 코스 추천' },
+            { icon: '📅', label: 'AI 데이트 플랜', desc: '스크랩 장소 기반 코스 추천\n💚 파트너 구독 시 50% 할인' },
             { icon: '📸', label: '추억 앨범', desc: '데이트 사진을 함께 기록' },
             { icon: '💎', label: '크레딧 선물', desc: '파트너에게 크레딧 전송' },
             { icon: '💬', label: '1:1 채팅', desc: '파트너와 실시간 대화' },
@@ -470,7 +470,7 @@ function LandingView({
               <Text style={styles.featurePremiumBadgeText}>👑 구독 전용</Text>
             </View>
             <Text style={styles.featurePremiumLabel}>AI 대화형 데이트 비서</Text>
-            <Text style={styles.featurePremiumDesc}>우리 커플의 취향을 분석해{`\n`}완벽한 데이트를 설계해드려요</Text>
+            <Text style={styles.featurePremiumDesc}>우리 커플의 취향을 분석해{`\n`}완벽한 데이트를 설계해드려요{`\n`}👫 파트너 구독 시 AI 이용료 50% 할인</Text>
           </View>
           <Text style={styles.featurePremiumEmoji}>🤖</Text>
         </LinearGradient>
@@ -1209,10 +1209,12 @@ function AiCoursePlanGroup({ group, onStatusChange, onOpenDetail }: {
   );
 }
 
-function DateTab() {
+function DateTab({ partnerProfile }: { partnerProfile?: PartnerProfile }) {
   const router = useRouter();
   const isFocused = useIsFocused();
   const { isPremium } = useCreditStore();
+  // 파트너가 구독 중이고 본인은 비구독일 때 AI 50% 할인 적용
+  const partnerIsPremium = (partnerProfile?.isPremium ?? false) && !isPremium;
   const [plans, setPlans] = useState<DatePlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [howToVisible, setHowToVisible] = useState(false);
@@ -1361,9 +1363,16 @@ function DateTab() {
             </View>
           </View>
           <View style={styles.aiInfoRight}>
-            <View style={styles.aiCreditBadge}>
-              <Coins size={11} color="#9810FA" />
-              <Text style={styles.aiCreditText}>15크레딧</Text>
+            {partnerIsPremium && (
+              <View style={{ backgroundColor: '#DCFCE7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 4, alignSelf: 'flex-end' }}>
+                <Text style={{ fontSize: 10, color: '#16A34A', fontWeight: '600' }}>💚 파트너 구독 혜택</Text>
+              </View>
+            )}
+            <View style={[styles.aiCreditBadge, partnerIsPremium && { backgroundColor: '#F0FFF4' }]}>
+              <Coins size={11} color={partnerIsPremium ? '#16A34A' : '#9810FA'} />
+              <Text style={[styles.aiCreditText, partnerIsPremium && { color: '#16A34A' }]}>
+                {partnerIsPremium ? '8크레딧 (50% 할인)' : '15크레딧'}
+              </Text>
             </View>
             <TouchableOpacity style={styles.aiStartBtn} onPress={handleAI}>
               <Text style={styles.aiStartBtnText}>시작하기</Text>
@@ -1450,7 +1459,7 @@ function DateTab() {
                 <View style={styles.aiNoteFooter}>
                   <View style={styles.aiNoteCreditBadge}>
                     <Coins size={12} color="#9810FA" />
-                    <Text style={styles.aiNoteCreditTxt}>15크레딧 소모</Text>
+                    <Text style={styles.aiNoteCreditTxt}>{partnerIsPremium ? '8크레딧 소모 (50% 할인)' : '15크레딧 소모'}</Text>
                   </View>
                   <TouchableOpacity style={styles.aiNoteStartBtn} onPress={startAI}>
                     <LinearGradient colors={['#9810FA','#E60076']} start={{x:0,y:0}} end={{x:1,y:0}} style={styles.aiNoteStartGrad}>
@@ -2148,7 +2157,7 @@ export default function CoupleLoungeScreen() {
               </ScrollView>
             )}
             {activeTab === 'scrap'  && <ScrapTab />}
-            {activeTab === 'date'   && <DateTab />}
+            {activeTab === 'date'   && <DateTab partnerProfile={partnerProfile} />}
             {activeTab === 'memory' && user && <MemoryTab myUserId={user.id} />}
             {user && (
               <View style={{ flex: 1, display: activeTab === 'chat' ? 'flex' : 'none' }}>

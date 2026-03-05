@@ -1365,17 +1365,24 @@ function DateTab({ partnerProfile }: { partnerProfile?: PartnerProfile }) {
             </View>
           </View>
           <View style={styles.aiInfoRight}>
-            {partnerIsPremium && (
-              <View style={{ backgroundColor: '#DCFCE7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 4, alignSelf: 'flex-end' }}>
-                <Text style={{ fontSize: 10, color: '#16A34A', fontWeight: '600' }}>💚 파트너 구독 혜택</Text>
+            {partnerIsPremium ? (
+              <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                <View style={{ backgroundColor: '#D1FAE5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Text style={{ fontSize: 10, color: '#065F46', fontWeight: '700' }}>💚 파트너 구독 혜택</Text>
+                </View>
+                <View style={[styles.aiCreditBadge, { backgroundColor: '#F0FFF4', gap: 3, borderWidth: 1, borderColor: '#BBF7D0' }]}>
+                  <Text style={{ fontSize: 10, color: '#9CA3AF', textDecorationLine: 'line-through' }}>15크레딧</Text>
+                  <Text style={{ fontSize: 10, color: '#9CA3AF' }}>→</Text>
+                  <Coins size={11} color="#16A34A" />
+                  <Text style={[styles.aiCreditText, { color: '#16A34A', fontWeight: '800' }]}>8크레딧</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.aiCreditBadge}>
+                <Coins size={11} color="#9810FA" />
+                <Text style={styles.aiCreditText}>15크레딧</Text>
               </View>
             )}
-            <View style={[styles.aiCreditBadge, partnerIsPremium && { backgroundColor: '#F0FFF4' }]}>
-              <Coins size={11} color={partnerIsPremium ? '#16A34A' : '#9810FA'} />
-              <Text style={[styles.aiCreditText, partnerIsPremium && { color: '#16A34A' }]}>
-                {partnerIsPremium ? '8크레딧 (50% 할인)' : '15크레딧'}
-              </Text>
-            </View>
             <TouchableOpacity style={styles.aiStartBtn} onPress={handleAI}>
               <Text style={styles.aiStartBtnText}>시작하기</Text>
             </TouchableOpacity>
@@ -1459,10 +1466,19 @@ function DateTab({ partnerProfile }: { partnerProfile?: PartnerProfile }) {
                   </View>
                 </View>
                 <View style={styles.aiNoteFooter}>
-                  <View style={styles.aiNoteCreditBadge}>
-                    <Coins size={12} color="#9810FA" />
-                    <Text style={styles.aiNoteCreditTxt}>{partnerIsPremium ? '8크레딧 소모 (50% 할인)' : '15크레딧 소모'}</Text>
-                  </View>
+                  {partnerIsPremium ? (
+                    <View style={[styles.aiNoteCreditBadge, { backgroundColor: '#F0FFF4', borderWidth: 1, borderColor: '#BBF7D0', gap: 3 }]}>
+                      <Coins size={12} color="#16A34A" />
+                      <Text style={{ fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through' }}>15</Text>
+                      <Text style={[styles.aiNoteCreditTxt, { color: '#16A34A' }]}>8크레딧</Text>
+                      <Text style={{ fontSize: 10, color: '#16A34A', fontWeight: '700' }}>(-50%)</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.aiNoteCreditBadge}>
+                      <Coins size={12} color="#9810FA" />
+                      <Text style={styles.aiNoteCreditTxt}>15크레딧 소모</Text>
+                    </View>
+                  )}
                   <TouchableOpacity style={styles.aiNoteStartBtn} onPress={startAI}>
                     <LinearGradient colors={['#9810FA','#E60076']} start={{x:0,y:0}} end={{x:1,y:0}} style={styles.aiNoteStartGrad}>
                       <Text style={styles.aiNoteStartTxt}>코스 만들기</Text>

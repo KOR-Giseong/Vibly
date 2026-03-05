@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Settings, ChevronRight, MapPin, Bookmark,
   Crown, BarChart2, CreditCard, LogOut, Sparkles,
-  Camera, User, Pencil, X, Heart,
+  Camera, User, Pencil, X, Heart, ShieldCheck,
 } from 'lucide-react-native';
 import { useCoupleStore } from '@stores/couple.store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -319,6 +319,7 @@ export default function ProfileScreen() {
 
   const [uploading, setUploading] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
+  const [adminRulesVisible, setAdminRulesVisible] = useState(false);
   const { coupleInfo } = useCoupleStore();
 
   // 실제 통계 API
@@ -392,7 +393,7 @@ export default function ProfileScreen() {
 
   // ── 프로필 저장 ───────────────────────────────────────────────────────────
   const handleSaveProfile = async (data: { name: string; nickname: string; gender: 'MALE' | 'FEMALE' | 'OTHER' | null; preferredVibes: string[] }) => {
-    const updated = await authService.updateProfile(data);
+    const updated = await authService.updateProfile({ ...data, gender: data.gender ?? undefined });
     setUser({ ...(user as any), ...updated });
     qc.invalidateQueries({ queryKey: ['user-stats'] });
   };
@@ -459,6 +460,15 @@ export default function ProfileScreen() {
               </Text>
               <ChevronRight size={13} color={coupleInfo ? '#E60076' : Colors.gray[400]} />
             </TouchableOpacity>
+
+            {/* 관리자 배지 */}
+            {user?.isAdmin && (
+              <TouchableOpacity style={styles.adminBadge} onPress={() => setAdminRulesVisible(true)} activeOpacity={0.8}>
+                <ShieldCheck size={13} color="#7C3AED" />
+                <Text style={styles.adminBadgeText}>관리자</Text>
+                <ChevronRight size={12} color="#7C3AED" />
+              </TouchableOpacity>
+            )}
 
             {/* 선호 바이브 태그 */}
             {user?.preferredVibes && user.preferredVibes.length > 0 && (
@@ -529,6 +539,35 @@ export default function ProfileScreen() {
           </Animated.View>
         </ScrollView>
       </LinearGradient>
+
+      {/* ── 관리자 수칙 모달 ── */}
+      <Modal visible={adminRulesVisible} transparent animationType="fade" onRequestClose={() => setAdminRulesVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setAdminRulesVisible(false)}>
+          <Pressable style={styles.adminRulesSheet}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.adminRulesHeader}>
+              <ShieldCheck size={20} color="#7C3AED" />
+              <Text style={styles.adminRulesTitle}>관리자 수칙</Text>
+            </View>
+            {[
+              '관리자 계정은 본인 외 타인에게 공유할 수 없습니다.',
+              '사용자의 개인정보는 업무 목적 외 열람 및 사용이 금지됩니다.',
+              '관리자 권한을 이용한 부당 행위는 즉시 권한이 박탈됩니다.',
+              '모든 관리자 활동은 로그로 기록되며 정기적으로 감사됩니다.',
+              '서비스 운영 관련 정보를 외부에 무단 공개하지 마십시오.',
+              '보안 사고 발생 시 즉시 상급자에게 보고하십시오.',
+            ].map((rule, i) => (
+              <View key={i} style={styles.adminRuleRow}>
+                <View style={styles.adminRuleNum}><Text style={styles.adminRuleNumText}>{i + 1}</Text></View>
+                <Text style={styles.adminRuleText}>{rule}</Text>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.adminRulesClose} onPress={() => setAdminRulesVisible(false)} activeOpacity={0.85}>
+              <Text style={styles.adminRulesCloseText}>확인했습니다</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── 프로필 편집 모달 ── */}
       <EditProfileModal
@@ -623,6 +662,43 @@ const styles = StyleSheet.create({
   },
   genderChipEditLabel: { fontSize: FontSize.sm, color: Colors.gray[500], fontWeight: FontWeight.medium },
   genderChipEditLabelSelected: { color: Colors.primary[700], fontWeight: FontWeight.semibold },
+
+  // 관리자 배지
+  adminBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#F3EEFF', borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: 5,
+    marginBottom: Spacing.md, borderWidth: 1, borderColor: '#DDD0F9',
+  },
+  adminBadgeText: { fontSize: FontSize.xs, color: '#7C3AED', fontWeight: FontWeight.semibold },
+
+  // 관리자 수칙 모달
+  adminRulesSheet: {
+    backgroundColor: Colors.white, borderRadius: BorderRadius['3xl'],
+    padding: Spacing['2xl'], margin: Spacing.xl,
+    ...Shadow.lg,
+  },
+  adminRulesHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  adminRulesTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.gray[900] },
+  adminRuleRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  adminRuleNum: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center',
+    marginTop: 1, flexShrink: 0,
+  },
+  adminRuleNumText: { fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold },
+  adminRuleText: { flex: 1, fontSize: FontSize.sm, color: Colors.gray[700], lineHeight: 20 },
+  adminRulesClose: {
+    marginTop: Spacing.xl, backgroundColor: '#7C3AED',
+    borderRadius: BorderRadius.xl, paddingVertical: 12, alignItems: 'center',
+  },
+  adminRulesCloseText: { color: Colors.white, fontWeight: FontWeight.semibold, fontSize: FontSize.sm },
 
   // 커플 뱃지
   coupleBadge: {

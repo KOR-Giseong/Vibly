@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -36,11 +36,14 @@ import {
   X,
 } from 'lucide-react-native';
 import { Colors, Gradients, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '@constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@hooks/useAuth';
 import { useAuthStore } from '@stores/auth.store';
 import { authService } from '@services/auth.service';
+import { notificationApi } from '@services/notification.service';
 
 const ADMIN_WEB_URL = 'https://admin.vibly.app';
+const NOTIF_ENABLED_KEY = 'vibly_push_enabled';
 
 // ─── 설정 행 컴포넌트 ─────────────────────────────────────────────────────────
 
@@ -142,8 +145,22 @@ export default function SettingsScreen() {
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
+  // 마운트 시 실제 시스템 권한 + 저장된 설정 반영
+  useEffect(() => {
+    void (async () => {
+      const { status } = await ExpoNotifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        setNotificationsEnabled(false);
+        return;
+      }
+      const saved = await AsyncStorage.getItem(NOTIF_ENABLED_KEY);
+      setNotificationsEnabled(saved !== 'false');
+    })();
+  }, []);
+
   const handleNotificationToggle = useCallback(async (value: boolean) => {
     if (value) {
+      // 켜기: 권한 요청 → 서버에 토큰 재등록
       const { status } = await ExpoNotifications.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('알림 권한 필요', '설정 앱에서 Vibly의 알림 권한을 허용해 주세요.', [
@@ -152,6 +169,29 @@ export default function SettingsScreen() {
         ]);
         return;
       }
+      try {
+        const projectId =
+          (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas
+            ?.projectId ?? Constants.easConfig?.projectId;
+        const tokenData = await ExpoNotifications.getExpoPushTokenAsync(
+          projectId ? { projectId } : undefined,
+        );
+        const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+        await notificationApi.registerToken(tokenData.data, platform);
+      } catch { /* 시뮬레이터 등 환경에서 무시 */ }
+      await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'true');
+    } else {
+      // 끄기: 서버에서 디바이스 토큰 삭제 → 서버가 이 기기로 푸시 발송 중단
+      try {
+        const projectId =
+          (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas
+            ?.projectId ?? Constants.easConfig?.projectId;
+        const tokenData = await ExpoNotifications.getExpoPushTokenAsync(
+          projectId ? { projectId } : undefined,
+        );
+        await notificationApi.removeToken(tokenData.data);
+      } catch { /* 토큰 없는 경우 무시 */ }
+      await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'false');
     }
     setNotificationsEnabled(value);
   }, []);

@@ -54,9 +54,9 @@ export const communityApi = {
     apiClient.delete(`/community/comments/${commentId}`).then((r) => r.data),
 
   /** 게시글 신고 */
-  reportPost: (postId: string, reason: import('@/types').ReportReason, detail?: string) =>
+  reportPost: (postId: string, reason: import('@/types').ReportReason, detail?: string, imageUrls?: string[]) =>
     apiClient
-      .post<{ success: boolean; message: string }>(`/community/posts/${postId}/report`, { reason, detail })
+      .post<{ success: boolean; message: string }>(`/community/posts/${postId}/report`, { reason, detail, imageUrls })
       .then((r) => r.data),
 };
 

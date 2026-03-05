@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Heart, MessageCircle, Eye, MoreVertical, Send, Trash2, Flag, User,
+  ArrowLeft, Heart, MessageCircle, Eye, MoreVertical, Send, Trash2, Flag, User, Plus, X,
 } from 'lucide-react-native';
 import {
   Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow,
@@ -19,6 +19,7 @@ import { POST_CATEGORY_LABEL, REPORT_REASON_LABEL } from '@/types';
 import type { ReportReason } from '@/types';
 import { useAuthStore } from '@stores/auth.store';
 import { formatRelativeTime } from '@utils/format';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,7 +33,18 @@ export default function PostDetailScreen() {
   const [reportTarget, setReportTarget] = useState<{
     type: 'post' | 'comment'; id: string;
   } | null>(null);
+  const [reportStep, setReportStep] = useState<1 | 2>(1);
+  const [reportReason, setReportReason] = useState<ReportReason>('SPAM');
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportImages, setReportImages] = useState<string[]>([]);
   const scrollRef = useRef<ScrollView>(null);
+
+  const closeReport = () => {
+    setReportTarget(null);
+    setReportStep(1);
+    setReportDetail('');
+    setReportImages([]);
+  };
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['post', id],
@@ -67,20 +79,46 @@ export default function PostDetailScreen() {
   });
 
   const reportMut = useMutation({
-    mutationFn: (reason: ReportReason) => {
-      // 댓글 신고도 부모 게시글 ID로 신고 (상세에 댓글 ID 포함)
-      const detail = reportTarget?.type === 'comment' ? `comment:${reportTarget.id}` : undefined;
-      return communityApi.reportPost(id!, reason, detail);
+    mutationFn: ({ reason, detail, imageUrls }: { reason: ReportReason; detail?: string; imageUrls?: string[] }) => {
+      // 댓글 신고는 detail에 comment:{id} 프리픽스 포함
+      const finalDetail = [
+        reportTarget?.type === 'comment' ? `comment:${reportTarget.id}` : null,
+        detail?.trim() || null,
+      ].filter(Boolean).join(' | ') || undefined;
+      return communityApi.reportPost(id!, reason, finalDetail, imageUrls);
     },
     onSuccess: (data) => {
-      setReportTarget(null);
+      closeReport();
       Alert.alert('신고 접수', data.message);
     },
     onError: (err: any) => {
-      setReportTarget(null);
+      closeReport();
       Alert.alert('신고 실패', err?.response?.data?.message ?? '신고 중 오류가 발생했어요.');
     },
   });
+
+  const pickReportImage = async () => {
+    if (reportImages.length >= 3) {
+      Alert.alert('사진', '최대 3장까지 첨부할 수 있어요.');
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('사진 접근 권한 필요', '설정에서 사진 접근을 허용해 주세요.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0].base64) {
+      const asset = result.assets[0];
+      const mimeType = asset.mimeType ?? 'image/jpeg';
+      setReportImages((prev) => [...prev, `data:${mimeType};base64,${asset.base64}`]);
+    }
+  };
 
   const handleDeletePost = () => {
     setShowActions(false);
@@ -92,10 +130,12 @@ export default function PostDetailScreen() {
 
   const handleOpenReport = () => {
     setShowActions(false);
+    setReportStep(1);
     setReportTarget({ type: 'post', id: id! });
   };
 
   const handleReportComment = (commentId: string) => {
+    setReportStep(1);
     setReportTarget({ type: 'comment', id: commentId });
   };
 
@@ -322,32 +362,97 @@ export default function PostDetailScreen() {
         visible={reportTarget !== null}
         transparent
         animationType="slide"
-        onRequestClose={() => setReportTarget(null)}
+        onRequestClose={closeReport}
       >
-        <Pressable style={styles.reportOverlay} onPress={() => setReportTarget(null)}>
-          <Pressable style={styles.reportSheet}>
-            <View style={styles.reportHandle} />
-            <Text style={styles.reportTitle}>
-              {reportTarget?.type === 'comment' ? '댓글' : '게시글'} 신고 사유를 선택해주세요
-            </Text>
-            {(['SPAM', 'ABUSE', 'ILLEGAL', 'ADULT', 'PRIVACY', 'OTHER'] as ReportReason[]).map((reason) => (
-              <TouchableOpacity
-                key={reason}
-                style={styles.reportOption}
-                onPress={() => reportMut.mutate(reason)}
-                disabled={reportMut.isPending}
-              >
-                <Text style={styles.reportOptionText}>{REPORT_REASON_LABEL[reason]}</Text>
-                {reportMut.isPending && reportMut.variables === reason && (
-                  <ActivityIndicator size="small" color={Colors.primary[600]} />
-                )}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.reportCancel} onPress={() => setReportTarget(null)}>
-              <Text style={styles.reportCancelText}>취소</Text>
-            </TouchableOpacity>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable style={styles.reportOverlay} onPress={closeReport}>
+            <Pressable style={styles.reportSheet} onPress={() => {}}>
+              <View style={styles.reportHandle} />
+
+              {reportStep === 1 ? (
+                // ── STEP 1: 신고 사유 선택 ────────────────────
+                <>
+                  <Text style={styles.reportTitle}>
+                    {reportTarget?.type === 'comment' ? '댓글' : '게시글'} 신고 사유를 선택해주세요
+                  </Text>
+                  {(['SPAM', 'ABUSE', 'ILLEGAL', 'ADULT', 'PRIVACY', 'OTHER'] as ReportReason[]).map((reason) => (
+                    <TouchableOpacity
+                      key={reason}
+                      style={styles.reportOption}
+                      onPress={() => { setReportReason(reason); setReportStep(2); }}
+                    >
+                      <Text style={styles.reportOptionText}>{REPORT_REASON_LABEL[reason]}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity style={styles.reportCancel} onPress={closeReport}>
+                    <Text style={styles.reportCancelText}>취소</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                // ── STEP 2: 상세 내용 + 사진 첨부 ────────────────
+                <>
+                  <Text style={styles.reportTitle}>신고 상세 작성</Text>
+
+                  {/* 선택된 사유 칩 */}
+                  <View style={styles.reportReasonChip}>
+                    <Text style={styles.reportReasonChipText}>{REPORT_REASON_LABEL[reportReason]}</Text>
+                    <TouchableOpacity onPress={() => setReportStep(1)}>
+                      <Text style={styles.reportReasonChipChange}>변경</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* 구체적 내용 */}
+                  <TextInput
+                    style={styles.reportDetailInput}
+                    placeholder="구체적인 내용을 작성해주세요 (선택)"
+                    placeholderTextColor={Colors.gray[300]}
+                    value={reportDetail}
+                    onChangeText={setReportDetail}
+                    multiline
+                    maxLength={500}
+                    numberOfLines={4}
+                  />
+
+                  {/* 사진 첨부 */}
+                  <Text style={styles.reportImgLabel}>사진 첨부 (선택, 최대 3장)</Text>
+                  <View style={styles.reportImgRow}>
+                    {reportImages.map((uri, i) => (
+                      <View key={i} style={styles.reportImgThumbWrap}>
+                        <Image source={{ uri }} style={styles.reportImgThumb} />
+                        <TouchableOpacity
+                          style={styles.reportImgRemove}
+                          onPress={() => setReportImages((prev) => prev.filter((_, idx) => idx !== i))}
+                        >
+                          <X size={12} color={Colors.white} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    {reportImages.length < 3 && (
+                      <TouchableOpacity style={styles.reportImgAdd} onPress={pickReportImage}>
+                        <Plus size={20} color={Colors.gray[400]} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* 제출 */}
+                  <TouchableOpacity
+                    style={[styles.reportSubmitBtn, reportMut.isPending && { opacity: 0.5 }]}
+                    onPress={() => reportMut.mutate({ reason: reportReason, detail: reportDetail, imageUrls: reportImages })}
+                    disabled={reportMut.isPending}
+                  >
+                    {reportMut.isPending
+                      ? <ActivityIndicator color={Colors.white} />
+                      : <Text style={styles.reportSubmitText}>신고 접수</Text>}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.reportCancel} onPress={closeReport}>
+                    <Text style={styles.reportCancelText}>취소</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenTransition>
   );
@@ -489,4 +594,35 @@ const styles = StyleSheet.create({
     alignItems: 'center', borderRadius: BorderRadius.lg, backgroundColor: Colors.gray[100],
   },
   reportCancelText: { fontSize: FontSize.base, fontWeight: FontWeight.medium, color: Colors.gray[600] },
+  reportReasonChip: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: Colors.primary[50], borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, marginBottom: Spacing.sm,
+  },
+  reportReasonChipText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.primary[700] },
+  reportReasonChipChange: { fontSize: FontSize.xs, color: Colors.primary[500], textDecorationLine: 'underline' },
+  reportDetailInput: {
+    borderWidth: 1, borderColor: Colors.gray[200], borderRadius: BorderRadius.lg,
+    padding: Spacing.md, fontSize: FontSize.sm, color: Colors.gray[900],
+    minHeight: 90, textAlignVertical: 'top', marginBottom: Spacing.sm,
+  },
+  reportImgLabel: { fontSize: FontSize.xs, color: Colors.gray[500], marginBottom: Spacing.xs },
+  reportImgRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
+  reportImgThumbWrap: { position: 'relative' },
+  reportImgThumb: { width: 70, height: 70, borderRadius: BorderRadius.lg },
+  reportImgRemove: {
+    position: 'absolute', top: -6, right: -6,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
+  },
+  reportImgAdd: {
+    width: 70, height: 70, borderRadius: BorderRadius.lg, borderWidth: 1.5,
+    borderColor: Colors.gray[200], borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.gray[50],
+  },
+  reportSubmitBtn: {
+    backgroundColor: '#EF4444', borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.sm,
+  },
+  reportSubmitText: { color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.base },
 });

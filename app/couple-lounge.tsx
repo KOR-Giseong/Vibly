@@ -227,18 +227,52 @@ function ReportModal({
   targetName: string;
   onClose: () => void;
 }) {
-  const [reason, setReason]   = useState('HARASSMENT');
-  const [detail, setDetail]   = useState('');
-  const [sending, setSending] = useState(false);
+  const [reason, setReason]       = useState('HARASSMENT');
+  const [detail, setDetail]       = useState('');
+  const [imageUris, setImageUris] = useState<string[]>([]);
+  const [sending, setSending]     = useState(false);
+
+  const handleClose = () => {
+    setDetail('');
+    setReason('HARASSMENT');
+    setImageUris([]);
+    onClose();
+  };
+
+  const pickImage = async () => {
+    if (imageUris.length >= 3) {
+      Alert.alert('사진', '최대 3장까지 첨부할 수 있어요.');
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('사진 접근 권한 필요', '설정에서 사진 접근을 허용해 주세요.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0].base64) {
+      const asset = result.assets[0];
+      const mimeType = asset.mimeType ?? 'image/jpeg';
+      setImageUris((prev) => [...prev, `data:${mimeType};base64,${asset.base64}`]);
+    }
+  };
 
   const handleSubmit = async () => {
     setSending(true);
     try {
-      await coupleService.reportUser({ reportedId: targetId, reason, detail: detail.trim() || undefined });
+      await coupleService.reportUser({
+        reportedId: targetId,
+        reason,
+        detail: detail.trim() || undefined,
+        imageUrls: imageUris.length > 0 ? imageUris : undefined,
+      });
       Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 적절한 조치를 취하겠습니다.');
-      setDetail('');
-      setReason('HARASSMENT');
-      onClose();
+      handleClose();
     } catch {
       Alert.alert('오류', '신고 접수에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
@@ -247,12 +281,12 @@ function ReportModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <Pressable style={styles.reportOverlay} onPress={onClose}>
+        <Pressable style={styles.reportOverlay} onPress={handleClose}>
           <Pressable style={styles.reportSheet} onPress={() => {}}>
             <View style={styles.reportHandle} />
             <Text style={styles.reportTitle}>{targetName} 신고</Text>
@@ -274,13 +308,34 @@ function ReportModal({
 
             <TextInput
               style={styles.reportDetailInput}
-              placeholder="추가 설명 (선택)"
+              placeholder="구체적인 내용을 작성해주세요 (선택)"
               placeholderTextColor={Colors.gray[300]}
               value={detail}
               onChangeText={setDetail}
               multiline
-              maxLength={300}
+              maxLength={500}
             />
+
+            {/* 사진 첨부 */}
+            <Text style={styles.reportImgLabel}>사진 첨부 (선택, 최대 3장)</Text>
+            <View style={styles.reportImgRow}>
+              {imageUris.map((uri, i) => (
+                <View key={i} style={styles.reportImgThumbWrap}>
+                  <Image source={{ uri }} style={styles.reportImgThumb} />
+                  <TouchableOpacity
+                    style={styles.reportImgRemove}
+                    onPress={() => setImageUris((prev) => prev.filter((_, idx) => idx !== i))}
+                  >
+                    <X size={12} color={Colors.white} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {imageUris.length < 3 && (
+                <TouchableOpacity style={styles.reportImgAdd} onPress={pickImage}>
+                  <Plus size={20} color={Colors.gray[400]} />
+                </TouchableOpacity>
+              )}
+            </View>
 
             <View style={styles.reportLegalNote}>
               <Text style={styles.reportLegalText}>
@@ -2083,6 +2138,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.gray[100],
     marginBottom: 12,
+  },
+  reportImgLabel: { fontSize: FontSize.xs, color: Colors.gray[500], marginBottom: 8 },
+  reportImgRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  reportImgThumbWrap: { position: 'relative' as const },
+  reportImgThumb: { width: 70, height: 70, borderRadius: BorderRadius.lg },
+  reportImgRemove: {
+    position: 'absolute' as const, top: -6, right: -6,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#EF4444', alignItems: 'center' as const, justifyContent: 'center' as const,
+  },
+  reportImgAdd: {
+    width: 70, height: 70, borderRadius: BorderRadius.lg, borderWidth: 1.5,
+    borderColor: Colors.gray[200], borderStyle: 'dashed' as const,
+    alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: Colors.gray[50],
   },
   reportLegalNote: {
     backgroundColor: '#FEF2F2',

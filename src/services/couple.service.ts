@@ -238,7 +238,7 @@ export const coupleService = {
     await apiClient.delete(`/couple/memories/${id}`);
   },
 
-  reportUser: async (dto: { reportedId: string; reason: string; detail?: string }): Promise<void> => {
+  reportUser: async (dto: { reportedId: string; reason: string; detail?: string; imageUrls?: string[] }): Promise<void> => {
     await apiClient.post('/couple/report', dto);
   },
 

@@ -63,7 +63,7 @@ export default function TermsScreen() {
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.introCard}>
             <Text style={styles.introTitle}>Vibly 서비스 이용약관</Text>
-            <Text style={styles.introDate}>시행일: 2025년 1월 1일</Text>
+            <Text style={styles.introDate}>시행일: 2026년 3월 1일 (최종 개정)</Text>
           </View>
 
           {TERMS.map((item, i) => (

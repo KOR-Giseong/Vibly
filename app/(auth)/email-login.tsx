@@ -14,7 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { Eye, EyeOff, Check } from 'lucide-react-native';
 import { SvgProps } from 'react-native-svg';
 import BackIcon from '@assets/Back-icon.svg';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
@@ -109,6 +109,8 @@ export default function EmailLoginScreen() {
   const [password, setPassword] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -127,6 +129,8 @@ export default function EmailLoginScreen() {
     setName('');
     setPassword('');
     setConfirmPw('');
+    setAgreeTerms(false);
+    setAgreePrivacy(false);
   };
 
   const handleSubmit = async () => {
@@ -137,6 +141,10 @@ export default function EmailLoginScreen() {
     }
     if (mode === 'signup' && password !== confirmPw) {
       setError('비밀번호가 일치하지 않아요.');
+      return;
+    }
+    if (mode === 'signup' && (!agreeTerms || !agreePrivacy)) {
+      setError('서비스 약관과 개인정보 처리방침에 동의해주세요.');
       return;
     }
 
@@ -291,6 +299,46 @@ export default function EmailLoginScreen() {
               />
             )}
           </View>
+
+          {/* 약관 동의 (회원가입 전용) */}
+          {mode === 'signup' && (
+            <View style={styles.agreeWrap}>
+              <TouchableOpacity
+                style={styles.agreeRow}
+                onPress={() => setAgreeTerms(!agreeTerms)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, agreeTerms && styles.checkboxActive]}>
+                  {agreeTerms && <Check size={12} color={Colors.white} strokeWidth={3} />}
+                </View>
+                <Text style={styles.agreeText}>
+                  <Text style={styles.agreeRequired}>[필수] </Text>
+                  <Text
+                    style={styles.agreeLink}
+                    onPress={(e) => { e.stopPropagation?.(); router.push('/terms'); }}
+                  >서비스 이용약관</Text>
+                  {'에 동의합니다'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.agreeRow}
+                onPress={() => setAgreePrivacy(!agreePrivacy)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, agreePrivacy && styles.checkboxActive]}>
+                  {agreePrivacy && <Check size={12} color={Colors.white} strokeWidth={3} />}
+                </View>
+                <Text style={styles.agreeText}>
+                  <Text style={styles.agreeRequired}>[필수] </Text>
+                  <Text
+                    style={styles.agreeLink}
+                    onPress={(e) => { e.stopPropagation?.(); router.push('/privacy'); }}
+                  >개인정보 처리방침</Text>
+                  {'에 동의합니다'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* 제출 버튼 */}
           <TouchableOpacity
@@ -481,6 +529,45 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
     color: Colors.white,
+  },
+
+  // 약관 동의
+  agreeWrap: {
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
+  },
+  agreeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.gray[300],
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+  },
+  checkboxActive: {
+    backgroundColor: '#9810FA',
+    borderColor: '#9810FA',
+  },
+  agreeText: {
+    fontSize: FontSize.sm,
+    color: Colors.gray[600],
+    flex: 1,
+  },
+  agreeRequired: {
+    color: '#9810FA',
+    fontWeight: FontWeight.semibold,
+  },
+  agreeLink: {
+    textDecorationLine: 'underline',
+    color: Colors.gray[700],
+    fontWeight: FontWeight.medium,
   },
 
   // 비밀번호 찾기

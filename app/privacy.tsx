@@ -25,7 +25,7 @@ const PRIVACY = [
   },
   {
     title: '5. 개인정보 처리 위탁',
-    body: '• Amazon Web Services (AWS): 서버 인프라 운영\n• Neon Technologies: 데이터베이스 운영\n• 위탁 업체는 개인정보 처리 목적 이외의 용도로 사용하지 않습니다.',
+    body: '• Cloudflare (R2): 이미지·파일 스토리지 운영\n• Neon Technologies: 데이터베이스 운영\n• Render: 서버 인프라 운영\n• 위탁 업체는 개인정보 처리 목적 이외의 용도로 사용하지 않습니다.',
   },
   {
     title: '6. 정보주체의 권리',
@@ -63,7 +63,7 @@ export default function PrivacyScreen() {
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.introCard}>
             <Text style={styles.introTitle}>Vibly 개인정보 처리방침</Text>
-            <Text style={styles.introDate}>시행일: 2025년 1월 1일</Text>
+            <Text style={styles.introDate}>시행일: 2026년 3월 1일 (최종 개정)</Text>
             <Text style={styles.introDesc}>
               Vibly는 이용자의 개인정보를 소중히 여깁니다. 본 처리방침은 개인정보보호법, 정보통신망 이용촉진 및 정보보호 등에 관한 법률에 따라 작성되었습니다.
             </Text>

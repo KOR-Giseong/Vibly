@@ -1,6 +1,5 @@
 import Expo
 import kakao_login
-import KakaoSDKCommon
 import React
 import ReactAppDependencyProvider
 
@@ -22,8 +21,6 @@ public class AppDelegate: ExpoAppDelegate {
     reactNativeDelegate = delegate
     reactNativeFactory = factory
     bindReactNativeFactory(factory)
-
-    KakaoSDK.initSDK(appKey: "ac833c12281b79a59bbe05f0f44ecd4c")
 
 #if os(iOS) || os(tvOS)
     window = UIWindow(frame: UIScreen.main.bounds)

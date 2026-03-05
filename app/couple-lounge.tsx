@@ -248,54 +248,59 @@ function ReportModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.reportOverlay} onPress={onClose}>
-        <Pressable style={styles.reportSheet} onPress={() => {}}>
-          <View style={styles.reportHandle} />
-          <Text style={styles.reportTitle}>{targetName} 신고</Text>
-          <Text style={styles.reportSubtitle}>신고 사유를 선택해주세요</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <Pressable style={styles.reportOverlay} onPress={onClose}>
+          <Pressable style={styles.reportSheet} onPress={() => {}}>
+            <View style={styles.reportHandle} />
+            <Text style={styles.reportTitle}>{targetName} 신고</Text>
+            <Text style={styles.reportSubtitle}>신고 사유를 선택해주세요</Text>
 
-          <View style={styles.reportReasons}>
-            {REPORT_REASONS.map(({ value, label }) => (
-              <TouchableOpacity
-                key={value}
-                style={[styles.reportReasonBtn, reason === value && styles.reportReasonBtnActive]}
-                onPress={() => setReason(value)}
-              >
-                <Text style={[styles.reportReasonText, reason === value && styles.reportReasonTextActive]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            <View style={styles.reportReasons}>
+              {REPORT_REASONS.map(({ value, label }) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[styles.reportReasonBtn, reason === value && styles.reportReasonBtnActive]}
+                  onPress={() => setReason(value)}
+                >
+                  <Text style={[styles.reportReasonText, reason === value && styles.reportReasonTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          <TextInput
-            style={styles.reportDetailInput}
-            placeholder="추가 설명 (선택)"
-            placeholderTextColor={Colors.gray[300]}
-            value={detail}
-            onChangeText={setDetail}
-            multiline
-            maxLength={300}
-          />
+            <TextInput
+              style={styles.reportDetailInput}
+              placeholder="추가 설명 (선택)"
+              placeholderTextColor={Colors.gray[300]}
+              value={detail}
+              onChangeText={setDetail}
+              multiline
+              maxLength={300}
+            />
 
-          <View style={styles.reportLegalNote}>
-            <Text style={styles.reportLegalText}>
-              신고된 내용은 검토 후 제재 처리되며, 심각한 위반 행위는 법적 조치로 이어질 수 있습니다.
-            </Text>
-          </View>
+            <View style={styles.reportLegalNote}>
+              <Text style={styles.reportLegalText}>
+                신고된 내용은 검토 후 제재 처리되며, 심각한 위반 행위는 법적 조치로 이어질 수 있습니다.
+              </Text>
+            </View>
 
-          <TouchableOpacity
-            style={[styles.reportSubmitBtn, sending && { opacity: 0.5 }]}
-            onPress={handleSubmit}
-            disabled={sending}
-          >
-            {sending
-              ? <ActivityIndicator color={Colors.white} />
-              : <Text style={styles.reportSubmitText}>신고 접수</Text>
-            }
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.reportSubmitBtn, sending && { opacity: 0.5 }]}
+              onPress={handleSubmit}
+              disabled={sending}
+            >
+              {sending
+                ? <ActivityIndicator color={Colors.white} />
+                : <Text style={styles.reportSubmitText}>신고 접수</Text>
+              }
+            </TouchableOpacity>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -1799,8 +1804,9 @@ export default function CoupleLoungeScreen() {
           try {
             await coupleService.dissolveCouple();
             setCoupleInfo(null);
-          } catch {
-            Alert.alert('오류', '커플 해제에 실패했습니다.');
+          } catch (e: any) {
+            const msg = e?.response?.data?.message ?? e?.message ?? '알 수 없는 오류';
+            Alert.alert('오류', `커플 해제에 실패했습니다.\n(${msg})`);
           }
         },
       },

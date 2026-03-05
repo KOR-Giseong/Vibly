@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Text } from 'react-native';
+import { View, Animated, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { Gradients } from '@constants/theme';
@@ -57,33 +57,36 @@ export default function AnimatedSplash() {
       start={{ x: 0.2, y: 0 }}
       end={{ x: 0.8, y: 1 }}
     >
-      <View style={styles.lettersRow}>
-        {LETTERS.map((letter, i) => (
-          <Animated.View
-            key={letter + i}
-            style={{
-              opacity: anims[i].opacity,
-              transform: [
-                { translateY: anims[i].translateY },
-                { scale: anims[i].scale },
-              ],
-            }}
-          >
-            <MaskedView
-              maskElement={
-                <Text style={styles.letter}>{letter}</Text>
-              }
-            >
-              <LinearGradient
-                colors={['#9810FA', '#E60076']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.gradientBox}
-              />
-            </MaskedView>
-          </Animated.View>
-        ))}
-      </View>
+      <MaskedView
+        maskElement={
+          <View style={styles.lettersRow}>
+            {LETTERS.map((letter, i) => (
+              <Animated.Text
+                key={letter + i}
+                style={[
+                  styles.letter,
+                  {
+                    opacity: anims[i].opacity,
+                    transform: [
+                      { translateY: anims[i].translateY },
+                      { scale: anims[i].scale },
+                    ],
+                  },
+                ]}
+              >
+                {letter}
+              </Animated.Text>
+            ))}
+          </View>
+        }
+      >
+        <LinearGradient
+          colors={['#9810FA', '#E60076']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientBox}
+        />
+      </MaskedView>
 
       <Animated.Text style={[styles.tagline, { opacity: taglineOpacity }]}>
         Vibe Together
@@ -101,15 +104,16 @@ const styles = StyleSheet.create({
   lettersRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    backgroundColor: 'transparent',
   },
   letter: {
     fontSize: 64,
     fontWeight: '800',
-    letterSpacing: 2,
-    color: '#000', // MaskedView mask는 색상 무관, 투명도만 사용
+    color: '#000',
+    includeFontPadding: false,
   },
   gradientBox: {
-    width: 70,
+    width: 260,
     height: 80,
   },
   tagline: {

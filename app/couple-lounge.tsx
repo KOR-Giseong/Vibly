@@ -1774,6 +1774,7 @@ export default function CoupleLoungeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showDissolveComplete, setShowDissolveComplete] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -1850,22 +1851,26 @@ export default function CoupleLoungeScreen() {
   };
 
   const handleDissolve = () => {
-    Alert.alert('커플 해제', '정말로 커플을 해제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '해제',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await coupleService.dissolveCouple();
-            setCoupleInfo(null);
-          } catch (e: any) {
-            const msg = e?.response?.data?.message ?? e?.message ?? '알 수 없는 오류';
-            Alert.alert('오류', `커플 해제에 실패했습니다.\n(${msg})`);
-          }
+    Alert.alert(
+      '커플 해제',
+      '파트너와의 연결을 해제할게요.\n해제 후에도 함께한 추억은 기록에 남아 있어요.\n\n정말 헤어지시겠어요? 💔',
+      [
+        { text: '아니요, 계속할게요', style: 'cancel' },
+        {
+          text: '네, 해제할게요',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await coupleService.dissolveCouple();
+              setShowDissolveComplete(true);
+            } catch (e: any) {
+              const msg = e?.response?.data?.message ?? e?.message ?? '알 수 없는 오류';
+              Alert.alert('오류', `커플 해제에 실패했습니다.\n(${msg})`);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
@@ -1976,6 +1981,34 @@ export default function CoupleLoungeScreen() {
           onClose={() => setReportTarget(null)}
         />
       )}
+
+      {/* 커플 해제 완료 모달 */}
+      <Modal
+        visible={showDissolveComplete}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.dissolveCompleteOverlay}>
+          <View style={styles.dissolveCompleteCard}>
+            <Text style={styles.dissolveCompleteEmoji}>💔</Text>
+            <Text style={styles.dissolveCompleteTitle}>커플이 해제되었어요</Text>
+            <Text style={styles.dissolveCompleteDesc}>
+              함께했던 시간은 소중한 추억으로{`\n`}앱에 기록되어 있어요
+            </Text>
+            <TouchableOpacity
+              style={styles.dissolveCompleteBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                setShowDissolveComplete(false);
+                setCoupleInfo(null);
+              }}
+            >
+              <Text style={styles.dissolveCompleteBtnText}>확인</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -2044,6 +2077,52 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
     color: Colors.gray[500],
+  },
+
+  // ── 커플 해제 완료 모달
+  dissolveCompleteOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing['2xl'],
+  },
+  dissolveCompleteCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius['2xl'],
+    paddingVertical: Spacing['3xl'],
+    paddingHorizontal: Spacing['2xl'],
+    alignItems: 'center',
+    width: '100%',
+    ...Shadow.lg,
+  },
+  dissolveCompleteEmoji: {
+    fontSize: 52,
+    marginBottom: Spacing.lg,
+  },
+  dissolveCompleteTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+    marginBottom: Spacing.sm,
+  },
+  dissolveCompleteDesc: {
+    fontSize: FontSize.sm,
+    color: Colors.gray[500],
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing['2xl'],
+  },
+  dissolveCompleteBtn: {
+    backgroundColor: Colors.gray[100],
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing['3xl'],
+    paddingVertical: Spacing.md,
+  },
+  dissolveCompleteBtnText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[700],
   },
   reportIconBtn: {
     width: 30,

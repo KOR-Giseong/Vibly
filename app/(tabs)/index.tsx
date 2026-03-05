@@ -4,6 +4,7 @@ import {
   Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Alert, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -245,7 +246,21 @@ export default function HomeScreen() {
 
           {/* 지역 선택 */}
           <View style={styles.regionRow}>
-            <Text style={styles.regionGuide} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요!</Text>
+            <MaskedView
+              style={{ flex: 1 }}
+              maskElement={
+                <Text style={styles.regionGuide} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요!</Text>
+              }
+            >
+              <LinearGradient
+                colors={['#9810FA', '#E60076']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
+              >
+                <Text style={[styles.regionGuide, { opacity: 0 }]} numberOfLines={1}>위치 또는 지역을 선택해 장소를 찾아보세요!</Text>
+              </LinearGradient>
+            </MaskedView>
             <TouchableOpacity
               style={styles.regionPill}
               onPress={() => setShowRegionModal(true)}

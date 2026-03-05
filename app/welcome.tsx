@@ -11,9 +11,9 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@co
 import ScreenTransition from '@components/ScreenTransition';
 
 const FEATURES = [
-  { emoji: '🗺️', title: '무드 기반 탐색', desc: '지금 기분에 딱 맞는 공간을 찾아요' },
-  { emoji: '✨', title: '바이브 큐레이션', desc: '취향에 맞는 장소만 골라드려요' },
-  { emoji: '📍', title: '체크인 & 기록', desc: '방문한 공간의 기억을 남겨요' },
+  { emoji: '🗺️', title: '무드 기반 탐색', desc: '지금 기분에 딱 맞는 공간을 찾아요!' },
+  { emoji: '✨', title: '바이브 큐레이션', desc: '취향에 맞는 장소만 골라드려요!' },
+  { emoji: '📍', title: '체크인 & 기록', desc: '방문한 공간의 기억을 남겨요!' },
 ];
 
 // 아이콘(0), 타이틀(1), 서브타이틀(2), 피쳐 3개(3~5), 버튼(6) — 총 7개
@@ -84,7 +84,7 @@ export default function WelcomeScreen() {
 
         {/* 서브타이틀 */}
         <Animated.Text style={[styles.subtitle, anim(2)]}>
-          Vibly와 함께 특별한 공간을{'\n'}발견해보세요
+          Vibly와 함께 특별한 공간을{'\n'}발견해보세요!
         </Animated.Text>
 
         {/* 피쳐 카드 */}

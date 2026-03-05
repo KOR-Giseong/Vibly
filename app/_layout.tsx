@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,6 +15,9 @@ import { useCoupleStore } from '@stores/couple.store';
 import { authService } from '@services/auth.service';
 import { notificationApi } from '@services/notification.service';
 import AnimatedSplash from '@components/AnimatedSplash';
+
+// 네이티브 스플래시 자동 숨김 방지 (JS 로드 후 수동으로 숨김)
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // 포그라운드 알림 표시 설정
 Notifications.setNotificationHandler({
@@ -37,6 +41,11 @@ function RootLayoutNav() {
   const { setCoupleInfo } = useCoupleStore();
   const [isLoaded, setIsLoaded] = useState(false);
   const notifResponseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  // 네이티브 스플래시 즉시 숨기고 커스텀 AnimatedSplash 표시
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   useEffect(() => {
     (async () => {

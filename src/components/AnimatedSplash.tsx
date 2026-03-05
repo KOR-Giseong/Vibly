@@ -104,11 +104,16 @@ const styles = StyleSheet.create({
   },
   maskedView: {
     alignSelf: 'center',
+    height: 90,
+    width: 300,
   },
   lettersRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    justifyContent: 'center',
     backgroundColor: 'transparent',
+    height: 90,
+    width: 300,
   },
   letter: {
     fontSize: 64,

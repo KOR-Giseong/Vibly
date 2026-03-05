@@ -2057,7 +2057,7 @@ export default function CoupleLoungeScreen() {
   const handleDissolve = () => {
     Alert.alert(
       '커플 해제',
-      '파트너와의 연결을 해제할게요.\n해제 후에도 함께한 추억은 기록에 남아 있어요.\n\n정말 헤어지시겠어요? 💔',
+      '파트너와의 연결을 해제할게요.\n해제 후에는 채팅, 추억 앨범, 데이트 플랜 등\n모든 커플 기록이 사라져요.\n\n정말 헤어지시겠어요? 💔',
       [
         { text: '아니요, 계속할게요', style: 'cancel' },
         {

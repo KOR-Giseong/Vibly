@@ -520,7 +520,7 @@ function LandingView({
 // ── 홈 탭 ─────────────────────────────────────────────────────────────────────
 const GIFT_AMOUNTS = [10, 30, 50, 100];
 
-function CreditHistoryItem({ item }: { item: CoupleCreditHistory }) {
+function CreditHistoryItem({ item, partnerName }: { item: CoupleCreditHistory; partnerName: string }) {
   const dateStr = new Date(item.createdAt).toLocaleDateString('ko-KR', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
@@ -533,7 +533,7 @@ function CreditHistoryItem({ item }: { item: CoupleCreditHistory }) {
       <View style={{ flex: 1 }}>
         <Text style={styles.creditHistoryText}>
           {item.isMine
-            ? `파트너에게 💝 ${item.amount} 크레딧 선물`
+            ? `${partnerName}님에게 💝 ${item.amount} 크레딧 선물`
             : `${item.senderName}님에게 💝 ${item.amount} 크레딧 받음`}
         </Text>
         <Text style={styles.creditHistoryDate}>{dateStr}</Text>
@@ -649,6 +649,7 @@ function HomeTab({
   const router = useRouter();
   const { spendCredits } = useCreditStore();
   const { setCoupleInfo } = useCoupleStore();
+  const partnerName = partnerProfile?.nickname ?? partnerProfile?.name ?? '파트너';
   const [giftModal, setGiftModal] = useState(false);
   const [giftAmount, setGiftAmount] = useState(30);
   const [gifting, setGifting] = useState(false);
@@ -704,7 +705,7 @@ function HomeTab({
         isMine: true,
       };
       setCreditHistory((prev) => [newItem, ...prev]);
-      Alert.alert('선물 완료 💝', `${giftAmount} 크레딧을 파트너에게 선물했습니다.`);
+      Alert.alert('선물 완료 💝', `${giftAmount} 크레딧을 ${partnerName}님에게 선물했습니다.`);
       setGiftModal(false);
     } catch (e: any) {
       Alert.alert('오류', e?.response?.data?.message ?? '크레딧 선물에 실패했습니다.');
@@ -785,7 +786,7 @@ function HomeTab({
       {/* 크레딧 선물 버튼 */}
       <TouchableOpacity style={styles.giftBtn} onPress={() => setGiftModal(true)} activeOpacity={0.85}>
         <Gift size={16} color="#E60076" />
-        <Text style={styles.giftBtnText}>파트너에게 크레딧 선물하기 💝</Text>
+        <Text style={styles.giftBtnText}>{partnerName}님께 크레딧 선물하기 💝</Text>
       </TouchableOpacity>
 
       {/* 크레딧 선물 내역 */}
@@ -793,7 +794,7 @@ function HomeTab({
         <View style={styles.creditHistoryBox}>
           <Text style={styles.creditHistoryTitle}>💳 크레딧 선물 내역</Text>
           {creditHistory.slice(0, 10).map((item) => (
-            <CreditHistoryItem key={item.id} item={item} />
+            <CreditHistoryItem key={item.id} item={item} partnerName={partnerName} />
           ))}
         </View>
       )}
@@ -814,7 +815,7 @@ function HomeTab({
           <Pressable style={styles.reportSheet} onPress={() => {}}>
             <View style={styles.reportHandle} />
             <Text style={styles.reportTitle}>💝 크레딧 선물</Text>
-            <Text style={styles.reportSubtitle}>파트너에게 선물할 크레딧을 선택하세요</Text>
+            <Text style={styles.reportSubtitle}>{partnerName}님에게 선물할 크레딧을 선택하세요</Text>
             <View style={styles.giftAmountRow}>
               {GIFT_AMOUNTS.map((amount) => (
                 <TouchableOpacity
@@ -851,6 +852,7 @@ function ScrapTab() {
   const [tab, setTab] = useState<'mine' | 'partner'>('partner');
   const [partnerBookmarks, setPartnerBookmarks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const partnerNickname = useCoupleStore((s) => s.partnerNickname) ?? '파트너';
 
   const loadPartner = useCallback(async () => {
     if (tab !== 'partner') return;
@@ -875,7 +877,7 @@ function ScrapTab() {
             onPress={() => setTab(t)}
           >
             <Text style={[styles.segmentText, tab === t && styles.segmentTextActive]}>
-              {t === 'mine' ? '내 스크랩' : '파트너 스크랩'}
+              {t === 'mine' ? '내 스크랩' : `${partnerNickname} 스크랩`}
             </Text>
           </TouchableOpacity>
         ))}
@@ -892,7 +894,7 @@ function ScrapTab() {
       ) : partnerBookmarks.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Bookmark size={44} color={Colors.gray[200]} />
-          <Text style={styles.emptyTitle}>파트너의 스크랩이 없습니다</Text>
+          <Text style={styles.emptyTitle}>{partnerNickname}님의 스크랩이 없어요</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.tabContent}>
@@ -1975,7 +1977,7 @@ export default function CoupleLoungeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, setUser } = useAuthStore();
-  const { coupleInfo, setCoupleInfo } = useCoupleStore();
+  const { coupleInfo, setCoupleInfo, setPartnerNickname } = useCoupleStore();
 
   const [activeTab, setActiveTab] = useState<CoupleTab>('home');
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
@@ -1997,6 +1999,7 @@ export default function CoupleLoungeScreen() {
           coupleService.getDatePlans().catch(() => []),
         ]);
         setPartnerProfile(profile);
+        setPartnerNickname(profile ? (profile.nickname ?? profile.name ?? null) : null);
         const upcoming = plans
           .filter((p) => p.status === 'PLANNED' && new Date(p.dateAt) >= new Date())
           .sort((a, b) => new Date(a.dateAt).getTime() - new Date(b.dateAt).getTime());
@@ -2214,6 +2217,7 @@ export default function CoupleLoungeScreen() {
               activeOpacity={0.85}
               onPress={() => {
                 setShowDissolveComplete(false);
+                setPartnerNickname(null);
                 setCoupleInfo(null);
               }}
             >

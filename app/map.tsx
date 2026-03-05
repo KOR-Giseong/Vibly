@@ -62,7 +62,8 @@ export default function MapScreen() {
 
   const { limit, radius } = useMapFilterStore();
 
-  const { coupleInfo } = useCoupleStore();
+  const { coupleInfo, partnerNickname } = useCoupleStore();
+  const partnerLabel = partnerNickname ?? '파트너';
 
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [query, setQuery] = useState('');
@@ -294,7 +295,7 @@ export default function MapScreen() {
             </Text>
             <Text style={styles.countRadius}>· {radiusLabel(radius)}</Text>
             {showPartnerScrap && (
-              <Text style={styles.partnerBadgeText}>💕 파트너 포함</Text>
+              <Text style={styles.partnerBadgeText}>💕 {partnerLabel} 포함</Text>
             )}
           </TouchableOpacity>
         )}
@@ -521,7 +522,7 @@ export default function MapScreen() {
                       <View style={styles.listMetaRow}>
                         {partnerPlaceIds?.has(item.id) ? (
                           <View style={[styles.listCatBadge, { backgroundColor: '#E6007618' }]}>
-                            <Text style={[styles.listCatText, { color: '#E60076' }]}>파트너 스크랩</Text>
+                            <Text style={[styles.listCatText, { color: '#E60076' }]}>{partnerLabel} 스크랩</Text>
                           </View>
                         ) : (
                           <View style={[styles.listCatBadge, { backgroundColor: (CATEGORY_COLOR[item.category] ?? '#9810FA') + '20' }]}>

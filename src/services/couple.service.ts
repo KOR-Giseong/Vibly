@@ -167,8 +167,8 @@ export const coupleService = {
   },
 
   /** 기념일 설정 */
-  setAnniversaryDate: async (date: string): Promise<CoupleInfo> => {
-    const { data } = await apiClient.patch<CoupleInfo>('/couple/anniversary', { date });
+  setAnniversaryDate: async (date: string): Promise<{ anniversaryDate: string | null }> => {
+    const { data } = await apiClient.patch<{ anniversaryDate: string | null }>('/couple/anniversary', { anniversaryDate: date });
     return data;
   },
 

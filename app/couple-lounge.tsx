@@ -24,9 +24,9 @@ import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Heart, Plus, Camera, Sparkles, ChevronLeft,
+  Heart, Plus, Camera, Sparkles, ChevronLeft, ChevronRight,
   UserPlus, Bookmark, User, Coins, Flag,
-  MessageCircle, Send, Gift, X, Check,
+  MessageCircle, Send, Gift, X, Check, CalendarDays,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -548,6 +548,95 @@ function CreditHistoryItem({ item }: { item: CoupleCreditHistory }) {
   );
 }
 
+// ── 달력 날짜 선택 컴포넌트 ───────────────────────────────────────────────────
+const CAL_DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function AnniversaryCalendar({
+  selected,
+  onSelect,
+}: {
+  selected: Date | null;
+  onSelect: (d: Date) => void;
+}) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [viewYear, setViewYear] = useState(selected?.getFullYear() ?? today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(selected?.getMonth() ?? today.getMonth());
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
+    else setViewMonth((m) => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
+    else setViewMonth((m) => m + 1);
+  };
+  const canGoNext = !(viewYear === today.getFullYear() && viewMonth >= today.getMonth());
+
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let i = 1; i <= daysInMonth; i++) cells.push(i);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const isSel = (d: number) =>
+    selected?.getFullYear() === viewYear &&
+    selected?.getMonth() === viewMonth &&
+    selected?.getDate() === d;
+  const isToday = (d: number) =>
+    today.getFullYear() === viewYear && today.getMonth() === viewMonth && today.getDate() === d;
+  const isDisabled = (d: number) => new Date(viewYear, viewMonth, d) > today;
+
+  return (
+    <View>
+      {/* 월 헤더 */}
+      <View style={styles.calHeader}>
+        <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}>
+          <ChevronLeft size={20} color={Colors.gray[600]} />
+        </TouchableOpacity>
+        <Text style={styles.calHeaderText}>{viewYear}년 {viewMonth + 1}월</Text>
+        <TouchableOpacity onPress={canGoNext ? nextMonth : undefined} style={styles.calNavBtn}>
+          <ChevronRight size={20} color={canGoNext ? Colors.gray[600] : Colors.gray[200]} />
+        </TouchableOpacity>
+      </View>
+      {/* 요일 행 */}
+      <View style={styles.calDayRow}>
+        {CAL_DAYS.map((d, i) => (
+          <Text key={d} style={[styles.calDayText, i === 0 && { color: '#E60076' }]}>{d}</Text>
+        ))}
+      </View>
+      {/* 날짜 그리드 */}
+      <View style={styles.calGrid}>
+        {cells.map((day, idx) => {
+          if (!day) return <View key={`e-${idx}`} style={styles.calCell} />;
+          const sel = isSel(day);
+          const dis = isDisabled(day);
+          const tod = isToday(day);
+          const isSun = idx % 7 === 0;
+          return (
+            <TouchableOpacity
+              key={`d-${idx}`}
+              style={[styles.calCell, sel && styles.calCellSel, tod && !sel && styles.calCellToday]}
+              onPress={() => !dis && onSelect(new Date(viewYear, viewMonth, day))}
+              disabled={dis}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.calCellText,
+                isSun && { color: '#E60076' },
+                dis && styles.calCellDisabled,
+                sel && styles.calCellSelText,
+                tod && !sel && styles.calCellTodayText,
+              ]}>{day}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function HomeTab({
   coupleInfo,
   partnerProfile,
@@ -559,10 +648,41 @@ function HomeTab({
 }) {
   const router = useRouter();
   const { spendCredits } = useCreditStore();
+  const { setCoupleInfo } = useCoupleStore();
   const [giftModal, setGiftModal] = useState(false);
   const [giftAmount, setGiftAmount] = useState(30);
   const [gifting, setGifting] = useState(false);
   const [creditHistory, setCreditHistory] = useState<CoupleCreditHistory[]>([]);
+
+  // ── 기념일
+  const [showAnnivModal, setShowAnnivModal] = useState(false);
+  const [pickedDate, setPickedDate] = useState<Date | null>(
+    coupleInfo.anniversaryDate ? new Date(coupleInfo.anniversaryDate) : null,
+  );
+  const [savingAnniv, setSavingAnniv] = useState(false);
+
+  // D+N 계산
+  const anniversaryDiff = (() => {
+    if (!coupleInfo.anniversaryDate) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const anniv = new Date(coupleInfo.anniversaryDate); anniv.setHours(0, 0, 0, 0);
+    return Math.floor((today.getTime() - anniv.getTime()) / (1000 * 60 * 60 * 24));
+  })();
+
+  const handleSaveAnniversary = async () => {
+    if (!pickedDate) return;
+    setSavingAnniv(true);
+    try {
+      const isoStr = pickedDate.toISOString();
+      await coupleService.setAnniversaryDate(isoStr);
+      setCoupleInfo({ ...coupleInfo, anniversaryDate: isoStr });
+      setShowAnnivModal(false);
+    } catch (e: any) {
+      Alert.alert('오류', e?.response?.data?.message ?? '기념일 저장에 실패했어요.');
+    } finally {
+      setSavingAnniv(false);
+    }
+  };
 
   useEffect(() => {
     coupleService.getCreditHistory().then(setCreditHistory).catch(() => {});
@@ -596,6 +716,71 @@ function HomeTab({
   return (
     <View style={styles.tabContent}>
       <PartnerCard coupleInfo={coupleInfo} partnerProfile={partnerProfile} />
+
+      {/* ── 기념일 D+N 카드 */}
+      {coupleInfo.anniversaryDate && anniversaryDiff !== null ? (
+        <LinearGradient
+          colors={['#9810FA', '#E60076']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.anniversaryCard}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.anniversaryDayLabel}>함께한 지</Text>
+            <View style={styles.anniversaryDayRow}>
+              <Text style={styles.anniversaryDayNum}>
+                {anniversaryDiff === 0 ? 'D-Day' : `D+${anniversaryDiff.toLocaleString()}`}
+              </Text>
+            </View>
+            <Text style={styles.anniversaryDateStr}>
+              {new Date(coupleInfo.anniversaryDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}부터
+            </Text>
+          </View>
+          <TouchableOpacity onPress={() => { setPickedDate(new Date(coupleInfo.anniversaryDate!)); setShowAnnivModal(true); }} style={styles.anniversaryEditBtn}>
+            <CalendarDays size={14} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.anniversaryEditText}>변경</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      ) : (
+        <TouchableOpacity
+          style={styles.anniversaryEmpty}
+          onPress={() => { setPickedDate(null); setShowAnnivModal(true); }}
+          activeOpacity={0.8}
+        >
+          <CalendarDays size={20} color="#9810FA" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.anniversaryEmptyTitle}>기념일을 설정해보세요 💕</Text>
+            <Text style={styles.anniversaryEmptyDesc}>처음 만난 날을 등록하면 D+N을 계산해드려요</Text>
+          </View>
+          <ChevronRight size={16} color={Colors.gray[300]} />
+        </TouchableOpacity>
+      )}
+
+      {/* 기념일 달력 모달 */}
+      <Modal visible={showAnnivModal} transparent animationType="slide" onRequestClose={() => setShowAnnivModal(false)}>
+        <Pressable style={styles.reportOverlay} onPress={() => setShowAnnivModal(false)}>
+          <Pressable style={styles.reportSheet} onPress={() => {}}>
+            <View style={styles.reportHandle} />
+            <Text style={styles.reportTitle}>💕 기념일 설정</Text>
+            <Text style={styles.reportSubtitle}>처음 만난 날 또는 사귀기 시작한 날을 선택하세요</Text>
+            <AnniversaryCalendar selected={pickedDate} onSelect={setPickedDate} />
+            <TouchableOpacity
+              style={[styles.giftSubmitBtn, (!pickedDate || savingAnniv) && { opacity: 0.5 }, { marginTop: 16 }]}
+              onPress={handleSaveAnniversary}
+              disabled={!pickedDate || savingAnniv}
+            >
+              {savingAnniv
+                ? <ActivityIndicator color={Colors.white} />
+                : <Text style={styles.reportSubmitText}>
+                    {pickedDate
+                      ? `${pickedDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 저장하기`
+                      : '날짜를 선택해주세요'}
+                  </Text>
+              }
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* 크레딧 선물 버튼 */}
       <TouchableOpacity style={styles.giftBtn} onPress={() => setGiftModal(true)} activeOpacity={0.85}>
@@ -2476,6 +2661,143 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginBottom: 2,
+  },
+
+  // ── 기념일 D+N 카드
+  anniversaryCard: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius['2xl'],
+    padding: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    ...Shadow.md,
+  },
+  anniversaryDayLabel: {
+    fontSize: FontSize.xs,
+    color: 'rgba(255,255,255,0.75)',
+    marginBottom: 2,
+  },
+  anniversaryDayRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  anniversaryDayNum: {
+    fontSize: 36,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  },
+  anniversaryDateStr: {
+    fontSize: FontSize.xs,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 4,
+  },
+  anniversaryEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignSelf: 'flex-end',
+  },
+  anniversaryEditText: {
+    fontSize: FontSize.xs,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: FontWeight.medium,
+  },
+  anniversaryEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius['2xl'],
+    padding: Spacing.lg,
+    borderWidth: 1.5,
+    borderColor: '#E9D5FF',
+    borderStyle: 'dashed',
+  },
+  anniversaryEmptyTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[800],
+  },
+  anniversaryEmptyDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.gray[400],
+    marginTop: 2,
+  },
+
+  // ── 달력
+  calHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  calNavBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.gray[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calHeaderText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+    color: Colors.gray[900],
+  },
+  calDayRow: {
+    flexDirection: 'row',
+    marginBottom: Spacing.xs,
+  },
+  calDayText: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.gray[400],
+    paddingVertical: 4,
+  },
+  calGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calCell: {
+    width: `${100 / 7}%` as any,
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 100,
+  },
+  calCellSel: {
+    backgroundColor: '#9810FA',
+  },
+  calCellToday: {
+    borderWidth: 1.5,
+    borderColor: '#9810FA',
+  },
+  calCellText: {
+    fontSize: FontSize.sm,
+    color: Colors.gray[800],
+  },
+  calCellDisabled: {
+    color: Colors.gray[200],
+  },
+  calCellSelText: {
+    color: Colors.white,
+    fontWeight: FontWeight.bold,
+  },
+  calCellTodayText: {
+    color: '#9810FA',
+    fontWeight: FontWeight.bold,
   },
 
   // ── 홈 탭 - 크레딧 선물

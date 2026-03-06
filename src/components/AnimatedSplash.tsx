@@ -6,7 +6,11 @@ import { Gradients } from '@constants/theme';
 
 const LETTERS = ['V', 'i', 'b', 'l', 'y'];
 
-export default function AnimatedSplash() {
+interface Props {
+  onFinish?: () => void;
+}
+
+export default function AnimatedSplash({ onFinish }: Props) {
   const anims = useRef(
     LETTERS.map(() => ({
       translateY: new Animated.Value(80),
@@ -47,7 +51,10 @@ export default function AnimatedSplash() {
         duration: 500,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]).start(() => {
+      // 애니메이션 완료 후 0.3초 뒤 onFinish 호출
+      setTimeout(() => onFinish?.(), 300);
+    });
   }, [anims, taglineOpacity]);
 
   return (

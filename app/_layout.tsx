@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -40,11 +40,15 @@ function RootLayoutNav() {
   const { setCredits, setPremium } = useCreditStore();
   const { setCoupleInfo } = useCoupleStore();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const notifResponseListener = useRef<Notifications.EventSubscription | null>(null);
 
   // 네이티브 스플래시 즉시 숨기고 커스텀 AnimatedSplash 표시
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
+    // 애니메이션 완료 후 최대 2.5초 뒤 스플래시 강제 종료 (API 응답 대기 없음)
+    const timer = setTimeout(() => setShowSplash(false), 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -157,7 +161,8 @@ function RootLayoutNav() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isAuthenticated]);
 
-  if (!isLoaded) return <AnimatedSplash />;
+  if (showSplash) return <AnimatedSplash onFinish={() => setShowSplash(false)} />;
+  if (!isLoaded) return <View style={{ flex: 1, backgroundColor: '#F5F3FF' }} />;
 
   return (
     <>

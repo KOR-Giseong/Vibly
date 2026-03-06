@@ -199,7 +199,7 @@ export default function LoginScreen() {
           <Text style={styles.termsLink} onPress={() => router.push('/terms')}>서비스 약관</Text>
           {' 및 '}
           <Text style={styles.termsLink} onPress={() => router.push('/privacy')}>개인정보 처리방침</Text>
-          {'에\n동의하는 것으로 간주됩니다'}
+          {'에\n동의하는 것으로 간주됩니다.'}
         </Text>
       </View>
     </LinearGradient>

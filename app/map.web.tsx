@@ -21,7 +21,7 @@ export default function MapScreenWeb() {
           <View style={styles.iconWrap}>
             <MapPin size={36} color={Colors.primary[400]} />
           </View>
-          <Text style={styles.title}>지도는 앱에서 사용 가능해요</Text>
+          <Text style={styles.title}>지도는 앱에서 사용 가능해요.</Text>
           <Text style={styles.desc}>
             Vibly 앱을 설치하면{'\n'}주변 장소를 지도에서 확인할 수 있어요
           </Text>

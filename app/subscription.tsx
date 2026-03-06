@@ -84,7 +84,7 @@ export default function SubscriptionScreen() {
             <Crown size={40} color={Colors.white} />
           </LinearGradient>
           <Text style={styles.heroTitle}>Vibly Premium</Text>
-          <Text style={styles.heroSub}>감정 기반 장소 탐험의 모든 것을{'\n'}무제한으로 경험하세요</Text>
+          <Text style={styles.heroSub}>감정 기반 장소 탐험의 모든 것을{'\n'}무제한으로 경험하세요.</Text>
         </View>
 
         {/* Plan Toggle */}

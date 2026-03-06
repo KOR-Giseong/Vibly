@@ -144,7 +144,7 @@ export function CoupleInviteModal({ visible, onClose, onInviteSent }: Props) {
                     <X size={17} color={Colors.gray[500]} />
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.sheetSubtitle}>이메일 또는 닉네임으로 검색해보세요</Text>
+                <Text style={styles.sheetSubtitle}>이메일 또는 닉네임으로 검색해보세요.</Text>
 
                 {/* 검색창 */}
                 <View style={styles.searchRow}>
@@ -185,7 +185,7 @@ export function CoupleInviteModal({ visible, onClose, onInviteSent }: Props) {
                 {searched && !searching && results.length === 0 ? (
                   <View style={styles.emptyResult}>
                     <Text style={styles.emptyResultText}>검색 결과가 없습니다</Text>
-                    <Text style={styles.emptyResultSub}>닉네임이나 이메일을 확인해주세요</Text>
+                    <Text style={styles.emptyResultSub}>닉네임이나 이메일을 확인해주세요.</Text>
                   </View>
                 ) : (
                   <FlatList

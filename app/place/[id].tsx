@@ -374,7 +374,7 @@ export default function PlaceDetailScreen() {
         ? `maps://?daddr=${lat},${lng}`
         : `geo:${lat},${lng}?q=${lat},${lng}(${label})`;
 
-    Alert.alert('길찾기', '사용할 앱을 선택하세요', [
+    Alert.alert('길찾기', '사용할 앱을 선택하세요.', [
       {
         text: '카카오맵',
         onPress: () =>
@@ -617,7 +617,7 @@ export default function PlaceDetailScreen() {
                 <Users size={16} color="#1c398e" />
                 <Text style={styles.visitorText}>
                   <Text style={{ fontWeight: FontWeight.bold }}>{place.reviewCount}명</Text>
-                  {'이 이 장소를 당신과 비슷한 감정으로 방문했어요'}
+                  {'이 이 장소를 당신과 비슷한 감정으로 방문했어요.'}
                 </Text>
               </View>
             )}

@@ -75,7 +75,7 @@ export function NearbyPlaceList({ coords, locationStatus, onSeeAll }: NearbyPlac
         <View style={styles.empty}>
           <MapPin size={32} color={Colors.gray[300]} />
           <Text style={styles.emptyText}>주변에 등록된 장소가 없어요</Text>
-          <Text style={styles.emptySubText}>AI에게 장소를 추천받아보세요</Text>
+          <Text style={styles.emptySubText}>AI에게 장소를 추천받아보세요.</Text>
         </View>
       )}
 

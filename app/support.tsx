@@ -120,7 +120,7 @@ export default function SupportScreen() {
           </TouchableOpacity>
         ))
       )}
-      <Text style={styles.retentionNote}>💾 문의 내용은 접수일로부터 90일간 보관됩니다</Text>
+      <Text style={styles.retentionNote}>💾 문의 내용은 접수일로부터 90일간 보관됩니다.</Text>
     </>
   );
 
@@ -166,7 +166,7 @@ export default function SupportScreen() {
           </View>
         )}
 
-        <Text style={styles.retentionNote}>💾 문의 내용은 접수일로부터 90일간 안전하게 보관됩니다</Text>
+        <Text style={styles.retentionNote}>💾 문의 내용은 접수일로부터 90일간 안전하게 보관됩니다.</Text>
       </View>
     );
   };

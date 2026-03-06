@@ -94,7 +94,7 @@ export default function SuspendedScreen() {
               {formatSuspendedUntil(user?.suspendedUntil)}까지
             </Text>
             <Text style={styles.infoSubBlue}>
-              정지 기간이 종료되면 자동으로 계정이 복구됩니다
+              정지 기간이 종료되면 자동으로 계정이 복구됩니다.
             </Text>
           </View>
 

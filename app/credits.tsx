@@ -158,7 +158,7 @@ export default function CreditsScreen() {
             <>
               <Crown size={32} color="#7C3AED" />
               <Text style={styles.balanceLabel}>구독 중</Text>
-              <Text style={styles.premiumDesc}>무제한 검색이 가능해요</Text>
+              <Text style={styles.premiumDesc}>무제한 검색이 가능해요.</Text>
             </>
           ) : (
             <>

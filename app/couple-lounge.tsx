@@ -58,20 +58,21 @@ function getLandingCopy(gender?: string) {
     return {
       emoji: '🗺️',
       title: '데이트 코스 기획이\n막막하신가요?',
-      desc: 'AI가 완벽한 데이트 코스를 설계해드립니다',
+      desc: 'AI가 완벽한 데이트 코스를 설계해드립니다.',
+
     };
   }
   if (gender === 'FEMALE') {
     return {
       emoji: '😏',
       title: '남자친구가 데이트 장소를\n못 정하나요?',
-      desc: '커플 라운지에서 함께 계획해봐요',
+      desc: '커플 라운지에서 함께 계획해봐요.',
     };
   }
   return {
     emoji: '💕',
     title: '연인과 함께하는\n특별한 데이트 공간',
-    desc: '커플 등록하고 특별한 기능을 즐겨보세요',
+    desc: '커플 등록하고 특별한 기능을 즐겨보세요.',
   };
 }
 
@@ -1443,7 +1444,7 @@ function DateTab({ partnerProfile }: { partnerProfile?: PartnerProfile }) {
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.aiNoteTitle}>AI 데이트 코스 만들기</Text>
-                    <Text style={styles.aiNoteSub}>지역·분위기 등 요청사항을 적으면 최우선 반영해요</Text>
+                    <Text style={styles.aiNoteSub}>지역·분위기 등 요청사항을 적으면 최우선 반영해요.</Text>
                   </View>
                   <TouchableOpacity onPress={() => setAiNoteVisible(false)}><X size={18} color={Colors.gray[400]} /></TouchableOpacity>
                 </View>
@@ -1711,7 +1712,7 @@ function MemoryTab({ myUserId }: { myUserId: string }) {
         <View style={styles.emptyWrap}>
           <Camera size={44} color={Colors.gray[200]} />
           <Text style={styles.emptyTitle}>첫 번째 추억을 기록해보세요 📸</Text>
-          <Text style={styles.emptyDesc}>사진을 추가하면 여기에 표시됩니다</Text>
+          <Text style={styles.emptyDesc}>사진을 추가하면 여기에 표시됩니다.</Text>
         </View>
       ) : (
         <ScrollView

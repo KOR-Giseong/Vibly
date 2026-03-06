@@ -269,7 +269,7 @@ export default function MapScreen() {
           >
             <Navigation size={13} color={Colors.white} />
             <Text style={styles.locationDeniedText}>
-              {canAskAgain ? '위치 권한을 허용하면 내 주변 장소를 볼 수 있어요' : '설정에서 위치 권한을 허용해주세요'}
+              {canAskAgain ? '위치 권한을 허용하면 내 주변 장소를 볼 수 있어요.' : '설정에서 위치 권한을 허용해주세요.'}
             </Text>
           </TouchableOpacity>
         )}

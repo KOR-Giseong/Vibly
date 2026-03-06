@@ -361,7 +361,7 @@ export default function CheckInScreen() {
                       ? `📍 ${Math.round(distanceM!)}m 이내 — GPS 체크인 가능`
                       : distanceM !== null
                       ? `📍 ${Math.round(distanceM)}m 떨어짐 — ${GPS_LIMIT_M}m 이내 접근 필요`
-                      : '위치 권한 없음 — 위치 접근을 허용해주세요'}
+                      ? '위치 권한 없음 — 위치 접근을 허용해주세요.'}
                   </Text>
                 </View>
               )}
@@ -437,18 +437,18 @@ export default function CheckInScreen() {
               ) : (
                 <Text style={[styles.submitText, !canSubmit && styles.submitTextDisabled]}>
                   {!selectedMood
-                    ? '기분을 먼저 선택해주세요'
+                    ? '기분을 먼저 선택해주세요.'
                     : checkInMode === 'receipt'
-                    ? (receiptUri ? '영수증 인증 체크인 ✓' : '영수증을 첨부해주세요')
+                    ? (receiptUri ? '영수증 인증 체크인 ✓' : '영수증을 첨부해주세요.')
                     : checkInMode === 'gps'
-                    ? (isNearby ? `GPS 체크인 (${Math.round(distanceM!)}m)` : distanceM !== null ? `너무 멀어요 (${Math.round(distanceM)}m)` : '위치 권한이 필요해요')
+                    ? (isNearby ? `GPS 체크인 (${Math.round(distanceM!)}m)` : distanceM !== null ? `너무 멀어요 (${Math.round(distanceM)}m)` : '위치 권한이 필요해요.')
                     : receiptUri
                     ? '영수증 인증 체크인 ✓'
                     : isNearby
                     ? `GPS 체크인 (${Math.round(distanceM!)}m)`
                     : distanceM !== null
                     ? `너무 멀어요 (${Math.round(distanceM)}m) — 영수증 첨부 필요`
-                    : '위치 권한 없음 — 영수증을 첨부해주세요'}
+                    : '위치 권한 없음 — 영수증을 첨부해주세요.'}
                 </Text>
               )}
             </TouchableOpacity>

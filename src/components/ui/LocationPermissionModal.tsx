@@ -118,7 +118,7 @@ export function LocationPermissionModal({
           </LinearGradient>
 
           {/* 텍스트 */}
-          <Text style={styles.title}>위치 권한이 필요해요</Text>
+          <Text style={styles.title}>위치 권한이 필요해요.</Text>
           <Text style={styles.description}>
             주변 감성 장소를 추천해드리려면{'\n'}
             위치 정보 접근 권한이 필요합니다.{'\n\n'}

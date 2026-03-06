@@ -288,10 +288,10 @@ export default function SearchScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>{hasSearched ? '😅' : nearbyError ? '⚠️' : '📍'}</Text>
             <Text style={styles.emptyTitle}>
-              {hasSearched ? '검색 결과가 없어요' : nearbyError ? '주변 장소를 불러오지 못했어요' : '주변 장소가 없어요'}
+              {hasSearched ? '검색 결과가 없어요.' : nearbyError ? '주변 장소를 불러오지 못했어요.' : '주변 장소가 없어요.'}
             </Text>
             <Text style={styles.emptyDesc}>
-              {hasSearched ? '다른 키워드로 검색해보세요' : nearbyError ? '네트워크 상태를 확인해주세요' : '더 넓은 범위를 탐색해보세요'}
+              {hasSearched ? '다른 키워드로 검색해보세요.' : nearbyError ? '네트워크 상태를 확인해주세요.' : '더 넓은 범위를 탐색해보세요.'}
             </Text>
             {nearbyError && !hasSearched && (
               <TouchableOpacity style={styles.retryBtn} onPress={() => refetchNearby()}>

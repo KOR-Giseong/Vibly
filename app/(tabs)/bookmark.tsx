@@ -216,7 +216,7 @@ export default function BookmarkScreen() {
             <Text style={styles.headerSub}>
               {'총 '}
               <Text style={styles.headerCount}>{filtered.length}개</Text>
-              {'의 장소를 저장했어요'}
+              {'의 장소를 저장했어요.'}
             </Text>
           </View>
 

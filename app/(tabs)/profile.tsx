@@ -179,13 +179,13 @@ function EditProfileModal({
   };
 
   const handleSave = async () => {
-    if (!name.trim()) { Alert.alert('이름을 입력해주세요'); return; }
+    if (!name.trim()) { Alert.alert('이름을 입력해주세요.'); return; }
     setSaving(true);
     try {
       await onSave({ name: name.trim(), nickname: nickname.trim(), gender, preferredVibes: vibes });
       onClose();
     } catch (e: any) {
-      Alert.alert('저장 실패', e?.response?.data?.message ?? '다시 시도해주세요');
+      Alert.alert('저장 실패', e?.response?.data?.message ?? '다시 시도해주세요.');
     } finally {
       setSaving(false);
     }

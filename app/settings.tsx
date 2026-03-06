@@ -376,7 +376,7 @@ export default function SettingsScreen() {
             {/* 30일 재가입 제한 경고 */}
             <View style={styles.deleteWarningBox}>
               <Text style={styles.deleteWarningText}>
-                ⚠️  탈퇴 후 30일간 동일 계정(이메일/소셜)으로 재가입이 제한됩니다.
+                ⚠️ 탈퇴 후 30일간 동일 계정으로 재가입이 제한됩니다.
               </Text>
             </View>
 

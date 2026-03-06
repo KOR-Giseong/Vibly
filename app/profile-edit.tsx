@@ -59,7 +59,7 @@ export default function ProfileEditScreen() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) { Alert.alert('이름을 입력해주세요'); return; }
+    if (!name.trim()) { Alert.alert('이름을 입력해주세요.'); return; }
     setSaving(true);
     try {
       const updated = await authService.updateProfile({ name: name.trim(), nickname: nickname.trim(), preferredVibes: vibes });
@@ -67,7 +67,7 @@ export default function ProfileEditScreen() {
       qc.invalidateQueries({ queryKey: ['user-stats'] });
       Alert.alert('저장 완료', '프로필이 업데이트됐어요!', [{ text: '확인', onPress: () => router.back() }]);
     } catch (e: any) {
-      Alert.alert('저장 실패', e?.response?.data?.message ?? '다시 시도해주세요');
+      Alert.alert('저장 실패', e?.response?.data?.message ?? '다시 시도해주세요.');
     } finally {
       setSaving(false);
     }

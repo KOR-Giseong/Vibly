@@ -17,6 +17,15 @@
         "simulator": false
       }
     },
+    "testflight": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "testflight"
+      },
+      "ios": {
+        "image": "latest"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "ios": {

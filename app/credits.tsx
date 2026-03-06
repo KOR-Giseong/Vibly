@@ -25,8 +25,9 @@ const TX_LABEL: Record<string, { label: string; sign: string; color: string }> =
   ADMIN_GRANT:       { label: '관리자 지급',       sign: '+', color: '#10B981' },
 };
 
-// 개발 시 TestIds.REWARDED, 프로덕션 시 실제 Ad Unit ID로 교체
-const REWARDED_AD_UNIT_ID = __DEV__
+// 개발/TestFlight 시 테스트 광고, App Store 출시 빌드만 실제 광고
+const IS_TEST_ENV = __DEV__ || process.env.EXPO_PUBLIC_APP_ENV === 'testflight';
+const REWARDED_AD_UNIT_ID = IS_TEST_ENV
   ? TestIds.REWARDED
   : Platform.select({
       ios: 'ca-app-pub-4793069997129951/7684070668',

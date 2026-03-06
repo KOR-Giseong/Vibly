@@ -157,17 +157,22 @@ export default function CheckInScreen() {
   };
 
   // 장소와의 거리 계산
+  const hasPlaceCoords = !!(place?.lat && place?.lng);
   const distanceM =
-    userLocation && place?.lat && place?.lng
-      ? haversineDistance(userLocation.lat, userLocation.lng, place.lat, place.lng)
+    userLocation && hasPlaceCoords
+      ? haversineDistance(userLocation.lat, userLocation.lng, place!.lat!, place!.lng!)
       : null;
   const isNearby = distanceM !== null && distanceM <= GPS_LIMIT_M;
 
   // 카테고리별 체크인 방식
+  // 장소 좌표가 없으면 GPS 불가 → both/gps는 영수증으로 폴백
   const category = place?.category?.toUpperCase?.() ?? '';
-  const checkInMode =
+  const baseCheckInMode =
     RECEIPT_REQUIRED.includes(category) ? 'receipt' :
     GPS_ONLY.includes(category) ? 'gps' : 'both';
+  const checkInMode = (place && !hasPlaceCoords && baseCheckInMode !== 'receipt')
+    ? 'receipt'
+    : baseCheckInMode;
 
   // canSubmit 카테고리별 분기
   const canSubmit = !!selectedMood && !isSubmitting && (
@@ -176,6 +181,17 @@ export default function CheckInScreen() {
     (!!receiptUri || isNearby)  // both
   );
   const placeEmoji = CATEGORY_EMOJI[place?.category?.toUpperCase?.() ?? ''] ?? '📍';
+
+  // GPS 상태 메시지
+  const gpsStatusText = locationLoading
+    ? 'GPS 위치 확인 중...'
+    : isNearby
+    ? `📍 ${Math.round(distanceM!)}m 이내 — GPS 체크인 가능`
+    : distanceM !== null
+    ? `📍 ${Math.round(distanceM)}m 떨어짐 — ${GPS_LIMIT_M}m 이내 접근 필요`
+    : !hasPlaceCoords && userLocation
+    ? '이 장소의 위치 정보가 등록되지 않아 GPS를 사용할 수 없어요.'
+    : '위치 권한 없음 — 설정에서 위치 접근을 허용해주세요.';
 
   return (
     <ScreenTransition>
@@ -327,7 +343,9 @@ export default function CheckInScreen() {
               <View style={styles.receiptHint}>
                 <Receipt size={14} color={Colors.primary[500]} />
                 <Text style={styles.receiptHintText}>
-                  {checkInMode === 'receipt'
+                  {checkInMode === 'receipt' && baseCheckInMode !== 'receipt'
+                    ? '이 장소는 GPS 정보가 없어 영수증으로만 체크인할 수 있어요.'
+                    : checkInMode === 'receipt'
                     ? '이 장소는 영수증으로만 체크인할 수 있어요.'
                     : checkInMode === 'gps'
                     ? '이 장소는 GPS로만 체크인할 수 있어요. 100m 이내 접근 필요.'
@@ -355,13 +373,7 @@ export default function CheckInScreen() {
                     : userLocation ? styles.gpsStatusTextWarn
                     : styles.gpsStatusTextFail,
                   ]}>
-                    {locationLoading
-                      ? 'GPS 위치 확인 중...'
-                      : isNearby
-                      ? `📍 ${Math.round(distanceM!)}m 이내 — GPS 체크인 가능`
-                      : distanceM !== null
-                      ? `📍 ${Math.round(distanceM)}m 떨어짐 — ${GPS_LIMIT_M}m 이내 접근 필요`
-                      : '위치 권한 없음 — 위치 접근을 허용해주세요.'}
+                    {gpsStatusText}
                   </Text>
                 </View>
               )}

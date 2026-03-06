@@ -199,16 +199,9 @@ export default function SupportChatScreen() {
         >
           {/* 안내 배너 */}
           <View style={styles.infoBanner}>
-            <Text style={styles.infoText}>
-              🔒 채팅 내용은 문의 해결 후 90일간 보관됨
-              　·　·　·　·　·　·　·　·
-            </Text>
-            <Text style={styles.infoText}>
-              📎 이미지는 10MB 이하만 첨부 가능해요
-            </Text>
-            <Text style={styles.infoText}>
-              ⏰ 평균 응답 시간: 1~2 영업일 　·　 운영 시간: 평일 09:00~18:00
-            </Text>
+            <Text style={styles.infoText}>🔒 채팅 내용은 문의 해결 후 90일간 보관돼요</Text>
+            <Text style={styles.infoText}>📎 이미지는 10MB 이하만 첨부 가능해요</Text>
+            <Text style={styles.infoText}>⏰ 평균 응답 시간: 1~2 영업일  |  운영 시간: 평일 09:00~18:00</Text>
           </View>
           {messages.length === 0 ? (
             <View style={styles.emptyArea}>

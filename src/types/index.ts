@@ -208,15 +208,18 @@ export interface VibeReportResponse {
 // ─── Support ─────────────────────────────────────────────────────────────────
 
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+export type TicketType = 'FAQ' | 'CHAT';
 
 export interface SupportTicket {
   id: string;
+  type: TicketType;
   title: string;
   body: string;
   status: TicketStatus;
   adminReply?: string;
   repliedAt?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────

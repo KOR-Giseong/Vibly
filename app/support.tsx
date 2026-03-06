@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator,
@@ -6,9 +6,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, HelpCircle, MessageCircle, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, HelpCircle, MessageCircle, ChevronRight, Inbox, Clock, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { supportService } from '@services/support.service';
+import type { SupportTicket, TicketStatus } from '@/types';
 
 const FAQ_CATEGORIES = [
   {
@@ -29,26 +30,145 @@ const FAQ_CATEGORIES = [
   },
 ];
 
-type Mode = 'landing' | 'faq-category' | 'faq-questions';
+type Mode = 'landing' | 'faq-category' | 'faq-questions' | 'my-tickets' | 'ticket-detail';
+
+const STATUS_LABELS: Record<TicketStatus, string> = {
+  OPEN: '검토 중',
+  IN_PROGRESS: '처리 중',
+  RESOLVED: '답변 완료',
+  CLOSED: '종료',
+};
+
+const STATUS_COLORS: Record<TicketStatus, string> = {
+  OPEN: '#F59E0B',
+  IN_PROGRESS: '#3B82F6',
+  RESOLVED: '#10B981',
+  CLOSED: Colors.gray[400],
+};
 
 export default function SupportScreen() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('landing');
   const [selectedCategory, setSelectedCategory] = useState<null | typeof FAQ_CATEGORIES[0]>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+
+  const loadTickets = useCallback(async () => {
+    setLoadingTickets(true);
+    try {
+      const all = await supportService.getMyTickets();
+      setTickets(all.filter((t: SupportTicket) => t.type === 'FAQ'));
+    } catch {
+      // 에러 무시
+    } finally {
+      setLoadingTickets(false);
+    }
+  }, []);
+
+  useEffect(() => { loadTickets(); }, [loadTickets]);
 
   const handleFaqQuestion = async (question: string) => {
     setSubmitting(true);
     try {
       await supportService.submitTicket(question, `FAQ 질문: ${question}`, 'FAQ');
-      Alert.alert('문의 접수 완료', '빠른 시일 내에 답변 드릴게요! 🙏\n답변은 알림으로 알려드려요.', [
-        { text: '확인', onPress: () => router.back() },
-      ]);
+      Alert.alert(
+        '문의 접수 완료 ✅',
+        '담당자 검토 후 알림으로 답변 드릴게요.\n\n문의 내용은 90일간 안전하게 보관됩니다.',
+        [{ text: '확인', onPress: () => { setMode('landing'); loadTickets(); } }],
+      );
     } catch (e: any) {
       Alert.alert('오류', e?.response?.data?.message ?? '접수에 실패했어요. 다시 시도해주세요.');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const renderMyTickets = () => (
+    <>
+      <Text style={styles.sectionHeader}>내 문의 목록</Text>
+      {loadingTickets ? (
+        <ActivityIndicator size="small" color={Colors.primary[500]} style={{ marginTop: Spacing.xl }} />
+      ) : tickets.length === 0 ? (
+        <View style={styles.emptyTickets}>
+          <Inbox size={40} color={Colors.gray[300]} />
+          <Text style={styles.emptyTicketsText}>아직 접수된 문의가 없어요</Text>
+        </View>
+      ) : (
+        tickets.map((ticket) => (
+          <TouchableOpacity
+            key={ticket.id}
+            style={styles.ticketCard}
+            onPress={() => { setSelectedTicket(ticket); setMode('ticket-detail'); }}
+            activeOpacity={0.8}
+          >
+            <View style={styles.ticketCardTop}>
+              <Text style={styles.ticketTitle} numberOfLines={1}>{ticket.title}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[ticket.status] + '22' }]}>
+                <Text style={[styles.statusText, { color: STATUS_COLORS[ticket.status] }]}>
+                  {STATUS_LABELS[ticket.status]}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.ticketDate}>
+              {new Date(ticket.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </Text>
+            {ticket.adminReply && (
+              <Text style={styles.ticketReplyPreview} numberOfLines={1}>💬 {ticket.adminReply}</Text>
+            )}
+          </TouchableOpacity>
+        ))
+      )}
+      <Text style={styles.retentionNote}>💾 문의 내용은 접수일로부터 90일간 보관됩니다</Text>
+    </>
+  );
+
+  const renderTicketDetail = () => {
+    if (!selectedTicket) return null;
+    const resolved = selectedTicket.status === 'RESOLVED' || selectedTicket.status === 'CLOSED';
+    return (
+      <View style={styles.detailWrap}>
+        {/* 상태 뱃지 */}
+        <View style={[styles.detailStatusRow, { backgroundColor: STATUS_COLORS[selectedTicket.status] + '18' }]}>
+          {resolved
+            ? <CheckCircle2 size={16} color={STATUS_COLORS[selectedTicket.status]} />
+            : <Clock size={16} color={STATUS_COLORS[selectedTicket.status]} />}
+          <Text style={[styles.detailStatusText, { color: STATUS_COLORS[selectedTicket.status] }]}>
+            {STATUS_LABELS[selectedTicket.status]}
+          </Text>
+        </View>
+
+        {/* 내 질문 */}
+        <View style={styles.detailCard}>
+          <Text style={styles.detailLabel}>📝 내 질문</Text>
+          <Text style={styles.detailQuestion}>{selectedTicket.title}</Text>
+          <Text style={styles.detailDate}>
+            {new Date(selectedTicket.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </Text>
+        </View>
+
+        {/* 관리자 답변 */}
+        {selectedTicket.adminReply ? (
+          <View style={[styles.detailCard, styles.replyCard]}>
+            <Text style={styles.detailLabel}>💬 Vibly 팀 답변</Text>
+            <Text style={styles.replyText}>{selectedTicket.adminReply}</Text>
+            {selectedTicket.repliedAt && (
+              <Text style={styles.detailDate}>
+                {new Date(selectedTicket.repliedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </Text>
+            )}
+          </View>
+        ) : (
+          <View style={[styles.detailCard, styles.pendingCard]}>
+            <AlertCircle size={18} color={Colors.gray[400]} style={{ marginBottom: 6 }} />
+            <Text style={styles.pendingText}>검토 중이에요. 답변이 오면 알림으로 알려드릴게요! 🙏</Text>
+          </View>
+        )}
+
+        <Text style={styles.retentionNote}>💾 문의 내용은 접수일로부터 90일간 안전하게 보관됩니다</Text>
+      </View>
+    );
   };
 
   const renderLanding = () => (
@@ -92,6 +212,44 @@ export default function SupportScreen() {
           <ChevronRight size={20} color={Colors.gray[400]} />
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* 내 문의 */}
+      {(loadingTickets || tickets.length > 0) && (
+        <>
+          <View style={styles.myTicketsHeader}>
+            <Text style={styles.myTicketsTitle}>내 문의 {tickets.length > 0 ? `(${tickets.length}건)` : ''}</Text>
+            {tickets.length > 0 && (
+              <TouchableOpacity onPress={() => setMode('my-tickets')}>
+                <Text style={styles.myTicketsMore}>전체 보기</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {loadingTickets ? (
+            <ActivityIndicator size="small" color={Colors.primary[500]} />
+          ) : (
+            tickets.slice(0, 2).map((ticket) => (
+              <TouchableOpacity
+                key={ticket.id}
+                style={styles.ticketCard}
+                onPress={() => { setSelectedTicket(ticket); setMode('ticket-detail'); }}
+                activeOpacity={0.8}
+              >
+                <View style={styles.ticketCardTop}>
+                  <Text style={styles.ticketTitle} numberOfLines={1}>{ticket.title}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[ticket.status] + '22' }]}>
+                    <Text style={[styles.statusText, { color: STATUS_COLORS[ticket.status] }]}>
+                      {STATUS_LABELS[ticket.status]}
+                    </Text>
+                  </View>
+                </View>
+                {ticket.adminReply
+                  ? <Text style={styles.ticketReplyPreview} numberOfLines={1}>💬 {ticket.adminReply}</Text>
+                  : <Text style={styles.ticketPending}>검토 중...</Text>}
+              </TouchableOpacity>
+            ))
+          )}
+        </>
+      )}
     </>
   );
 
@@ -135,10 +293,20 @@ export default function SupportScreen() {
   );
 
   const handleBack = () => {
+    if (mode === 'ticket-detail') { setMode('my-tickets'); return; }
+    if (mode === 'my-tickets') { setMode('landing'); return; }
     if (mode === 'faq-questions') { setMode('faq-category'); return; }
     if (mode === 'faq-category') { setMode('landing'); return; }
     router.back();
   };
+
+  const headerTitle = {
+    landing: '고객센터',
+    'faq-category': '자주 묻는 질문',
+    'faq-questions': selectedCategory?.category ?? '질문 선택',
+    'my-tickets': '내 문의',
+    'ticket-detail': '문의 상세',
+  }[mode];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -148,7 +316,7 @@ export default function SupportScreen() {
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ArrowLeft size={22} color={Colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>고객센터</Text>
+          <Text style={styles.headerTitle}>{headerTitle}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -156,6 +324,8 @@ export default function SupportScreen() {
           {mode === 'landing' && renderLanding()}
           {mode === 'faq-category' && renderCategories()}
           {mode === 'faq-questions' && renderQuestions()}
+          {mode === 'my-tickets' && renderMyTickets()}
+          {mode === 'ticket-detail' && renderTicketDetail()}
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>
@@ -219,4 +389,55 @@ const styles = StyleSheet.create({
     padding: Spacing.xl, marginBottom: Spacing.md, ...Shadow.sm,
   },
   questionText: { flex: 1, fontSize: FontSize.md, color: Colors.gray[800], lineHeight: 22 },
+
+  // 내 문의 랜딩
+  myTicketsHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: Spacing.xl, marginBottom: Spacing.md,
+  },
+  myTicketsTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.gray[700] },
+  myTicketsMore: { fontSize: FontSize.sm, color: Colors.primary[600], fontWeight: FontWeight.medium },
+
+  // 티켓 카드
+  ticketCard: {
+    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
+    padding: Spacing.xl, marginBottom: Spacing.md, ...Shadow.sm,
+  },
+  ticketCardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 },
+  ticketTitle: { flex: 1, fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.gray[900] },
+  statusBadge: { borderRadius: BorderRadius.full, paddingHorizontal: 8, paddingVertical: 2 },
+  statusText: { fontSize: 11, fontWeight: FontWeight.semibold },
+  ticketDate: { fontSize: 11, color: Colors.gray[400], marginTop: 2 },
+  ticketReplyPreview: { fontSize: FontSize.xs, color: Colors.primary[600], marginTop: 4 },
+  ticketPending: { fontSize: FontSize.xs, color: Colors.gray[400], marginTop: 4 },
+
+  // 빈 티켓
+  emptyTickets: { alignItems: 'center', paddingVertical: Spacing['2xl'], gap: Spacing.md },
+  emptyTicketsText: { fontSize: FontSize.sm, color: Colors.gray[400] },
+
+  // 보관 안내
+  retentionNote: {
+    fontSize: 11, color: Colors.gray[400], textAlign: 'center',
+    marginTop: Spacing.xl, lineHeight: 16,
+  },
+
+  // 상세 보기
+  detailWrap: { gap: Spacing.md },
+  detailStatusRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: BorderRadius.full, alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.lg, paddingVertical: 6, marginBottom: Spacing.sm,
+  },
+  detailStatusText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
+  detailCard: {
+    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
+    padding: Spacing.xl, ...Shadow.sm,
+  },
+  detailLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.gray[500], marginBottom: 8 },
+  detailQuestion: { fontSize: FontSize.md, color: Colors.gray[900], lineHeight: 22 },
+  detailDate: { fontSize: 11, color: Colors.gray[400], marginTop: 6 },
+  replyCard: { backgroundColor: Colors.primary[50] },
+  replyText: { fontSize: FontSize.md, color: Colors.gray[800], lineHeight: 22 },
+  pendingCard: { alignItems: 'center', paddingVertical: Spacing.xl, backgroundColor: Colors.gray[50] },
+  pendingText: { fontSize: FontSize.sm, color: Colors.gray[500], textAlign: 'center', lineHeight: 20 },
 });

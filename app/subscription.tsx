@@ -33,12 +33,17 @@ export default function SubscriptionScreen() {
 
   const [trialEnabled, setTrialEnabled] = useState(false);
   const [trialDays, setTrialDays] = useState(7);
+  const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [discountPct, setDiscountPct] = useState(0);
 
   useEffect(() => {
     subscriptionService.getAppConfig().then((cfg) => {
       setTrialEnabled(cfg['FREE_TRIAL_ENABLED'] === 'true');
       const days = parseInt(cfg['FREE_TRIAL_DAYS'] ?? '7', 10);
       setTrialDays(isNaN(days) ? 7 : days);
+      setDiscountEnabled(cfg['DISCOUNT_ENABLED'] === 'true');
+      const pct = parseInt(cfg['DISCOUNT_PCT'] ?? '0', 10);
+      setDiscountPct(isNaN(pct) ? 0 : pct);
     }).catch(() => {});
   }, []);
 
@@ -106,6 +111,14 @@ export default function SubscriptionScreen() {
 
   const currentPlan = SUBSCRIPTION_PLANS[plan];
 
+  // 원래 가격 (숫자)
+  const PRICES: Record<Plan, number> = { monthly: 9900, yearly: 99000 };
+  const originalPrice = PRICES[plan];
+  const discountedPrice = discountEnabled && discountPct > 0
+    ? Math.floor(originalPrice * (1 - discountPct / 100))
+    : originalPrice;
+  const formatPrice = (n: number) => n.toLocaleString('ko-KR');
+
   return (
     <ScreenTransition>
     <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
@@ -147,12 +160,24 @@ export default function SubscriptionScreen() {
         {/* Price */}
         <View style={styles.priceCard}>
           <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+          {discountEnabled && discountPct > 0 && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>{discountPct}% 할인 이벤트 중 🎉</Text>
+            </View>
+          )}
           <View style={styles.priceRow}>
             <Text style={styles.priceSymbol}>₩</Text>
-            <Text style={styles.priceNumber}>{currentPlan.price.replace('₩', '').replace(',', '')}</Text>
+            <Text style={styles.priceNumber}>{formatPrice(discountedPrice)}</Text>
             <Text style={styles.pricePeriod}>/{currentPlan.period}</Text>
           </View>
-          <Text style={styles.priceTotal}>{currentPlan.total}</Text>
+          {discountEnabled && discountPct > 0 ? (
+            <Text style={styles.priceTotal}>
+              <Text style={{ textDecorationLine: 'line-through', opacity: 0.6 }}>₩{formatPrice(originalPrice)}</Text>
+              {'  →  '}₩{formatPrice(discountedPrice)}/{currentPlan.period}
+            </Text>
+          ) : (
+            <Text style={styles.priceTotal}>{currentPlan.total}</Text>
+          )}
         </View>
 
         {/* Features */}

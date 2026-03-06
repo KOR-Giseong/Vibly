@@ -26,19 +26,23 @@ const TX_LABEL: Record<string, { label: string; sign: string; color: string }> =
   ADMIN_GRANT:       { label: '관리자 지급',       sign: '+', color: '#10B981' },
 };
 
-// 개발 or TestFlight → 테스트 광고 / App Store 빌드만 실제 광고
-const IS_TESTFLIGHT = Platform.OS === 'ios'
-  && Application.releaseType === Application.ApplicationReleaseType.TESTFLIGHT;
-const IS_TEST_ENV = __DEV__ || IS_TESTFLIGHT;
-const REWARDED_AD_UNIT_ID = IS_TEST_ENV
-  ? TestIds.REWARDED
-  : Platform.select({
-      ios: 'ca-app-pub-4793069997129951/7684070668',
-      android: 'ca-app-pub-4793069997129951/3387255513',
-    })!;
+const PROD_AD_ID = Platform.select({
+  ios: 'ca-app-pub-4793069997129951/7684070668',
+  android: 'ca-app-pub-4793069997129951/3387255513',
+})!;
 
-function createRewardedAd() {
-  return RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
+// 비동기로 광고 ID 결정 (개발/TestFlight → 테스트 광고, AppStore → 실제 광고)
+async function resolveAdUnitId(): Promise<string> {
+  if (__DEV__) return TestIds.REWARDED;
+  if (Platform.OS === 'ios') {
+    const type = await Application.getIosApplicationReleaseTypeAsync();
+    if (type === Application.ApplicationReleaseType.TESTFLIGHT) return TestIds.REWARDED;
+  }
+  return PROD_AD_ID;
+}
+
+function createRewardedAd(adUnitId: string) {
+  return RewardedAd.createForAdRequest(adUnitId, {
     requestNonPersonalizedAdsOnly: false,
   });
 }
@@ -51,10 +55,20 @@ export default function CreditsScreen() {
   const [adWatchedToday, setAdWatchedToday] = useState(0);
   const [adLoaded, setAdLoaded] = useState(false);
   const [adLoading, setAdLoading] = useState(false);
-  const [rewardedAd, setRewardedAd] = useState(() => createRewardedAd());
+  const [rewardedAd, setRewardedAd] = useState<ReturnType<typeof createRewardedAd> | null>(null);
+
+  // 마운트 시 비동기로 광고 ID 확인 후 광고 객체 생성
+  useEffect(() => {
+    resolveAdUnitId().then((adUnitId) => {
+      const ad = createRewardedAd(adUnitId);
+      setRewardedAd(ad);
+    });
+  }, []);
 
   // 광고 이벤트 등록
   useEffect(() => {
+    if (!rewardedAd) return; // 아직 초기화 전
+
     const unsubLoaded = rewardedAd.addAdEventListener(RewardedAdEventType.LOADED, () => {
       setAdLoaded(true);
       setAdLoading(false);
@@ -69,16 +83,19 @@ export default function CreditsScreen() {
     const unsubClosed = rewardedAd.addAdEventListener(AdEventType.CLOSED, () => {
       // 광고 닫힘 → 새 광고 미리 로드
       setAdLoaded(false);
-      const next = createRewardedAd();
-      setRewardedAd(next);
-      next.load();
+      resolveAdUnitId().then((adUnitId) => {
+        const next = createRewardedAd(adUnitId);
+        setRewardedAd(next);
+      });
     });
     const unsubError = rewardedAd.addAdEventListener(AdEventType.ERROR, () => {
       setAdLoaded(false);
       setAdLoading(false);
-      // 실패한 광고 객체는 재사용 불가 → 새 객체로 교체 후 자동 재로드
-      const next = createRewardedAd();
-      setRewardedAd(next);
+      // 실패한 광고 객체는 재사용 불가 → 새 객체로 교체
+      resolveAdUnitId().then((adUnitId) => {
+        const next = createRewardedAd(adUnitId);
+        setRewardedAd(next);
+      });
     });
 
     rewardedAd.load();
@@ -126,6 +143,10 @@ export default function CreditsScreen() {
   const handleWatchAd = useCallback(() => {
     if (adWatchedToday >= 5) {
       Alert.alert('오늘 한도 초과', '광고 시청은 하루 5번까지만 가능해요. 내일 다시 시도해주세요.');
+      return;
+    }
+    if (!rewardedAd) {
+      Alert.alert('광고 준비 중', '광고를 불러오고 있어요. 잠시 후 다시 탭해주세요.');
       return;
     }
     if (!adLoaded) {
@@ -186,7 +207,7 @@ export default function CreditsScreen() {
           style={styles.rechargeCard}
           onPress={handleWatchAd}
           activeOpacity={0.75}
-          disabled={watchAdMutation.isPending || adLoading || adWatchedToday >= 5}
+          disabled={!rewardedAd || watchAdMutation.isPending || adLoading || adWatchedToday >= 5}
         >
           <View style={[styles.rechargeIcon, { backgroundColor: '#FEF3C7' }]}>
             <Tv size={22} color="#D97706" />
@@ -195,7 +216,7 @@ export default function CreditsScreen() {
             <Text style={styles.rechargeTitle}>광고 시청</Text>
             <Text style={styles.rechargeDesc}>+15 크레딧 · 오늘 {adWatchedToday}/5회</Text>
           </View>
-          {watchAdMutation.isPending || adLoading ? (
+          {!rewardedAd || watchAdMutation.isPending || adLoading ? (
             <ActivityIndicator size="small" color={Colors.primary[500]} />
           ) : adWatchedToday >= 5 ? (
             <View style={styles.adDoneTag}>

@@ -37,8 +37,28 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = await storage.getItem('refreshToken');
         if (!refreshToken) throw new Error('no_refresh_token');
-        const { data } = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
+
+        // Render 슬립 상태일 수 있으므로 503이면 최대 2회 재시도 (각 5초 대기)
+        let data: { accessToken: string; refreshToken?: string } | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const res = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken }, { timeout: 70000 });
+            data = res.data;
+            break;
+          } catch (retryErr: any) {
+            const status = retryErr?.response?.status;
+            if ((status === 503 || !status) && attempt < 2) {
+              // 서버 슬립 중 → 5초 대기 후 재시도
+              await new Promise((res) => setTimeout(res, 5000));
+              continue;
+            }
+            throw retryErr;
+          }
+        }
+        if (!data) throw new Error('refresh_failed');
+
         await storage.setItem('accessToken', data.accessToken);
+        if (data.refreshToken) await storage.setItem('refreshToken', data.refreshToken);
         original.headers.Authorization = `Bearer ${data.accessToken}`;
         return apiClient(original);
       } catch {

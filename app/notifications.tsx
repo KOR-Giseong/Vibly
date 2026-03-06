@@ -26,11 +26,32 @@ import {
   Headphones,
   BellOff,
   CheckCheck,
+  ArrowRight,
 } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
 import { notificationApi, NOTIF_DISPLAY, NOTIF_ICON, type NotifIconKey } from '@services/notification.service';
 import type { AppNotification, NotificationType } from '@/types';
+
+// ─── 알림 타입별 이동 경로 ────────────────────────────────────────────────────
+
+function getNavigationTarget(item: AppNotification): string | null {
+  const payload = (item.payload ?? {}) as Record<string, string>;
+  switch (item.type) {
+    case 'COMMENT':
+    case 'LIKE':
+      return payload.postId ? `/community/${payload.postId}` : null;
+    case 'COUPLE_INVITE':
+    case 'COUPLE_ACCEPT':
+      return '/couple-lounge';
+    case 'NEARBY':
+      return payload.placeId ? `/place/${payload.placeId}` : '/map';
+    case 'SUPPORT':
+      return '/support-chat';
+    default:
+      return null;
+  }
+}
 
 // ─── 아이콘 맵 ────────────────────────────────────────────────────────────────
 
@@ -125,6 +146,7 @@ export default function NotificationsScreen() {
   }, [loadNotifications]);
 
   const handleItemPress = useCallback(async (item: AppNotification) => {
+    // 텍스트 펼치기/접기 토글
     setExpandedIds((prev) => {
       const next = new Set(prev);
       next.has(item.id) ? next.delete(item.id) : next.add(item.id);
@@ -140,6 +162,33 @@ export default function NotificationsScreen() {
     setHasUnread(sections.some((s) => s.data.some((n) => n.id !== item.id && !n.isRead)));
     await notificationApi.markRead(item.id).catch(() => {});
   }, [sections]);
+
+  // 꾹 눌러서 해당 화면으로 이동
+  const handleItemLongPress = useCallback(async (item: AppNotification) => {
+    const target = getNavigationTarget(item);
+    if (!target) return;
+    if (!item.isRead) {
+      setSections((prev) =>
+        prev.map((sec) => ({
+          ...sec,
+          data: sec.data.map((n) => (n.id === item.id ? { ...n, isRead: true } : n)),
+        })),
+      );
+      setHasUnread(sections.some((s) => s.data.some((n) => n.id !== item.id && !n.isRead)));
+      await notificationApi.markRead(item.id).catch(() => {});
+    }
+    router.push(target as Parameters<typeof router.push>[0]);
+  }, [sections, router]);
+
+  // 이동하기 버튼 직접 탭
+  const handleNavigate = useCallback(async (item: AppNotification) => {
+    const target = getNavigationTarget(item);
+    if (!target) return;
+    if (!item.isRead) {
+      await notificationApi.markRead(item.id).catch(() => {});
+    }
+    router.push(target as Parameters<typeof router.push>[0]);
+  }, [router]);
 
   const handleMarkAllRead = useCallback(async () => {
     setSections((prev) =>
@@ -200,11 +249,14 @@ export default function NotificationsScreen() {
               const Icon = getIconForType(item.type);
               const gradient = getGradientForType(item.type);
               const expanded = expandedIds.has(item.id);
+              const navTarget = getNavigationTarget(item);
               return (
                 <TouchableOpacity
                   style={[styles.item, !item.isRead && styles.itemUnread]}
                   activeOpacity={0.8}
                   onPress={() => { void handleItemPress(item); }}
+                  onLongPress={() => { void handleItemLongPress(item); }}
+                  delayLongPress={400}
                 >
                   <View style={styles.iconWrap}>
                     <LinearGradient
@@ -218,7 +270,24 @@ export default function NotificationsScreen() {
                   <View style={styles.textWrap}>
                     <Text style={styles.itemTitle}>{item.title}</Text>
                     <Text style={styles.itemBody} numberOfLines={expanded ? undefined : 2}>{item.body}</Text>
-                    <Text style={styles.itemTime}>{formatTime(item.createdAt)}</Text>
+                    <View style={styles.itemFooter}>
+                      <Text style={styles.itemTime}>{formatTime(item.createdAt)}</Text>
+                      {/* 이동 가능한 알림: 힌트 텍스트 + 펼쳤을 때 이동하기 버튼 */}
+                      {navTarget && (
+                        expanded ? (
+                          <TouchableOpacity
+                            style={styles.navigateBtn}
+                            onPress={() => { void handleNavigate(item); }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Text style={styles.navigateBtnText}>이동하기</Text>
+                            <ArrowRight size={12} color={Colors.primary[500]} />
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.longPressHint}>꾹 눌러서 이동</Text>
+                        )
+                      )}
+                    </View>
                   </View>
                   {!item.isRead && <View style={styles.unreadDot} />}
                 </TouchableOpacity>
@@ -288,6 +357,27 @@ const styles = StyleSheet.create({
   itemTitle: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, color: Colors.gray[900], marginBottom: 2 },
   itemBody: { fontSize: FontSize.sm, color: Colors.gray[500], lineHeight: 20, marginBottom: 4 },
   itemTime: { fontSize: FontSize.xs, color: Colors.gray[400] },
+  itemFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  navigateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  navigateBtnText: {
+    fontSize: FontSize.xs,
+    color: Colors.primary[500],
+    fontWeight: FontWeight.semibold,
+  },
+  longPressHint: {
+    fontSize: 10,
+    color: Colors.gray[300],
+    fontStyle: 'italic',
+  },
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary[500], marginTop: 4 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
   emptyText: { fontSize: FontSize.base, color: Colors.gray[400] },

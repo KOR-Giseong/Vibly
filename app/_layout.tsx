@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -161,8 +161,7 @@ function RootLayoutNav() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isAuthenticated]);
 
-  if (showSplash) return <AnimatedSplash onFinish={() => setShowSplash(false)} />;
-  if (!isLoaded) return <View style={{ flex: 1, backgroundColor: '#F5F3FF' }} />;
+  if (showSplash || !isLoaded) return <AnimatedSplash onFinish={() => setShowSplash(false)} />;
 
   return (
     <>

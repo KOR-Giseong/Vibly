@@ -361,7 +361,7 @@ export default function CheckInScreen() {
                       ? `📍 ${Math.round(distanceM!)}m 이내 — GPS 체크인 가능`
                       : distanceM !== null
                       ? `📍 ${Math.round(distanceM)}m 떨어짐 — ${GPS_LIMIT_M}m 이내 접근 필요`
-                      ? '위치 권한 없음 — 위치 접근을 허용해주세요.'}
+                      : '위치 권한 없음 — 위치 접근을 허용해주세요.'}
                   </Text>
                 </View>
               )}

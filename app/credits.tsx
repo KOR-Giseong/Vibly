@@ -72,7 +72,9 @@ export default function CreditsScreen() {
     const unsubError = rewardedAd.addAdEventListener(AdEventType.ERROR, () => {
       setAdLoaded(false);
       setAdLoading(false);
-      Alert.alert('광고 오류', '광고를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      // 실패한 광고 객체는 재사용 불가 → 새 객체로 교체 후 자동 재로드
+      const next = createRewardedAd();
+      setRewardedAd(next);
     });
 
     rewardedAd.load();
@@ -123,13 +125,15 @@ export default function CreditsScreen() {
       return;
     }
     if (!adLoaded) {
-      setAdLoading(true);
-      rewardedAd.load();
+      if (!adLoading) {
+        setAdLoading(true);
+        rewardedAd.load();
+      }
       Alert.alert('광고 준비 중', '광고를 불러오고 있어요. 잠시 후 다시 탭해주세요.');
       return;
     }
     rewardedAd.show();
-  }, [adWatchedToday, adLoaded, rewardedAd]);
+  }, [adWatchedToday, adLoaded, adLoading, rewardedAd]);
 
   const handleSubscribe = () => {
     Alert.alert('구독', '구독 기능은 준비 중이에요. 곧 출시될 예정이에요! 🚀');

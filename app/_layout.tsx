@@ -46,9 +46,6 @@ function RootLayoutNav() {
   // 네이티브 스플래시 즉시 숨기고 커스텀 AnimatedSplash 표시
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
-    // 애니메이션 완료 후 최대 2.5초 뒤 스플래시 강제 종료 (API 응답 대기 없음)
-    const timer = setTimeout(() => setShowSplash(false), 2500);
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

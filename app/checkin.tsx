@@ -52,25 +52,41 @@ export default function CheckInScreen() {
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'failed' | null>(null);
   const [showGuide, setShowGuide] = useState(false);
 
-  // ── 위치 자동 취득 ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      setLocationLoading(true);
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-        }
-      } catch {
-        // 위치 취득 실패 시 영수증으로만 체크인 가능
-      } finally {
-        setLocationLoading(false);
+  // ── 위치 취득 함수 (재시도 가능) ────────────────────────────────────────────
+  const fetchLocation = async () => {
+    setLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationPermission('denied');
+        return;
       }
-    })();
-  }, []);
+      setLocationPermission('granted');
+      try {
+        // 현재 위치 시도
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      } catch {
+        // 실패 시 마지막으로 알려진 위치 폴백
+        const last = await Location.getLastKnownPositionAsync();
+        if (last) {
+          setUserLocation({ lat: last.coords.latitude, lng: last.coords.longitude });
+        } else {
+          setLocationPermission('failed');
+        }
+      }
+    } catch {
+      setLocationPermission('failed');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  // ── 위치 자동 취득 ──────────────────────────────────────────────────────────
+  useEffect(() => { fetchLocation(); }, []);
 
   // ── 장소 데이터 (상세 페이지 캐시 재사용) ──────────────────────────────────
   const { data: place, isLoading: isPlaceLoading } = useQuery({
@@ -191,7 +207,11 @@ export default function CheckInScreen() {
     ? `📍 ${Math.round(distanceM)}m 떨어짐 — ${GPS_LIMIT_M}m 이내 접근 필요`
     : !hasPlaceCoords && userLocation
     ? '이 장소의 위치 정보가 등록되지 않아 GPS를 사용할 수 없어요.'
-    : '위치 권한 없음 — 설정에서 위치 접근을 허용해주세요.';
+    : locationPermission === 'denied'
+    ? '위치 권한이 거부됐어요 — 설정에서 위치 접근을 허용해주세요.'
+    : locationPermission === 'failed'
+    ? '위치를 가져오지 못했어요. 아래 버튼으로 다시 시도해주세요.'
+    : '위치 확인 중...';
 
   return (
     <ScreenTransition>
@@ -356,26 +376,38 @@ export default function CheckInScreen() {
 
               {/* GPS 상태 (receipt 전용이 아니면 표시) */}
               {checkInMode !== 'receipt' && (
-                <View style={[
-                  styles.gpsStatus,
-                  isNearby ? styles.gpsStatusOk : userLocation ? styles.gpsStatusWarn : styles.gpsStatusFail,
-                ]}>
-                  {locationLoading ? (
-                    <ActivityIndicator size="small" color={Colors.gray[500]} />
-                  ) : isNearby ? (
-                    <CheckCircle size={14} color="#16a34a" />
-                  ) : (
-                    <MapPin size={14} color={userLocation ? '#d97706' : Colors.gray[400]} />
-                  )}
-                  <Text style={[
-                    styles.gpsStatusText,
-                    isNearby ? styles.gpsStatusTextOk
-                    : userLocation ? styles.gpsStatusTextWarn
-                    : styles.gpsStatusTextFail,
+                <>
+                  <View style={[
+                    styles.gpsStatus,
+                    isNearby ? styles.gpsStatusOk : userLocation ? styles.gpsStatusWarn : styles.gpsStatusFail,
                   ]}>
-                    {gpsStatusText}
-                  </Text>
-                </View>
+                    {locationLoading ? (
+                      <ActivityIndicator size="small" color={Colors.gray[500]} />
+                    ) : isNearby ? (
+                      <CheckCircle size={14} color="#16a34a" />
+                    ) : (
+                      <MapPin size={14} color={userLocation ? '#d97706' : Colors.gray[400]} />
+                    )}
+                    <Text style={[
+                      styles.gpsStatusText,
+                      isNearby ? styles.gpsStatusTextOk
+                      : userLocation ? styles.gpsStatusTextWarn
+                      : styles.gpsStatusTextFail,
+                    ]}>
+                      {gpsStatusText}
+                    </Text>
+                  </View>
+                  {/* 위치 취득 실패 시 재시도 버튼 */}
+                  {!locationLoading && !userLocation && locationPermission !== 'denied' && (
+                    <TouchableOpacity
+                      style={styles.retryLocationBtn}
+                      onPress={fetchLocation}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.retryLocationText}>📡 위치 다시 가져오기</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
 
               {/* 영수증 업로드 (gps 전용이 아니면 표시) */}
@@ -687,6 +719,15 @@ const styles = StyleSheet.create({
   gpsStatusTextOk: { color: '#16a34a' },
   gpsStatusTextWarn: { color: '#d97706' },
   gpsStatusTextFail: { color: Colors.gray[400] },
+  retryLocationBtn: {
+    marginTop: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.primary[50],
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+  },
+  retryLocationText: { fontSize: FontSize.xs, color: Colors.primary[600], fontWeight: FontWeight.semibold },
 
   // 영수증 안내 문구
   receiptHint: {

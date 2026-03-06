@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Platform } from 'react-native';
 import { RewardedAd, RewardedAdEventType, TestIds, AdEventType } from 'react-native-google-mobile-ads';
+import * as Application from 'expo-application';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,8 +26,10 @@ const TX_LABEL: Record<string, { label: string; sign: string; color: string }> =
   ADMIN_GRANT:       { label: '관리자 지급',       sign: '+', color: '#10B981' },
 };
 
-// 개발/TestFlight 시 테스트 광고, App Store 출시 빌드만 실제 광고
-const IS_TEST_ENV = __DEV__ || process.env.EXPO_PUBLIC_APP_ENV === 'testflight';
+// 개발 or TestFlight → 테스트 광고 / App Store 빌드만 실제 광고
+const IS_TESTFLIGHT = Platform.OS === 'ios'
+  && Application.releaseType === Application.ApplicationReleaseType.TESTFLIGHT;
+const IS_TEST_ENV = __DEV__ || IS_TESTFLIGHT;
 const REWARDED_AD_UNIT_ID = IS_TEST_ENV
   ? TestIds.REWARDED
   : Platform.select({

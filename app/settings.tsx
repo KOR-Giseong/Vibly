@@ -42,7 +42,7 @@ import { useAuthStore } from '@stores/auth.store';
 import { authService } from '@services/auth.service';
 import { notificationApi } from '@services/notification.service';
 
-const ADMIN_WEB_URL = 'https://admin.vibly.app';
+const ADMIN_WEB_URL = 'https://vibly-admin.vercel.app';
 const NOTIF_ENABLED_KEY = 'vibly_push_enabled';
 
 // ─── 설정 행 컴포넌트 ─────────────────────────────────────────────────────────

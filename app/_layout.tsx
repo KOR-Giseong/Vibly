@@ -158,7 +158,12 @@ function RootLayoutNav() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isAuthenticated]);
 
-  if (showSplash || !isLoaded) return <AnimatedSplash onFinish={() => setShowSplash(false)} />;
+  if (showSplash || !isLoaded) return (
+    <AnimatedSplash
+      isLoading={!isLoaded}
+      onFinish={() => setShowSplash(false)}
+    />
+  );
 
   return (
     <>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow,
 import ScreenTransition from '@components/ScreenTransition';
 import { useCreditStore } from '@stores/credit.store';
 import { creditService } from '@services/credit.service';
+import { subscriptionService } from '@services/subscription.service';
 
 type Plan = 'monthly' | 'yearly';
 
@@ -30,10 +31,49 @@ export default function SubscriptionScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const { isPremium, syncBalance } = useCreditStore();
 
+  const [trialEnabled, setTrialEnabled] = useState(false);
+  const [trialDays, setTrialDays] = useState(7);
+
+  useEffect(() => {
+    subscriptionService.getAppConfig().then((cfg) => {
+      setTrialEnabled(cfg['FREE_TRIAL_ENABLED'] === 'true');
+      const days = parseInt(cfg['FREE_TRIAL_DAYS'] ?? '7', 10);
+      setTrialDays(isNaN(days) ? 7 : days);
+    }).catch(() => {});
+  }, []);
+
   const handleSubscribe = () => {
     Alert.alert('업데이트 예정', '인앱결제 기능은 현재 업데이트 중입니다.\n곧 만나보실 수 있어요! 😊', [
       { text: '확인' },
     ]);
+  };
+
+  const handleStartTrial = async () => {
+    Alert.alert(
+      `${trialDays}일 무료 체험`,
+      `지금 시작하면 ${trialDays}일간 프리미엄 기능을 모두 이용할 수 있어요.\n무료 체험은 계정당 1회만 제공됩니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '시작하기',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              await subscriptionService.startFreeTrial();
+              await syncBalance();
+              Alert.alert('무료 체험 시작! 🎉', `${trialDays}일간 프리미엄 기능을 즐겨보세요!`, [
+                { text: '확인', onPress: () => router.back() },
+              ]);
+            } catch (err: unknown) {
+              const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+              Alert.alert('오류', message ?? '무료 체험 시작 중 오류가 발생했어요.');
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleCancel = () => {
@@ -156,11 +196,23 @@ export default function SubscriptionScreen() {
             </TouchableOpacity>
           </>
         ) : (
-          <TouchableOpacity style={[styles.ctaBtn, isLoading && { opacity: 0.7 }]} activeOpacity={0.85} onPress={handleSubscribe} disabled={isLoading}>
-            <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-            <Crown size={20} color={Colors.white} />
-            <Text style={styles.ctaBtnText}>{isLoading ? '처리 중...' : '지금 시작하기'}</Text>
-          </TouchableOpacity>
+          <>
+            {trialEnabled && (
+              <TouchableOpacity
+                style={[styles.trialBtn, isLoading && { opacity: 0.7 }]}
+                activeOpacity={0.85}
+                onPress={handleStartTrial}
+                disabled={isLoading}
+              >
+                <Text style={styles.trialBtnText}>{trialDays}일 무료 체험 시작</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={[styles.ctaBtn, isLoading && { opacity: 0.7 }]} activeOpacity={0.85} onPress={handleSubscribe} disabled={isLoading}>
+              <LinearGradient colors={Gradients.primary} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+              <Crown size={20} color={Colors.white} />
+              <Text style={styles.ctaBtnText}>{isLoading ? '처리 중...' : '지금 시작하기'}</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
     </LinearGradient>
@@ -201,6 +253,8 @@ const styles = StyleSheet.create({
   ctaWrap: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: Spacing['2xl'], paddingTop: Spacing.lg, backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.gray[100] },
   ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, borderRadius: BorderRadius['2xl'], paddingVertical: Spacing.xl, overflow: 'hidden' },
   ctaBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.white },
+  trialBtn: { alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius['2xl'], paddingVertical: Spacing.lg, marginBottom: Spacing.sm, borderWidth: 1.5, borderColor: Colors.primary[400] },
+  trialBtnText: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, color: Colors.primary[600] },
   activeBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, backgroundColor: Colors.primary[50], borderRadius: BorderRadius.xl, paddingVertical: Spacing.md, marginBottom: Spacing.sm },
   activeBadgeText: { fontSize: FontSize.sm, color: Colors.primary[600], fontWeight: FontWeight.semibold },
   cancelBtn: { alignItems: 'center', paddingVertical: Spacing.md },

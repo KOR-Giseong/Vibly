@@ -15,6 +15,18 @@ export const subscriptionService = {
     return data as { isPremium: boolean; expiresAt: string };
   },
 
+  getAppConfig: async () => {
+    const { data } = await apiClient.get<Record<string, string>>('/credits/app-config');
+    return data;
+  },
+
+  startFreeTrial: async () => {
+    const { data } = await apiClient.post<{ ok: boolean; expiresAt: string; durationDays: number }>(
+      '/credits/subscription/trial',
+    );
+    return data;
+  },
+
   adminGrantSubscription: async (userId: string, type: SubscriptionType, durationDays: number) => {
     const { data } = await apiClient.post('/credits/admin/subscriptions', {
       userId,

@@ -402,7 +402,16 @@ export default function PlaceDetailScreen() {
 
   // ── 체크인 ──────────────────────────────────────────────────────────────
   const handleCheckin = () => {
-    router.push({ pathname: '/checkin', params: { placeId: id } });
+    router.push({
+      pathname: '/checkin',
+      params: {
+        placeId: id,
+        // hint: 좌표가 누락된 kakao 장소를 checkin 화면에서 재조회할 때 사용
+        ...(place?.name ? { hintName: place.name } : {}),
+        ...(place?.lat ? { hintLat: String(place.lat) } : {}),
+        ...(place?.lng ? { hintLng: String(place.lng) } : {}),
+      },
+    });
   };
 
   // ── 로딩 / 오류 상태 ──────────────────────────────────────────────────

@@ -45,7 +45,17 @@ export default function CheckInScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
-  const { placeId } = useLocalSearchParams<{ placeId: string }>();
+  const { placeId, hintName, hintLat, hintLng } = useLocalSearchParams<{
+    placeId: string;
+    hintName?: string;
+    hintLat?: string;
+    hintLng?: string;
+  }>();
+
+  const placeHint =
+    hintName && hintLat && hintLng
+      ? { name: hintName, lat: parseFloat(hintLat), lng: parseFloat(hintLng) }
+      : undefined;
 
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [memo, setMemo] = useState('');
@@ -88,10 +98,10 @@ export default function CheckInScreen() {
   // ── 위치 자동 취득 ──────────────────────────────────────────────────────────
   useEffect(() => { fetchLocation(); }, []);
 
-  // ── 장소 데이터 (상세 페이지 캐시 재사용) ──────────────────────────────────
+  // ── 장소 데이터 (상세 페이지 캐시 재사용, hint 포함 → 좌표 누락 장소 보정) ────
   const { data: place, isLoading: isPlaceLoading } = useQuery({
     queryKey: ['place', placeId],
-    queryFn: () => placeService.getById(placeId!),
+    queryFn: () => placeService.getById(placeId!, placeHint),
     enabled: !!placeId,
     staleTime: 1000 * 60 * 5,
   });

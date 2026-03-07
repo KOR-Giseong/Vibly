@@ -455,7 +455,12 @@ export default function MapScreen() {
                   onPress={() =>
                     router.push({
                       pathname: '/checkin',
-                      params: { placeId: selectedPlace.id },
+                      params: {
+                        placeId: selectedPlace.id,
+                        ...(selectedPlace.name ? { hintName: selectedPlace.name } : {}),
+                        ...(selectedPlace.lat ? { hintLat: String(selectedPlace.lat) } : {}),
+                        ...(selectedPlace.lng ? { hintLng: String(selectedPlace.lng) } : {}),
+                      },
                     })
                   }
                   activeOpacity={0.85}

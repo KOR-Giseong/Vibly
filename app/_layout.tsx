@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -15,26 +14,14 @@ import { useCreditStore } from '@stores/credit.store';
 import { useCoupleStore } from '@stores/couple.store';
 import { authService } from '@services/auth.service';
 import { notificationApi } from '@services/notification.service';
-import mobileAds from 'react-native-google-mobile-ads';
+import { getAdsInitialized } from '@utils/adsInit';
 import AnimatedSplash from '@components/AnimatedSplash';
 
 // 네이티브 스플래시 자동 숨김 방지 (JS 로드 후 수동으로 숨김)
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// AdMob 초기화 Promise (광고 로드 전에 await 가능하도록 전역 노출)
-export let adsInitialized: Promise<void>;
-if (Platform.OS === 'ios') {
-  adsInitialized = requestTrackingPermissionsAsync()
-    .catch(() => {})
-    .then(() => mobileAds().initialize())
-    .then(() => {})
-    .catch(() => {});
-} else {
-  adsInitialized = mobileAds()
-    .initialize()
-    .then(() => {})
-    .catch(() => {});
-}
+// AdMob 초기화 시작 (앱 진입 시점에 미리 킥오프)
+getAdsInitialized();
 
 // 포그라운드 알림 표시 설정
 Notifications.setNotificationHandler({

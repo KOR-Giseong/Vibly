@@ -209,7 +209,7 @@ export default function CheckInScreen() {
   const placeEmoji = CATEGORY_EMOJI[place?.category?.toUpperCase?.() ?? ''] ?? '📍';
 
   // GPS 상태 메시지
-  const gpsStatusText = locationLoading
+  const gpsStatusText = (locationLoading || isPlaceLoading)
     ? 'GPS 위치 확인 중...'
     : isNearby
     ? `📍 ${Math.round(distanceM!)}m 이내 — GPS 체크인 가능`

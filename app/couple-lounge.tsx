@@ -2786,10 +2786,11 @@ const styles = StyleSheet.create({
   },
   calDayRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginBottom: Spacing.xs,
   },
   calDayText: {
-    flex: 1,
+    width: `${100 / 7}%` as any,
     textAlign: 'center',
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,

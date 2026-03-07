@@ -6,7 +6,6 @@ import {
 import { Platform } from 'react-native';
 import { getAdsInitialized, isAttGranted } from '@utils/adsInit';
 import { RewardedAd, RewardedAdEventType, TestIds, AdEventType } from 'react-native-google-mobile-ads';
-import * as Application from 'expo-application';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,25 +31,16 @@ const PROD_AD_ID = Platform.select({
   android: 'ca-app-pub-4793069997129951/3387255513',
 })!;
 
-// 광고 ID는 앱 생애 주기 동안 한 번만 결정 (ref에 캐시)
-async function resolveAdUnitId(): Promise<string> {
-  if (__DEV__) return TestIds.REWARDED;
-  if (Platform.OS === 'ios') {
-    try {
-      const type = await Application.getIosApplicationReleaseTypeAsync();
-      // 0=UNKNOWN, 1=SIMULATOR, 2=ENTERPRISE, 3=APP_STORE, 4=TESTFLIGHT
-      console.log('[AdMob] iOS release type:', type, '| __DEV__:', __DEV__);
-      if (type === Application.ApplicationReleaseType.APP_STORE) {
-        console.log('[AdMob] Using PROD ad unit ID');
-        return PROD_AD_ID;
-      }
-      console.log('[AdMob] Using TEST ad unit ID:', TestIds.REWARDED);
-      return TestIds.REWARDED;
-    } catch (e) {
-      console.warn('[AdMob] getIosApplicationReleaseTypeAsync failed:', e);
-      return TestIds.REWARDED;
-    }
+// 광고 ID 결정: EXPO_PUBLIC_APP_ENV === 'production' 일 때만 실제 광고
+// EAS 빌드의 getIosApplicationReleaseTypeAsync()는 TestFlight도 APP_STORE로 잘못 인식하므로 사용 안 함
+function resolveAdUnitId(): string {
+  const appEnv = process.env.EXPO_PUBLIC_APP_ENV;
+  console.log('[AdMob] EXPO_PUBLIC_APP_ENV:', appEnv, '| __DEV__:', __DEV__);
+  if (__DEV__ || appEnv !== 'production') {
+    console.log('[AdMob] Using TEST ad unit ID:', TestIds.REWARDED);
+    return TestIds.REWARDED;
   }
+  console.log('[AdMob] Using PROD ad unit ID:', PROD_AD_ID);
   return PROD_AD_ID;
 }
 
@@ -147,8 +137,8 @@ export default function CreditsScreen() {
 
   // 마운트 시 AdMob 초기화 완료 후 광고 ID 결정 → 로드 시작
   useEffect(() => {
-    getAdsInitialized().then(() => resolveAdUnitId()).then((id) => {
-      adUnitIdRef.current = id;
+    getAdsInitialized().then(() => {
+      adUnitIdRef.current = resolveAdUnitId();
       loadAd();
     });
     return () => {

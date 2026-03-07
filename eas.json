@@ -26,6 +26,9 @@
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "production"
+      },
       "autoIncrement": true,
       "ios": {
         "image": "latest"

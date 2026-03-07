@@ -4,7 +4,7 @@ import {
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { Platform } from 'react-native';
-import { getAdsInitialized } from '@utils/adsInit';
+import { getAdsInitialized, isAttGranted } from '@utils/adsInit';
 import { RewardedAd, RewardedAdEventType, TestIds, AdEventType } from 'react-native-google-mobile-ads';
 import * as Application from 'expo-application';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -80,8 +80,11 @@ export default function CreditsScreen() {
     unsubsRef.current.forEach((fn) => fn());
     unsubsRef.current = [];
 
+    // ATT 미동의 시 비개인화 광고 요청 필수 (개인화 요청 시 fill 실패 가능)
+    const nonPersonalized = Platform.OS === 'ios' ? !isAttGranted() : false;
     const ad = RewardedAd.createForAdRequest(adUnitIdRef.current, {
-      requestNonPersonalizedAdsOnly: false,
+      requestNonPersonalizedAdsOnly: nonPersonalized,
+      keywords: ['lifestyle', 'dating', 'social'],
     });
     adRef.current = ad;
     setAdLoaded(false);
@@ -119,6 +122,7 @@ export default function CreditsScreen() {
       }),
       ad.addAdEventListener(AdEventType.ERROR, (error) => {
         if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
+        console.error('[AdMob] Ad error:', error?.code, error?.message, '| unitId:', adUnitIdRef.current, '| retry:', retryCountRef.current);
         retryCountRef.current += 1;
         setAdLoaded(false);
         if (retryCountRef.current >= MAX_AD_RETRIES) {

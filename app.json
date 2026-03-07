@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.vibly.mobile",
-      "buildNumber": "17",
+      "buildNumber": "16",
       "infoPlist": {
         "CFBundleURLTypes": [
           {

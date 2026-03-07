@@ -1,11 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated,
+  View, Text, StyleSheet, TouchableOpacity, Animated, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sparkles } from 'lucide-react-native';
 import { useAuthStore } from '@stores/auth.store';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
@@ -65,16 +64,13 @@ export default function WelcomeScreen() {
         styles.container,
         { paddingTop: insets.top + Spacing['2xl'], paddingBottom: insets.bottom + Spacing['3xl'] },
       ]}>
-        {/* 아이콘 */}
+        {/* 앱 로고 */}
         <Animated.View style={[styles.iconWrap, anim(0)]}>
-          <LinearGradient
-            colors={['#9810FA', '#E60076']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconGradient}
-          >
-            <Sparkles size={34} color="#fff" />
-          </LinearGradient>
+          <Image
+            source={require('@assets/Logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         {/* 타이틀 */}
@@ -135,17 +131,9 @@ const styles = StyleSheet.create({
   iconWrap: {
     marginBottom: Spacing.xl,
   },
-  iconGradient: {
-    width: 84,
-    height: 84,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#9810FA',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 14,
+  logoImage: {
+    width: 120,
+    height: 120,
   },
 
   title: {

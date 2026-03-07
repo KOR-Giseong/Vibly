@@ -15,14 +15,22 @@ import { useCreditStore } from '@stores/credit.store';
 import { useCoupleStore } from '@stores/couple.store';
 import { authService } from '@services/auth.service';
 import { notificationApi } from '@services/notification.service';
+import mobileAds from 'react-native-google-mobile-ads';
 import AnimatedSplash from '@components/AnimatedSplash';
 
 // 네이티브 스플래시 자동 숨김 방지 (JS 로드 후 수동으로 숨김)
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// iOS ATT 권한 요청 (AdMob 광고 로드 전에 완료돼야 함)
+// iOS ATT 권한 요청 → 완료 후 AdMob 초기화
+// Android는 바로 초기화
 if (Platform.OS === 'ios') {
-  requestTrackingPermissionsAsync().catch(() => {});
+  requestTrackingPermissionsAsync()
+    .catch(() => {})
+    .finally(() => {
+      mobileAds().initialize().catch(() => {});
+    });
+} else {
+  mobileAds().initialize().catch(() => {});
 }
 
 // 포그라운드 알림 표시 설정

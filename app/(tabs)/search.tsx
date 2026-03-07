@@ -360,7 +360,7 @@ export default function SearchScreen() {
                     key={opt}
                     style={[styles.chip, limit === opt && styles.chipSelected, locked && styles.chipLocked]}
                     onPress={() => {
-                      if (locked) { router.push('/subscription'); return; }
+                      if (locked) { setShowSort(false); router.push('/subscription'); return; }
                       setLimit(opt as LimitOption);
                     }}
                     activeOpacity={0.75}
@@ -388,7 +388,7 @@ export default function SearchScreen() {
                     key={opt}
                     style={[styles.chip, radius === opt && styles.chipSelected, locked && styles.chipLocked]}
                     onPress={() => {
-                      if (locked) { router.push('/subscription'); return; }
+                      if (locked) { setShowSort(false); router.push('/subscription'); return; }
                       setRadius(opt as RadiusOption);
                     }}
                     activeOpacity={0.75}

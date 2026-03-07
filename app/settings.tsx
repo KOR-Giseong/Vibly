@@ -186,10 +186,8 @@ export default function SettingsScreen() {
       try {
         const projectId =
           (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas
-            ?.projectId ?? Constants.easConfig?.projectId;
-        const tokenData = await ExpoNotifications.getExpoPushTokenAsync(
-          projectId ? { projectId } : undefined,
-        );
+            ?.projectId ?? Constants.easConfig?.projectId ?? '477b6705-c13e-421c-b5be-7527810f44e8';
+        const tokenData = await ExpoNotifications.getExpoPushTokenAsync({ projectId });
         await notificationApi.removeToken(tokenData.data);
       } catch { /* 토큰 없는 경우 무시 */ }
       await SecureStore.setItemAsync(NOTIF_ENABLED_KEY, 'false');
@@ -200,7 +198,19 @@ export default function SettingsScreen() {
   const handleLogout = useCallback(() => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠어요?', [
       { text: '취소', style: 'cancel' },
-      { text: '로그아웃', style: 'destructive', onPress: async () => { await logout(); } },
+      {
+        text: '로그아웃', style: 'destructive', onPress: async () => {
+          // 로그아웃 전 푸시 토큰 DB에서 삭제
+          try {
+            const projectId =
+              (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas
+                ?.projectId ?? Constants.easConfig?.projectId ?? '477b6705-c13e-421c-b5be-7527810f44e8';
+            const tokenData = await ExpoNotifications.getExpoPushTokenAsync({ projectId });
+            await notificationApi.removeToken(tokenData.data);
+          } catch { /* 무시 */ }
+          await logout();
+        },
+      },
     ]);
   }, [logout]);
 

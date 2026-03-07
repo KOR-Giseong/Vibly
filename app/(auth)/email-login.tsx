@@ -119,7 +119,7 @@ export default function EmailLoginScreen() {
   const { setUser } = useAuthStore();
   const { setCredits, setPremium } = useCreditStore();
   const { setCoupleInfo } = useCoupleStore();
-  const { signInWithKakao, signInWithGoogle, signInWithApple, loading: socialLoading } = useSocialAuth();
+  const { signInWithKakao, signInWithGoogle, signInWithApple, loading: socialLoading, error: socialError, clearError: clearSocialError } = useSocialAuth();
 
   const isAnyLoading = loading || socialLoading !== null;
 
@@ -372,6 +372,13 @@ export default function EmailLoginScreen() {
             <Text style={styles.dividerText}>또는</Text>
             <View style={styles.dividerLine} />
           </View>
+
+          {/* 소셜 에러 (30일 제한 등) */}
+          {!!socialError && (
+            <TouchableOpacity style={styles.errorBox} onPress={clearSocialError} activeOpacity={0.8}>
+              <Text style={styles.errorText}>{socialError}</Text>
+            </TouchableOpacity>
+          )}
 
           {/* 소셜 로그인 */}
           <View style={styles.socialArea}>

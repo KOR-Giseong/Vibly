@@ -38,9 +38,10 @@ async function resolveAdUnitId(): Promise<string> {
   if (Platform.OS === 'ios') {
     try {
       const type = await Application.getIosApplicationReleaseTypeAsync();
-      if (type === Application.ApplicationReleaseType.TESTFLIGHT) return TestIds.REWARDED;
+      // APP_STORE(3) 일 때만 실제 광고, 나머지(UNKNOWN/SIMULATOR/TESTFLIGHT/ENTERPRISE)는 테스트
+      if (type === Application.ApplicationReleaseType.APP_STORE) return PROD_AD_ID;
+      return TestIds.REWARDED;
     } catch {
-      // 감지 실패 시 안전하게 테스트 광고 사용
       return TestIds.REWARDED;
     }
   }

@@ -63,6 +63,7 @@ export default function CreditsScreen() {
   const adRef = useRef<ReturnType<typeof RewardedAd.createForAdRequest> | null>(null);
   const retryCountRef = useRef(0);
   const unsubsRef = useRef<(() => void)[]>([]);
+  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAd = useCallback(() => {
     if (!adUnitIdRef.current) return;
@@ -72,7 +73,8 @@ export default function CreditsScreen() {
       return;
     }
 
-    // 이전 광고 리스너 정리
+    // 이전 광고 리스너 & 타임아웃 정리
+    if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
     unsubsRef.current.forEach((fn) => fn());
     unsubsRef.current = [];
 
@@ -84,8 +86,22 @@ export default function CreditsScreen() {
     setAdLoading(true);
     setAdFailed(false);
 
+    // 15초 안에 LOADED/ERROR 이벤트가 없으면 실패로 처리
+    loadTimeoutRef.current = setTimeout(() => {
+      if (!adRef.current) return;
+      retryCountRef.current += 1;
+      setAdLoaded(false);
+      if (retryCountRef.current >= MAX_AD_RETRIES) {
+        setAdFailed(true);
+        setAdLoading(false);
+      } else {
+        loadAd();
+      }
+    }, 15000);
+
     unsubsRef.current.push(
       ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+        if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
         retryCountRef.current = 0; // 성공 시 재시도 카운트 초기화
         setAdLoaded(true);
         setAdLoading(false);
@@ -99,7 +115,8 @@ export default function CreditsScreen() {
         // 광고 닫힘 → 다음 광고 준비
         setTimeout(() => loadAd(), 500);
       }),
-      ad.addAdEventListener(AdEventType.ERROR, () => {
+      ad.addAdEventListener(AdEventType.ERROR, (error) => {
+        if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
         retryCountRef.current += 1;
         setAdLoaded(false);
         if (retryCountRef.current >= MAX_AD_RETRIES) {
@@ -123,6 +140,7 @@ export default function CreditsScreen() {
       loadAd();
     });
     return () => {
+      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
       unsubsRef.current.forEach((fn) => fn());
     };
   }, [loadAd]);

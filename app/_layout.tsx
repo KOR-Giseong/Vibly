@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,6 +19,11 @@ import AnimatedSplash from '@components/AnimatedSplash';
 
 // 네이티브 스플래시 자동 숨김 방지 (JS 로드 후 수동으로 숨김)
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// iOS ATT 권한 요청 (AdMob 광고 로드 전에 완료돼야 함)
+if (Platform.OS === 'ios') {
+  requestTrackingPermissionsAsync().catch(() => {});
+}
 
 // 포그라운드 알림 표시 설정
 Notifications.setNotificationHandler({

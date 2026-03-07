@@ -33,7 +33,7 @@ export default function ProfileSetupScreen() {
   const { setUser } = useAuthStore();
   const [nickname, setNickname] = useState('');
   const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>('idle');
-  const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER' | null>(null);
+  const [gender, setGender] = useState<'MALE' | 'FEMALE' | null>(null);
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -182,7 +182,7 @@ export default function ProfileSetupScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>성별</Text>
             <View style={styles.genderRow}>
-              {([['MALE', '남성', '👨'], ['FEMALE', '여성', '👩'], ['OTHER', '기타', '🧑']] as const).map(([val, label, emoji]) => (
+              {([['MALE', '남성', '👨'], ['FEMALE', '여성', '👩']] as const).map(([val, label, emoji]) => (
                 <TouchableOpacity
                   key={val}
                   onPress={() => setGender(val)}

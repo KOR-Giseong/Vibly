@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: FontSize.sm, fontWeight: FontWeight.semibold,
-    color: Colors.gray[700], marginTop: Spacing.lg,
+    color: Colors.gray[700], marginTop: Spacing.lg, marginBottom: Spacing.sm,
   },
   inputLabelSub: {
     fontSize: FontSize.xs, color: Colors.gray[400], fontWeight: FontWeight.medium,

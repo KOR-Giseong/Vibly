@@ -129,17 +129,24 @@ function RootLayoutNav() {
           return;
         }
 
+        // Constants가 없는 환경(Xcode 직접 빌드 등)에도 projectId 보장
         const projectId =
           (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas
-            ?.projectId ?? Constants.easConfig?.projectId;
+            ?.projectId ??
+          Constants.easConfig?.projectId ??
+          '477b6705-c13e-421c-b5be-7527810f44e8';
 
-        const tokenData = await Notifications.getExpoPushTokenAsync(
-          projectId ? { projectId } : undefined,
-        );
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
         const platform = Platform.OS === 'ios' ? 'ios' : 'android';
-        await notificationApi.registerToken(tokenData.data, platform).catch(() => {});
+        // 토큰 등록 실패 시 1회 재시도
+        try {
+          await notificationApi.registerToken(tokenData.data, platform);
+        } catch {
+          await new Promise((r) => setTimeout(r, 2000));
+          await notificationApi.registerToken(tokenData.data, platform).catch(() => {});
+        }
       } catch {
-        // 토큰 등록 실패 시 무시 (시뮬레이터 등 환경)
+        // 시뮬레이터 등 환경에서 토큰 발급 자체가 불가한 경우 무시
       }
 
       // Cold start: 앱이 종료된 상태에서 알림 탭으로 실행된 경우

@@ -4,6 +4,7 @@ import {
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { Platform } from 'react-native';
+import { adsInitialized } from './_layout';
 import { RewardedAd, RewardedAdEventType, TestIds, AdEventType } from 'react-native-google-mobile-ads';
 import * as Application from 'expo-application';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -133,9 +134,9 @@ export default function CreditsScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 마운트 시 광고 ID 결정 후 로드 시작
+  // 마운트 시 AdMob 초기화 완료 후 광고 ID 결정 → 로드 시작
   useEffect(() => {
-    resolveAdUnitId().then((id) => {
+    adsInitialized.then(() => resolveAdUnitId()).then((id) => {
       adUnitIdRef.current = id;
       loadAd();
     });

@@ -21,16 +21,19 @@ import AnimatedSplash from '@components/AnimatedSplash';
 // 네이티브 스플래시 자동 숨김 방지 (JS 로드 후 수동으로 숨김)
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// iOS ATT 권한 요청 → 완료 후 AdMob 초기화
-// Android는 바로 초기화
+// AdMob 초기화 Promise (광고 로드 전에 await 가능하도록 전역 노출)
+export let adsInitialized: Promise<void>;
 if (Platform.OS === 'ios') {
-  requestTrackingPermissionsAsync()
+  adsInitialized = requestTrackingPermissionsAsync()
     .catch(() => {})
-    .finally(() => {
-      mobileAds().initialize().catch(() => {});
-    });
+    .then(() => mobileAds().initialize())
+    .then(() => {})
+    .catch(() => {});
 } else {
-  mobileAds().initialize().catch(() => {});
+  adsInitialized = mobileAds()
+    .initialize()
+    .then(() => {})
+    .catch(() => {});
 }
 
 // 포그라운드 알림 표시 설정

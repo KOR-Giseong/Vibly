@@ -189,6 +189,7 @@ function RootLayoutNav() {
         <Stack.Screen name="map" />
         <Stack.Screen name="checkin" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="my-checkins" />
+        <Stack.Screen name="my-reviews" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="vibe-report" />
         <Stack.Screen name="subscription" options={{ animation: 'slide_from_bottom' }} />

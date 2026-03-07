@@ -83,12 +83,12 @@ function AvatarPicker({
 }
 
 /** 통계 항목 */
-function StatItem({ value, label }: { value: number | string; label: string }) {
+function StatItem({ value, label, onPress }: { value: number | string; label: string; onPress?: () => void }) {
   return (
-    <View style={styles.statItem}>
+    <TouchableOpacity style={styles.statItem} onPress={onPress} activeOpacity={onPress ? 0.7 : 1} disabled={!onPress}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -484,11 +484,23 @@ export default function ProfileScreen() {
 
             {/* 통계 */}
             <View style={styles.statsRow}>
-              <StatItem value={stats?.checkinCount ?? '—'} label="체크인" />
+              <StatItem
+                value={stats?.checkinCount ?? '—'}
+                label="체크인"
+                onPress={() => router.push('/my-checkins')}
+              />
               <View style={styles.statDivider} />
-              <StatItem value={stats?.bookmarkCount ?? '—'} label="저장" />
+              <StatItem
+                value={stats?.bookmarkCount ?? '—'}
+                label="저장"
+                onPress={() => router.push('/(tabs)/bookmark')}
+              />
               <View style={styles.statDivider} />
-              <StatItem value={stats?.reviewCount ?? '—'} label="리뷰" />
+              <StatItem
+                value={stats?.reviewCount ?? '—'}
+                label="리뷰"
+                onPress={() => router.push('/my-reviews')}
+              />
             </View>
           </Animated.View>
 

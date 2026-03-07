@@ -14,6 +14,18 @@ export interface MyCheckIn {
   createdAt: string;
 }
 
+export interface MyReview {
+  id: string;
+  placeId: string;
+  placeName: string;
+  category: string;
+  address: string;
+  imageUrl: string;
+  rating: number;
+  body: string;
+  createdAt: string;
+}
+
 // 백엔드 응답 → Place 타입 정규화 (tags: 객체배열 → 문자열배열, images → imageUrl)
 function normalizePlace(raw: any): Place {
   return {
@@ -123,6 +135,11 @@ export const placeService = {
 
   async getMyCheckins(): Promise<MyCheckIn[]> {
     const { data } = await apiClient.get<MyCheckIn[]>('/places/my-checkins');
+    return data;
+  },
+
+  async getMyReviews(): Promise<MyReview[]> {
+    const { data } = await apiClient.get<MyReview[]>('/places/my-reviews');
     return data;
   },
 

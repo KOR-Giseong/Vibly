@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 12.0.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -18,7 +18,6 @@
       }
     },
     "testflight": {
-      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_APP_ENV": "testflight"
       },
@@ -33,6 +32,22 @@
       },
       "android": {
         "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "testflight": {
+      "ios": {
+        "appleId": "ghdrltjd2441@daum.net",
+        "ascAppId": "6760162680",
+        "appleTeamId": "2TAGX4RN98"
+      }
+    },
+    "production": {
+      "ios": {
+        "appleId": "ghdrltjd2441@daum.net",
+        "ascAppId": "6760162680",
+        "appleTeamId": "2TAGX4RN98"
       }
     }
   }

@@ -604,36 +604,46 @@ function AnniversaryCalendar({
       {/* 요일 행 */}
       <View style={styles.calDayRow}>
         {CAL_DAYS.map((d, i) => (
-          <Text key={d} style={[styles.calDayText, i === 0 && { color: '#E60076' }]}>{d}</Text>
+          <View key={d} style={styles.calDayCell}>
+            <Text style={[styles.calDayText, i === 0 && { color: '#E60076' }]}>{d}</Text>
+          </View>
         ))}
       </View>
-      {/* 날짜 그리드 */}
-      <View style={styles.calGrid}>
-        {cells.map((day, idx) => {
-          if (!day) return <View key={`e-${idx}`} style={styles.calCell} />;
-          const sel = isSel(day);
-          const dis = isDisabled(day);
-          const tod = isToday(day);
-          const isSun = idx % 7 === 0;
-          return (
-            <TouchableOpacity
-              key={`d-${idx}`}
-              style={[styles.calCell, sel && styles.calCellSel, tod && !sel && styles.calCellToday]}
-              onPress={() => !dis && onSelect(new Date(viewYear, viewMonth, day))}
-              disabled={dis}
-              activeOpacity={0.7}
-            >
-              <Text style={[
-                styles.calCellText,
-                isSun && { color: '#E60076' },
-                dis && styles.calCellDisabled,
-                sel && styles.calCellSelText,
-                tod && !sel && styles.calCellTodayText,
-              ]}>{day}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {/* 날짜 그리드 - 7개씩 행으로 명시 렌더링 */}
+      {Array.from({ length: cells.length / 7 }).map((_, rowIdx) => (
+        <View key={`row-${rowIdx}`} style={styles.calRow}>
+          {cells.slice(rowIdx * 7, rowIdx * 7 + 7).map((day, colIdx) => {
+            const idx = rowIdx * 7 + colIdx;
+            if (!day) return <View key={`e-${idx}`} style={styles.calDayCell} />;
+            const sel = isSel(day);
+            const dis = isDisabled(day);
+            const tod = isToday(day);
+            const isSun = colIdx === 0;
+            return (
+              <View key={`d-${idx}`} style={styles.calDayCell}>
+                <TouchableOpacity
+                  style={[
+                    styles.calCell,
+                    sel && styles.calCellSel,
+                    tod && !sel && styles.calCellToday,
+                  ]}
+                  onPress={() => !dis && onSelect(new Date(viewYear, viewMonth, day))}
+                  disabled={dis}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.calCellText,
+                    isSun && { color: '#E60076' },
+                    dis && styles.calCellDisabled,
+                    sel && styles.calCellSelText,
+                    tod && !sel && styles.calCellTodayText,
+                  ]}>{day}</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }
@@ -2786,11 +2796,19 @@ const styles = StyleSheet.create({
   },
   calDayRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     marginBottom: Spacing.xs,
   },
+  calRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  calDayCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 2,
+  },
   calDayText: {
-    width: `${100 / 7}%` as any,
     textAlign: 'center',
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
@@ -2802,11 +2820,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   calCell: {
-    width: `${100 / 7}%` as any,
-    aspectRatio: 1,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 100,
   },
   calCellSel: {
     backgroundColor: '#9810FA',

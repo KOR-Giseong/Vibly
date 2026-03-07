@@ -106,7 +106,7 @@ export default function HomeScreen() {
     setSelectedMood(mood);
     const { searchCoords, searchRadius } = getSearchParams();
     if (isPremium) {
-      search(mood.label, searchCoords, searchRadius);
+      search(mood.label, searchCoords, searchRadius, selectedRegion.label);
       router.push('/(tabs)/search');
       return;
     }
@@ -118,7 +118,7 @@ export default function HomeScreen() {
         {
           text: '검색하기',
           onPress: () => {
-            search(mood.label, searchCoords, searchRadius);
+            search(mood.label, searchCoords, searchRadius, selectedRegion.label);
             router.push('/(tabs)/search');
           },
         },
@@ -131,7 +131,7 @@ export default function HomeScreen() {
     if (!aiQuery.trim()) return;
     const { searchCoords, searchRadius } = getSearchParams();
     if (isPremium) {
-      search(aiQuery.trim(), searchCoords, searchRadius);
+      search(aiQuery.trim(), searchCoords, searchRadius, selectedRegion.label);
       setShowAIModal(false);
       setAiQuery('');
       router.push('/(tabs)/search');
@@ -146,7 +146,7 @@ export default function HomeScreen() {
           text: '검색하기',
           onPress: () => {
             const { searchCoords: sc, searchRadius: sr } = getSearchParams();
-            search(aiQuery.trim(), sc, sr);
+            search(aiQuery.trim(), sc, sr, selectedRegion.label);
             setShowAIModal(false);
             setAiQuery('');
             router.push('/(tabs)/search');

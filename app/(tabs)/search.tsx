@@ -237,7 +237,7 @@ export default function SearchScreen() {
               end={{ x: 1, y: 0 }}
             >
               <Sparkles size={13} color="rgba(255,255,255,0.9)" style={{ marginTop: 2 }} />
-              <Text style={styles.moodBannerText} numberOfLines={2}>{searchResult.summary}</Text>
+              <Text style={styles.moodBannerText} numberOfLines={5}>{searchResult.summary}</Text>
               <TouchableOpacity onPress={() => setSearchResult(null)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                 <X size={14} color="rgba(255,255,255,0.8)" />
               </TouchableOpacity>

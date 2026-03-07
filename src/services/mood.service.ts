@@ -7,6 +7,7 @@ interface MoodSearchParams {
   lng?: number;
   limit?: number;
   radius?: number;
+  regionLabel?: string;
 }
 
 export const moodService = {

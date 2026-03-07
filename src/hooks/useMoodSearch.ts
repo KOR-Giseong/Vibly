@@ -40,12 +40,12 @@ export function useMoodSearch() {
   const hasEnoughCredits = isPremium || credits >= 5;
 
   const search = useCallback(
-    (query: string, coords?: { lat: number; lng: number }, overrideRadius?: number | null) => {
+    (query: string, coords?: { lat: number; lng: number }, overrideRadius?: number | null, regionLabel?: string) => {
       if (!hasEnoughCredits) return;
       const location = coords ?? DEFAULT_COORDS;
       // overrideRadius: null이면 반경 제한 없음(전국), undefined면 store 값 사용
       const finalRadius = overrideRadius === null ? undefined : (overrideRadius ?? radius);
-      mutation.mutate({ query, ...location, limit, radius: finalRadius });
+      mutation.mutate({ query, ...location, limit, radius: finalRadius, regionLabel });
     },
     [mutation, hasEnoughCredits, limit, radius],
   );

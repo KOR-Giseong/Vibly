@@ -1376,7 +1376,12 @@ function DateTab({ partnerProfile }: { partnerProfile?: PartnerProfile }) {
             </View>
           </View>
           <View style={styles.aiInfoRight}>
-            {partnerIsPremium ? (
+            {isPremium ? (
+              <View style={[styles.aiCreditBadge, { backgroundColor: '#F3E8FF', borderWidth: 1, borderColor: '#DDD6FE' }]}>
+                <Text style={{ fontSize: 13 }}>👑</Text>
+                <Text style={[styles.aiCreditText, { color: '#7C3AED', fontWeight: '800' }]}>무제한</Text>
+              </View>
+            ) : partnerIsPremium ? (
               <View style={{ alignItems: 'flex-end', gap: 4 }}>
                 <View style={{ backgroundColor: '#D1FAE5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
                   <Text style={{ fontSize: 10, color: '#065F46', fontWeight: '700' }}>💚 파트너 구독 혜택</Text>

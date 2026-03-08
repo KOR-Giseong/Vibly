@@ -4,10 +4,11 @@ import {
   TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
   Modal, ScrollView, Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Send, MapPin, List, Plus, Trash2, X, BookmarkPlus, Calendar, Check } from 'lucide-react-native';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow } from '@constants/theme';
+import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Shadow, Gradients } from '@constants/theme';
 import { coupleService } from '@services/couple.service';
 import { usePlaceCacheStore } from '@stores/placeCache.store';
 import ScreenTransition from '@components/ScreenTransition';
@@ -248,6 +249,7 @@ export default function AiDateChatScreen() {
 
   return (
     <ScreenTransition>
+      <LinearGradient colors={Gradients.background} style={{ flex: 1 }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* 헤더 */}
         <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
@@ -462,15 +464,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing['2xl'], paddingBottom: Spacing.sm,
-    backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.gray[100],
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3F4F6',
-    alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center', ...Shadow.sm,
   },
   historyBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3F4F6',
-    alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center', ...Shadow.sm,
   },
   headerTitle: { fontSize: FontSize.base, fontWeight: FontWeight.bold, color: Colors.gray[900], textAlign: 'center' },
   headerSub: { fontSize: FontSize.xs, color: Colors.primary[500], textAlign: 'center' },
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   placeChipText: { fontSize: FontSize.xs, color: Colors.primary[600], fontWeight: FontWeight.medium, flex: 1 },
   typingWrap: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing['2xl'], paddingBottom: Spacing.sm },
   typingText: { fontSize: FontSize.xs, color: Colors.gray[400] },
-  inputWrap: { backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.gray[100], padding: Spacing.md },
+  inputWrap: { backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.md, ...Shadow.md },
   emojiRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
   emojiBtn: { padding: 4 },
   emojiText: { fontSize: 20 },

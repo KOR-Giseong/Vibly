@@ -4,7 +4,9 @@ import {
   TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
   Modal, ScrollView, Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MMKV } from 'react-native-mmkv';
+
+const chatStorage = new MMKV({ id: 'ai-date-chat' });
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Send, MapPin, List, Plus, Trash2, X } from 'lucide-react-native';
@@ -40,16 +42,16 @@ interface ChatSession {
   messages: ChatBubble[];
 }
 
-// AsyncStorage 헬퍼
-async function loadSessions(): Promise<ChatSession[]> {
+// MMKV 헬퍼
+function loadSessions(): ChatSession[] {
   try {
-    const raw = await AsyncStorage.getItem(SESSIONS_KEY);
+    const raw = chatStorage.getString(SESSIONS_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }
 
-async function saveSessions(sessions: ChatSession[]) {
-  await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+function saveSessions(sessions: ChatSession[]) {
+  chatStorage.set(SESSIONS_KEY, JSON.stringify(sessions));
 }
 
 function formatDate(iso: string) {
@@ -77,15 +79,15 @@ export default function AiDateChatScreen() {
 
   // 진입 시 세션 목록 로드
   useEffect(() => {
-    loadSessions().then(setSessions);
+    setSessions(loadSessions());
   }, []);
 
   // 현재 메시지를 세션에 저장 (첫 user 메시지 이후부터)
-  const persistSession = useCallback(async (msgs: ChatBubble[], sessionId: string) => {
+  const persistSession = useCallback((msgs: ChatBubble[], sessionId: string) => {
     const userMsgs = msgs.filter((m) => m.role === 'user');
     if (userMsgs.length === 0) return;
 
-    const all = await loadSessions();
+    const all = loadSessions();
     const title = userMsgs[0].text.slice(0, 30) + (userMsgs[0].text.length > 30 ? '…' : '');
 
     const idx = all.findIndex((s) => s.id === sessionId);
@@ -107,7 +109,7 @@ export default function AiDateChatScreen() {
       }
     }
 
-    await saveSessions(all);
+    saveSessions(all);
     setSessions([...all]);
   }, []);
 
@@ -142,14 +144,14 @@ export default function AiDateChatScreen() {
       };
       const finalMessages = [...newMessages, modelMsg];
       setMessages(finalMessages);
-      await persistSession(finalMessages, sessionId);
+      persistSession(finalMessages, sessionId);
     } catch {
       const errMsgs = [
         ...newMessages,
         { id: (Date.now() + 1).toString(), role: 'model' as const, text: '죄송해요, 잠시 후 다시 시도해주세요 🙏' },
       ];
       setMessages(errMsgs);
-      await persistSession(errMsgs, sessionId);
+      persistSession(errMsgs, sessionId);
     } finally {
       setIsLoading(false);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -171,9 +173,9 @@ export default function AiDateChatScreen() {
   };
 
   // 세션 삭제
-  const deleteSession = async (sessionId: string) => {
+  const deleteSession = (sessionId: string) => {
     const updated = sessions.filter((s) => s.id !== sessionId);
-    await saveSessions(updated);
+    saveSessions(updated);
     setSessions(updated);
     if (currentSessionId === sessionId) {
       setMessages([WELCOME_MSG]);
@@ -226,7 +228,7 @@ export default function AiDateChatScreen() {
           </View>
           <TouchableOpacity
             style={styles.historyBtn}
-            onPress={() => { loadSessions().then(setSessions); setShowHistory(true); }}
+            onPress={() => { setSessions(loadSessions()); setShowHistory(true); }}
           >
             <List size={20} color={Colors.gray[700]} />
           </TouchableOpacity>

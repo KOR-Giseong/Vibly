@@ -440,3 +440,19 @@ export interface AiChatResponse {
   text: string;
   places?: Place[];
 }
+
+// -- 일일 출석체크 -----------------------------------------------------------
+
+export interface AttendanceCheckResult {
+  alreadyChecked: boolean;
+  streak: number;
+  creditsEarned: number;
+  totalCredits: number;
+  isWeekBonus: boolean;
+}
+
+export interface AttendanceStatus {
+  hasCheckedToday: boolean;
+  streak: number;
+  recentDates: string[];
+}

@@ -8,8 +8,10 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, Sparkles, X, MapPin, ChevronDown } from 'lucide-react-native';
+import { Bell, Sparkles, X, MapPin, ChevronDown, CheckSquare } from 'lucide-react-native';
 import { notificationApi } from '@services/notification.service';
+import { attendanceApi } from '@services/attendance.service';
+import { AttendanceModal } from '@components/AttendanceModal';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useAuthStore } from '@stores/auth.store';
 import { useMoodStore } from '@stores/mood.store';
@@ -21,7 +23,7 @@ import { AIBanner } from '@components/features/ai/AIBanner';
 import { NearbyPlaceList } from '@components/features/place/NearbyPlaceList';
 import { LocationPermissionModal } from '@components/ui';
 import ScreenTransition from '@components/ScreenTransition';
-import type { Mood } from '@/types';
+import type { Mood, AttendanceCheckResult } from '@/types';
 
 // ── 지역 목록 ─────────────────────────────────────────────────────────────────
 type Region = {
@@ -60,6 +62,9 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedRegion, setSelectedRegion] = useState<Region>(REGIONS[0]);
   const [showRegionModal, setShowRegionModal] = useState(false);
+  const [attendanceResult, setAttendanceResult] = useState<AttendanceCheckResult | null>(null);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const attendanceChecked = useRef(false);
 
   // 선택된 지역 기준 검색 좌표/반경 결정
   const getSearchParams = () => {
@@ -92,10 +97,25 @@ export default function HomeScreen() {
     });
   }, [isPremium]);
 
-  // 탭 포커스마다 미읽음 수 갱신
+  // 탭 포커스마다 미읽음 수 갱신 + 출석체크 팝업
   useFocusEffect(
     useCallback(() => {
       notificationApi.getUnreadCount().then(setUnreadCount).catch(() => {});
+
+      // 세션당 1회만 자동 팝업
+      if (attendanceChecked.current) return;
+      attendanceChecked.current = true;
+
+      const timer = setTimeout(() => {
+        attendanceApi.check()
+          .then((result) => {
+            setAttendanceResult(result);
+            setShowAttendanceModal(true);
+          })
+          .catch(() => {});
+      }, 1500);
+
+      return () => clearTimeout(timer);
     }, []),
   );
 
@@ -176,19 +196,31 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.subGreeting}>오늘 기분이 어떠세요?</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push('/notifications')}
-              style={styles.bellBtn}
-            >
-              <Bell size={22} color={Colors.gray[700]} />
-              {unreadCount > 0 && (
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>
-                    {unreadCount > 99 ? '99+' : String(unreadCount)}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                onPress={() => {
+                  attendanceApi.check()
+                    .then((result) => { setAttendanceResult(result); setShowAttendanceModal(true); })
+                    .catch(() => {});
+                }}
+                style={styles.attendanceBtn}
+              >
+                <CheckSquare size={22} color={Colors.gray[700]} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/notifications')}
+                style={styles.bellBtn}
+              >
+                <Bell size={22} color={Colors.gray[700]} />
+                {unreadCount > 0 && (
+                  <View style={styles.bellBadge}>
+                    <Text style={styles.bellBadgeText}>
+                      {unreadCount > 99 ? '99+' : String(unreadCount)}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* 검색 횟수 안내 */}
@@ -414,6 +446,12 @@ export default function HomeScreen() {
         }}
         canAskAgain={canAskAgain}
       />
+
+      <AttendanceModal
+        visible={showAttendanceModal}
+        result={attendanceResult}
+        onClose={() => setShowAttendanceModal(false)}
+      />
     </ScreenTransition>
   );
 }
@@ -446,6 +484,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   bellBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.sm,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  attendanceBtn: {
     width: 44,
     height: 44,
     borderRadius: BorderRadius.full,

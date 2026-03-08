@@ -13,18 +13,24 @@ interface NearbyPlaceListProps {
   coords: { lat: number; lng: number };
   locationStatus?: 'idle' | 'loading' | 'granted' | 'denied';
   onSeeAll?: () => void;
+  /** 지역 선택 시 해당 좌표 (null = 내 위치/GPS 사용) */
+  regionCoords?: { lat: number; lng: number } | null;
+  regionLabel?: string;
 }
 
-export function NearbyPlaceList({ coords, locationStatus, onSeeAll }: NearbyPlaceListProps) {
+export function NearbyPlaceList({ coords, locationStatus, onSeeAll, regionCoords, regionLabel }: NearbyPlaceListProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const QUERY_KEY = ['nearby', coords.lat, coords.lng];
+  // 지역이 선택됐으면 해당 좌표, 아니면 GPS 좌표, 없으면 서울 기본값
+  const SEOUL_COORDS = { lat: 37.5665, lng: 126.9780 };
+  const queryCoords = regionCoords ?? coords ?? SEOUL_COORDS;
+  const QUERY_KEY = ['nearby', queryCoords.lat, queryCoords.lng, regionLabel];
 
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: () =>
-      placeService.getNearby({ lat: coords.lat, lng: coords.lng, limit: 5 }),
+      placeService.getNearby({ lat: queryCoords.lat, lng: queryCoords.lng, limit: 5 }),
     staleTime: 1000 * 60 * 5, // 5분 캐시
   });
 
@@ -48,10 +54,14 @@ export function NearbyPlaceList({ coords, locationStatus, onSeeAll }: NearbyPlac
       {/* 헤더 */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={styles.title}>주변 추천 장소</Text>
-          {isDenied && (
+          <Text style={styles.title}>
+            {regionLabel && regionLabel !== '내 위치' ? `${regionLabel} 추천 장소` : '주변 추천 장소'}
+          </Text>
+          {(isDenied || (regionLabel && regionLabel !== '내 위치')) && (
             <View style={styles.defaultBadge}>
-              <Text style={styles.defaultBadgeText}>서울 기준</Text>
+              <Text style={styles.defaultBadgeText}>
+                {regionLabel ?? '서울'} 기준
+              </Text>
             </View>
           )}
           <TouchableOpacity onPress={handleRefresh} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

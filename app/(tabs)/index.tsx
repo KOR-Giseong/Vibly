@@ -34,17 +34,25 @@ type Region = {
 };
 
 const REGIONS: Region[] = [
-  { id: 'nearby',   label: '내 위치',  coords: null,                          radius: undefined as any },
-  { id: 'all',      label: '전체',     coords: { lat: 37.5665, lng: 126.9780 }, radius: null },
-  { id: 'seoul',    label: '서울',     coords: { lat: 37.5665, lng: 126.9780 }, radius: null },
-  { id: 'gyeonggi', label: '경기',    coords: { lat: 37.4138, lng: 127.5183 }, radius: null },
-  { id: 'incheon',  label: '인천',    coords: { lat: 37.4563, lng: 126.7052 }, radius: null },
-  { id: 'busan',    label: '부산',    coords: { lat: 35.1796, lng: 129.0756 }, radius: null },
-  { id: 'daegu',    label: '대구',    coords: { lat: 35.8714, lng: 128.6014 }, radius: null },
-  { id: 'gwangju',  label: '광주',    coords: { lat: 35.1595, lng: 126.8526 }, radius: null },
-  { id: 'daejeon',  label: '대전',    coords: { lat: 36.3504, lng: 127.3845 }, radius: null },
-  { id: 'ulsan',    label: '울산',    coords: { lat: 35.5384, lng: 129.3114 }, radius: null },
-  { id: 'jeju',     label: '제주',    coords: { lat: 33.4996, lng: 126.5312 }, radius: null },
+  { id: 'nearby',    label: '내 위치', coords: null,                            radius: undefined as any },
+  { id: 'all',       label: '전체',    coords: { lat: 37.5665, lng: 126.9780 }, radius: null },
+  { id: 'seoul',     label: '서울',    coords: { lat: 37.5665, lng: 126.9780 }, radius: null },
+  { id: 'gyeonggi',  label: '경기',    coords: { lat: 37.4138, lng: 127.5183 }, radius: null },
+  { id: 'incheon',   label: '인천',    coords: { lat: 37.4563, lng: 126.7052 }, radius: null },
+  { id: 'gangwon',   label: '강원',    coords: { lat: 37.8228, lng: 128.1555 }, radius: null },
+  { id: 'chungbuk',  label: '충북',    coords: { lat: 36.6357, lng: 127.4917 }, radius: null },
+  { id: 'chungnam',  label: '충남',    coords: { lat: 36.5184, lng: 126.8000 }, radius: null },
+  { id: 'sejong',    label: '세종',    coords: { lat: 36.4801, lng: 127.2890 }, radius: null },
+  { id: 'daejeon',   label: '대전',    coords: { lat: 36.3504, lng: 127.3845 }, radius: null },
+  { id: 'jeonbuk',   label: '전북',    coords: { lat: 35.8202, lng: 127.1089 }, radius: null },
+  { id: 'jeonnam',   label: '전남',    coords: { lat: 34.8161, lng: 126.4629 }, radius: null },
+  { id: 'gwangju',   label: '광주',    coords: { lat: 35.1595, lng: 126.8526 }, radius: null },
+  { id: 'gyeongbuk', label: '경북',    coords: { lat: 36.5760, lng: 128.5055 }, radius: null },
+  { id: 'daegu',     label: '대구',    coords: { lat: 35.8714, lng: 128.6014 }, radius: null },
+  { id: 'gyeongnam', label: '경남',    coords: { lat: 35.4606, lng: 128.2132 }, radius: null },
+  { id: 'busan',     label: '부산',    coords: { lat: 35.1796, lng: 129.0756 }, radius: null },
+  { id: 'ulsan',     label: '울산',    coords: { lat: 35.5384, lng: 129.3114 }, radius: null },
+  { id: 'jeju',      label: '제주',    coords: { lat: 33.4996, lng: 126.5312 }, radius: null },
 ];
 
 export default function HomeScreen() {
@@ -315,7 +323,12 @@ export default function HomeScreen() {
 
           {/* 주변 추천 장소 */}
           <View style={styles.block}>
-            <NearbyPlaceList coords={coords} locationStatus={locationStatus} />
+            <NearbyPlaceList
+              coords={coords}
+              locationStatus={locationStatus}
+              regionCoords={selectedRegion.id === 'nearby' ? null : selectedRegion.coords}
+              regionLabel={selectedRegion.id === 'nearby' ? undefined : selectedRegion.label}
+            />
           </View>
         </ScrollView>
       </LinearGradient>
@@ -398,7 +411,7 @@ export default function HomeScreen() {
       <Modal
         visible={showRegionModal}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowRegionModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowRegionModal(false)}>
@@ -409,25 +422,27 @@ export default function HomeScreen() {
                 <X size={20} color={Colors.gray[500]} />
               </TouchableOpacity>
             </View>
-            {REGIONS.map((region) => {
-              const isActive = selectedRegion.id === region.id;
-              return (
-                <TouchableOpacity
-                  key={region.id}
-                  style={[styles.regionItem, isActive && styles.regionItemActive]}
-                  onPress={() => {
-                    setSelectedRegion(region);
-                    setShowRegionModal(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.regionItemText, isActive && styles.regionItemTextActive]}>
-                    {region.label}
-                  </Text>
-                  {isActive && <View style={styles.regionItemDot} />}
-                </TouchableOpacity>
-              );
-            })}
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              {REGIONS.map((region) => {
+                const isActive = selectedRegion.id === region.id;
+                return (
+                  <TouchableOpacity
+                    key={region.id}
+                    style={[styles.regionItem, isActive && styles.regionItemActive]}
+                    onPress={() => {
+                      setSelectedRegion(region);
+                      setShowRegionModal(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.regionItemText, isActive && styles.regionItemTextActive]}>
+                      {region.label}
+                    </Text>
+                    {isActive && <View style={styles.regionItemDot} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -655,6 +670,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: Spacing['2xl'],
     paddingBottom: Spacing['4xl'],
+    maxHeight: '75%',
   },
   regionModalHeader: {
     flexDirection: 'row',

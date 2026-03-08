@@ -344,12 +344,14 @@ export default function PlaceDetailScreen() {
   // ── 공유 ────────────────────────────────────────────────────────────────
   const handleShare = async () => {
     if (!place) return;
-    try {
-      await Share.share({
-        message: `${place.name} - vibly에서 발견한 장소예요!\n📍 ${place.address}`,
-        title: place.name,
-      });
-    } catch {}
+    await sharePlaceKakao({
+      placeId: String(id),
+      name: place.name,
+      address: place.address,
+      category: place.category,
+      rating: place.rating,
+      imageUrl: place.images?.[0],
+    });
   };
 
   // ── 길찾기 ──────────────────────────────────────────────────────────────

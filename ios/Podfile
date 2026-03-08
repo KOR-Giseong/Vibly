@@ -21,6 +21,8 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 prepare_react_native_project!
 
 target 'Vibly' do
+  # KakaoSDK 버전 통일 (kakao-login 2.22.0 ↔ kakao-share-link 2.11.1 충돌 방지)
+  $KakaoSDKVersion = "2.22.0"
   use_expo_modules!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'

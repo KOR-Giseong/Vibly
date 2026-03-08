@@ -274,8 +274,8 @@ export const coupleService = {
     await apiClient.patch('/couple/messages/read');
   },
 
-  aiDateChat: async (messages: AiChatMessage[], lat?: number, lng?: number): Promise<AiChatResponse> => {
-    const { data } = await apiClient.post<AiChatResponse>('/couple/date-plans/ai-chat', { messages, lat, lng }, { timeout: 60000 });
+  aiDateChat: async (messages: AiChatMessage[], lat?: number, lng?: number, imageBase64?: string, imageMimeType?: string): Promise<AiChatResponse> => {
+    const { data } = await apiClient.post<AiChatResponse>('/couple/date-plans/ai-chat', { messages, lat, lng, imageBase64, imageMimeType }, { timeout: 60000 });
     return data;
   },
 };

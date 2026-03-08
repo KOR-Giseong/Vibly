@@ -6,6 +6,7 @@ export interface ChatBubble {
   role: 'user' | 'model';
   text: string;
   places?: Place[];
+  imageUri?: string;
 }
 
 export interface ChatSession {

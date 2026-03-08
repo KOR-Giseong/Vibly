@@ -432,6 +432,8 @@ export interface SmartRecommendResult {
 export interface AiChatMessage {
   role: 'user' | 'model';
   text: string;
+  imageBase64?: string;
+  imageMimeType?: string;
 }
 
 export interface AiChatResponse {

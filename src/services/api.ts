@@ -61,9 +61,14 @@ apiClient.interceptors.response.use(
         if (data.refreshToken) await storage.setItem('refreshToken', data.refreshToken);
         original.headers.Authorization = `Bearer ${data.accessToken}`;
         return apiClient(original);
-      } catch {
-        await storage.deleteItem('accessToken');
-        await storage.deleteItem('refreshToken');
+      } catch (refreshErr: any) {
+        // 실제 401(토큰 만료/무효)일 때만 로그아웃, 네트워크 오류/500은 토큰 유지
+        const status = refreshErr?.response?.status;
+        if (status === 401) {
+          await storage.deleteItem('accessToken');
+          await storage.deleteItem('refreshToken');
+        }
+        // 네트워크 오류나 서버 재시작(500, 503 등)이면 토큰 유지 → 다음 앱 실행 시 재시도
       }
     }
 

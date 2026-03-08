@@ -68,6 +68,7 @@ export function AttendanceModal({ visible, result, onClose }: Props) {
                 const day = i + 1;
                 const done = day <= streak;
                 const isToday = day === streak;
+                const dayCredits = day === 7 ? 50 : 5;
                 return (
                   <View key={day} style={styles.dayWrap}>
                     <View
@@ -82,6 +83,9 @@ export function AttendanceModal({ visible, result, onClose }: Props) {
                       </Text>
                     </View>
                     <Text style={styles.dayLabel}>{day}일</Text>
+                    <Text style={[styles.dayCredits, day === 7 && styles.dayCreditsBonus]}>
+                      +{dayCredits}
+                    </Text>
                   </View>
                 );
               })}
@@ -183,6 +187,14 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontSize: 10,
     color: Colors.gray[400],
+  },
+  dayCredits: {
+    fontSize: 9,
+    color: '#8B5CF6',
+    fontWeight: FontWeight.semibold,
+  },
+  dayCreditsBonus: {
+    color: '#F59E0B',
   },
   creditBox: {
     borderRadius: BorderRadius.full,

@@ -407,7 +407,13 @@ export default function MapScreen() {
                   {CATEGORY_EMOJI[selectedPlace.category] ?? '📍'} {selectedPlace.category}
                 </Text>
               </View>
-              {/* Close button */}
+              {/* 이미지 타입 배지 */}
+              <View style={[styles.imgTypeBadge, selectedPlace.imageUrl ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
+                <Text style={styles.imgTypeBadgeText}>
+                  {selectedPlace.imageUrl ? '📷 실제 이미지' : '🖼 기본 이미지'}
+                </Text>
+              </View>
+              {/* Close button */}}
               <TouchableOpacity
                 style={styles.cardClose}
                 onPress={handleDismissCard}
@@ -772,6 +778,21 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.white,
   },
+  imgTypeBadge: {
+    position: 'absolute',
+    bottom: Spacing.sm,
+    right: Spacing.md,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  imgTypeBadgeText: {
+    fontSize: 9,
+    color: '#fff',
+    fontWeight: '500' as const,
+  },
+  imgTypeBadgeReal: { backgroundColor: 'rgba(0,0,0,0.5)' },
+  imgTypeBadgeDefault: { backgroundColor: 'rgba(152,16,250,0.75)' },
   cardClose: {
     position: 'absolute',
     top: Spacing.sm,

@@ -17,11 +17,18 @@ export function PlaceCard({ place, onPress }: PlaceCardProps) {
       activeOpacity={0.9}
       style={styles.container}
     >
-      {place.imageUrl ? (
-        <Image source={{ uri: place.imageUrl }} style={styles.image} resizeMode="cover" />
-      ) : (
-        <View style={[styles.image, styles.imageFallback]} />
-      )}
+      <View style={styles.imageWrap}>
+        {place.imageUrl ? (
+          <Image source={{ uri: place.imageUrl }} style={styles.image} resizeMode="cover" />
+        ) : (
+          <View style={[styles.image, styles.imageFallback]} />
+        )}
+        <View style={[styles.imgLabel, place.imageUrl ? styles.imgLabelReal : styles.imgLabelDefault]}>
+          <Text style={styles.imgLabelText}>
+            {place.imageUrl ? '📷 실제 이미지' : '🖼 기본 이미지'}
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={1}>{place.name}</Text>
@@ -64,6 +71,27 @@ const styles = StyleSheet.create({
   imageFallback: {
     backgroundColor: Colors.primary[100],
   },
+  imageWrap: {
+    width: 100,
+    height: 100,
+    borderRadius: BorderRadius['2xl'],
+    overflow: 'hidden',
+  },
+  imgLabel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  imgLabelText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: FontWeight.medium,
+  },
+  imgLabelReal: { backgroundColor: 'rgba(0,0,0,0.5)' },
+  imgLabelDefault: { backgroundColor: 'rgba(152,16,250,0.75)' },
   content: {
     flex: 1,
     gap: Spacing.xs,

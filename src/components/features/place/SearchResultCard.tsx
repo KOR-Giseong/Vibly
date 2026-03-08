@@ -35,11 +35,18 @@ function ListCard({ place, onPress }: Props) {
       )}
 
       <View style={styles.listInner}>
-        {place.imageUrl ? (
-          <Image source={{ uri: place.imageUrl }} style={styles.listImg} resizeMode="cover" />
-        ) : (
-          <View style={[styles.listImg, styles.imgPlaceholder]} />
-        )}
+        <View style={styles.listImgWrap}>
+          {place.imageUrl ? (
+            <Image source={{ uri: place.imageUrl }} style={styles.listImg} resizeMode="cover" />
+          ) : (
+            <View style={[styles.listImg, styles.imgPlaceholder]} />
+          )}
+          <View style={[styles.imgLabel, place.imageUrl ? styles.imgLabelReal : styles.imgLabelDefault]}>
+            <Text style={styles.imgLabelText}>
+              {place.imageUrl ? '📷 실제 이미지' : '🖼 기본 이미지'}
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.listInfo}>
           <Text style={styles.listName} numberOfLines={1}>{place.name}</Text>
@@ -90,11 +97,18 @@ function GridCard({ place, onPress }: Props) {
       activeOpacity={0.85}
       style={styles.gridCard}
     >
-      {place.imageUrl ? (
-        <Image source={{ uri: place.imageUrl }} style={styles.gridImg} resizeMode="cover" />
-      ) : (
-        <View style={[styles.gridImg, styles.imgPlaceholder]} />
-      )}
+      <View style={styles.gridImgWrap}>
+        {place.imageUrl ? (
+          <Image source={{ uri: place.imageUrl }} style={styles.gridImg} resizeMode="cover" />
+        ) : (
+          <View style={[styles.gridImg, styles.imgPlaceholder]} />
+        )}
+        <View style={[styles.imgLabel, place.imageUrl ? styles.imgLabelReal : styles.imgLabelDefault]}>
+          <Text style={styles.imgLabelText}>
+            {place.imageUrl ? '📷 실제 이미지' : '🖼 기본 이미지'}
+          </Text>
+        </View>
+      </View>
 
       {place.isSponsored && (
         <LinearGradient
@@ -142,6 +156,32 @@ export function SearchResultCard({ place, onPress, mode = 'list' }: Props) {
 // -- Styles -------------------------------------------------------------------
 const styles = StyleSheet.create({
   imgPlaceholder: { backgroundColor: Colors.primary[100] },
+  listImgWrap: {
+    width: 112,
+    height: 112,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  gridImgWrap: {
+    width: '100%' as const,
+    height: 160,
+    overflow: 'hidden',
+  },
+  imgLabel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  imgLabelText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: '500' as const,
+  },
+  imgLabelReal: { backgroundColor: 'rgba(0,0,0,0.5)' },
+  imgLabelDefault: { backgroundColor: 'rgba(152,16,250,0.75)' },
   sponsorText: {
     fontSize: 11,
     fontWeight: FontWeight.bold,

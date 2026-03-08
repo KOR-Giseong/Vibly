@@ -517,6 +517,12 @@ export default function PlaceDetailScreen() {
                   <Text style={styles.imgExpandHintText}>🔍 탭하여 전체보기</Text>
                 </View>
               )}
+              {/* 이미지 타입 배지 */}
+              <View style={[styles.imgTypeBadge, place.imageUrl ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
+                <Text style={styles.imgTypeBadgeText}>
+                  {place.imageUrl ? '📷 장소 실제 이미지입니다' : '🖼 Vibly에서 제공하는 기본 이미지입니다'}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
 
@@ -828,6 +834,9 @@ export default function PlaceDetailScreen() {
                 resizeMode="contain"
               />
             )}
+            <View style={styles.imgTypeBadgeInline}>
+              <Text style={styles.imgTypeBadgeText}>📷 장소 실제 이미지입니다</Text>
+            </View>
             <Text style={styles.fullscreenPlaceName}>{place.name}</Text>
           </View>
         </Modal>
@@ -869,6 +878,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(255,255,255,0.9)',
   },
+  // 이미지 타입 배지
+  imgTypeBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 12,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  imgTypeBadgeInline: {
+    marginTop: 8,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  imgTypeBadgeText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '500' as const,
+  },
+  imgTypeBadgeReal: { backgroundColor: 'rgba(0,0,0,0.5)' },
+  imgTypeBadgeDefault: { backgroundColor: 'rgba(152,16,250,0.75)' },
 
   // 풀스크린 이미지 모달
   fullscreenOverlay: {

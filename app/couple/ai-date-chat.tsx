@@ -342,3 +342,4 @@ const styles = StyleSheet.create({
   sessionTitle: { fontSize: FontSize.sm, color: Colors.gray[800], fontWeight: FontWeight.medium, flex: 1 },
   sessionDate: { fontSize: FontSize.xs, color: Colors.gray[400] },
   deleteBtn: { padding: Spacing.xs },
+});

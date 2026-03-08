@@ -12,9 +12,8 @@ import { Platform, Share } from 'react-native';
  */
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────
-// TODO: 실제 호스팅된 Vibly 로고 이미지 URL로 교체하세요
 export const VIBLY_LOGO_URL =
-  'https://your-server.com/public/vibly-og-image.png'; // ← 교체 필요
+  'https://vibly-backend-jo12.onrender.com/public/vibly-logo.png';
 
 // 앱스토어 / 플레이스토어 랜딩 (없으면 마케팅 웹페이지 링크로 교체)
 const APP_STORE_URL = 'https://apps.apple.com/kr/app/vibly/id6743178559';

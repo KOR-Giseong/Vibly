@@ -319,6 +319,7 @@ export default function AiDateChatScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+      </LinearGradient>
 
       {/* 대화 목록 모달 */}
       <Modal visible={showHistory} animationType="slide" transparent onRequestClose={() => setShowHistory(false)}>

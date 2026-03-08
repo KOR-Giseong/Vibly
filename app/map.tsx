@@ -23,6 +23,7 @@ import { MapFilterSheet } from '@components/features/map/MapFilterSheet';
 import { LocationPermissionModal } from '@components/ui';
 import { useMapFilterStore, radiusLabel } from '@stores/mapFilter.store';
 import { useCoupleStore } from '@stores/couple.store';
+import { isGoogleImage } from '@utils/format';
 import type { Place } from '@/types';
 
 // ─── Category constants ───────────────────────────────────────────────────────
@@ -408,9 +409,9 @@ export default function MapScreen() {
                 </Text>
               </View>
               {/* 이미지 타입 배지 */}
-              <View style={[styles.imgTypeBadge, selectedPlace.imageUrl ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
+              <View style={[styles.imgTypeBadge, isGoogleImage(selectedPlace.imageUrl) ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
                 <Text style={styles.imgTypeBadgeText}>
-                  {selectedPlace.imageUrl ? '📷 실제 이미지' : '🖼 기본 이미지'}
+                  {isGoogleImage(selectedPlace.imageUrl) ? '📷 실제 이미지' : '🖼 Vibly 기본 이미지'}
                 </Text>
               </View>
               {/* Close button */}}

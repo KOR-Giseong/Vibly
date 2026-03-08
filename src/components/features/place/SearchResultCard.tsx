@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, BorderRadius, FontSize, FontWeight, Spacing, Shadow } from '@constants/theme';
+import { isGoogleImage } from '@utils/format';
 import type { Place } from '@/types';
 
 const SCORE_COLORS = ['#9810FA', '#E60076'] as const;
@@ -41,9 +42,9 @@ function ListCard({ place, onPress }: Props) {
           ) : (
             <View style={[styles.listImg, styles.imgPlaceholder]} />
           )}
-          <View style={[styles.imgLabel, place.imageUrl ? styles.imgLabelReal : styles.imgLabelDefault]}>
+          <View style={[styles.imgLabel, isGoogleImage(place.imageUrl) ? styles.imgLabelReal : styles.imgLabelDefault]}>
             <Text style={styles.imgLabelText}>
-              {place.imageUrl ? '📷 실제 이미지' : '🖼 기본 이미지'}
+              {isGoogleImage(place.imageUrl) ? '📷 실제 이미지' : '🖼 Vibly 기본 이미지'}
             </Text>
           </View>
         </View>
@@ -103,9 +104,9 @@ function GridCard({ place, onPress }: Props) {
         ) : (
           <View style={[styles.gridImg, styles.imgPlaceholder]} />
         )}
-        <View style={[styles.imgLabel, place.imageUrl ? styles.imgLabelReal : styles.imgLabelDefault]}>
+        <View style={[styles.imgLabel, isGoogleImage(place.imageUrl) ? styles.imgLabelReal : styles.imgLabelDefault]}>
           <Text style={styles.imgLabelText}>
-            {place.imageUrl ? '📷 실제 이미지' : '🖼 기본 이미지'}
+            {isGoogleImage(place.imageUrl) ? '📷 실제 이미지' : '🖼 Vibly 기본 이미지'}
           </Text>
         </View>
       </View>

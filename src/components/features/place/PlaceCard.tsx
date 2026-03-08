@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { Badge } from '@components/ui';
 import { Colors, BorderRadius, FontSize, FontWeight, Spacing, Shadow } from '@constants/theme';
+import { isGoogleImage } from '@utils/format';
 import type { Place } from '@/types';
 
 interface PlaceCardProps {
@@ -23,9 +24,9 @@ export function PlaceCard({ place, onPress }: PlaceCardProps) {
         ) : (
           <View style={[styles.image, styles.imageFallback]} />
         )}
-        <View style={[styles.imgLabel, place.imageUrl ? styles.imgLabelReal : styles.imgLabelDefault]}>
+        <View style={[styles.imgLabel, isGoogleImage(place.imageUrl) ? styles.imgLabelReal : styles.imgLabelDefault]}>
           <Text style={styles.imgLabelText}>
-            {place.imageUrl ? '📷 실제 이미지' : '🖼 기본 이미지'}
+            {isGoogleImage(place.imageUrl) ? '📷 실제 이미지' : '🖼 Vibly 기본 이미지'}
           </Text>
         </View>
       </View>

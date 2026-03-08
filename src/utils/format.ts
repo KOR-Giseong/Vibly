@@ -20,3 +20,13 @@ export function formatRelativeTime(isoString: string): string {
 export function formatPrice(amount: number): string {
   return `₩${amount.toLocaleString('ko-KR')}`;
 }
+
+/**
+ * Google Places API 실제 이미지인지 여부 판단
+ * - googleusercontent.com / googleapis.com 도메인 → 실제 이미지
+ * - unsplash 등 나머지 → Vibly 기본 이미지
+ */
+export function isGoogleImage(url?: string | null): boolean {
+  if (!url) return false;
+  return url.includes('googleusercontent.com') || url.includes('googleapis.com');
+}

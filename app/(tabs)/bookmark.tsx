@@ -12,6 +12,7 @@ import { useCoupleStore } from '@stores/couple.store';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import ScreenTransition from '@components/ScreenTransition';
 import { placeService } from '@services/place.service';
+import { isGoogleImage } from '@utils/format';
 import type { Place } from '@/types';
 
 // ─── 공통 상수 ────────────────────────────────────────────────────────────────
@@ -69,9 +70,9 @@ function GridCard({
           <LinearGradient colors={['#f3e8ff', '#fce7f3']} style={styles.gridImg} />
         )}
         {/* 이미지 타입 배지 */}
-        <View style={[styles.imgTypeBadge, (place.imageUrl && !imgError) ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
+        <View style={[styles.imgTypeBadge, (isGoogleImage(place.imageUrl) && !imgError) ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
           <Text style={styles.imgTypeBadgeText}>
-            {(place.imageUrl && !imgError) ? '📷 실제 이미지' : '🖼 기본 이미지'}
+            {(isGoogleImage(place.imageUrl) && !imgError) ? '📷 실제 이미지' : '🖼 Vibly 기본 이미지'}
           </Text>
         </View>
         {/* 하트 버튼: 피그마 - 이미지 우상단에 반투명 원형 배경 */}
@@ -119,9 +120,9 @@ function ListCard({
         ) : (
           <LinearGradient colors={['#f3e8ff', '#fce7f3']} style={styles.listImg} />
         )}
-        <View style={[styles.imgTypeBadge, (place.imageUrl && !imgError) ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
+        <View style={[styles.imgTypeBadge, (isGoogleImage(place.imageUrl) && !imgError) ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
           <Text style={styles.imgTypeBadgeText}>
-            {(place.imageUrl && !imgError) ? '📷 실제' : '🖼 기본'}
+            {(isGoogleImage(place.imageUrl) && !imgError) ? '📷 실제' : '🖼 Vibly 기본'}
           </Text>
         </View>
       </View>

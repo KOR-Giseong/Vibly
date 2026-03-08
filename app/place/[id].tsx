@@ -22,6 +22,7 @@ import { useCreditStore } from '@stores/credit.store';
 import ShareIcon from '@assets/Share.svg';
 import ThumsIcon from '@assets/Thums.svg';
 import { sharePlaceKakao } from '@utils/kakaoShare';
+import { isGoogleImage } from '@utils/format';
 import type { PlaceDetail, PlaceReview } from '@/types';
 
 const IMAGE_HEIGHT = 320;
@@ -518,9 +519,9 @@ export default function PlaceDetailScreen() {
                 </View>
               )}
               {/* 이미지 타입 배지 */}
-              <View style={[styles.imgTypeBadge, place.imageUrl ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
+              <View style={[styles.imgTypeBadge, isGoogleImage(place.imageUrl) ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
                 <Text style={styles.imgTypeBadgeText}>
-                  {place.imageUrl ? '📷 장소 실제 이미지입니다' : '🖼 Vibly에서 제공하는 기본 이미지입니다'}
+                  {isGoogleImage(place.imageUrl) ? '📷 장소 실제 이미지입니다' : '🖼 Vibly에서 제공하는 기본 이미지입니다'}
                 </Text>
               </View>
             </View>
@@ -835,7 +836,9 @@ export default function PlaceDetailScreen() {
               />
             )}
             <View style={styles.imgTypeBadgeInline}>
-              <Text style={styles.imgTypeBadgeText}>📷 장소 실제 이미지입니다</Text>
+              <Text style={styles.imgTypeBadgeText}>
+                {isGoogleImage(place.imageUrl) ? '📷 장소 실제 이미지입니다' : '🖼 Vibly에서 제공하는 기본 이미지입니다'}
+              </Text>
             </View>
             <Text style={styles.fullscreenPlaceName}>{place.name}</Text>
           </View>

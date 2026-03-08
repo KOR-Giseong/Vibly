@@ -260,7 +260,14 @@ export default function SettingsScreen() {
           <Section title="계정">
             <SettingRow icon={<User size={18} color={Colors.primary[600]} />} label="프로필 수정" onPress={() => router.push('/profile-edit')} />
             <View style={styles.divider} />
-            <SettingRow icon={<Lock size={18} color={Colors.primary[600]} />} label="비밀번호 변경" onPress={() => setShowPasswordModal(true)} />
+            <SettingRow icon={<Lock size={18} color={Colors.primary[600]} />} label="비밀번호 변경" onPress={() => {
+              if (user?.provider && user.provider !== 'email') {
+                const providerName = user.provider === 'kakao' ? '카카오' : user.provider === 'google' ? '구글' : 'Apple';
+                Alert.alert('비밀번호 변경 불가', `${providerName} 소셜 로그인으로 가입된 계정은 비밀번호를 변경할 수 없어요.\n비밀번호 설정이 필요하다면 이메일로 새로 가입해주세요.`);
+                return;
+              }
+              setShowPasswordModal(true);
+            }} />
             <View style={styles.divider} />
             <SettingRow
               icon={<Globe size={18} color={Colors.primary[600]} />}

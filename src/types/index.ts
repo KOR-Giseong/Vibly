@@ -30,6 +30,7 @@ export interface User {
   isAdmin?: boolean;
   credits: number;
   createdAt: string;
+  provider?: AuthProvider;
   couple?: CoupleInfo | null;
 }
 

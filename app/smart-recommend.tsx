@@ -60,7 +60,11 @@ export default function SmartRecommendScreen() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['smart-recommend', lat, lng, mode, selectedRegion.id],
-    queryFn: () => placeService.smartRecommend(lat, lng, mode === 'nearby' ? 'nearby' : 'wide'),
+    queryFn: () => placeService.smartRecommend(
+      lat, lng,
+      mode === 'nearby' ? 'nearby' : 'wide',
+      mode === 'nearby' ? undefined : selectedRegion.label,
+    ),
     staleTime: 5 * 60 * 1000,
   });
 

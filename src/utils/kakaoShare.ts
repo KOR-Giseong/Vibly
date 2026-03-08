@@ -1,21 +1,21 @@
-import { Platform, Share } from 'react-native';
+import { Platform, Share, NativeModules } from 'react-native';
 
 /**
  * Vibly 카카오링크 공유 유틸리티
  *
- * ▸ 실제 기기(iOS/Android): KakaoTalk 앱 친구/채팅방 공유
- * ▸ 웹 / 폴백: 기본 OS 공유 시트
- *
- * [공개 이미지 URL 설정]
- * VIBLY_LOGO_URL 에 카카오 개발자 콘솔에 등록한
- * 로고 이미지의 공개 HTTPS URL을 입력하세요.
+ * ▸ 실제 빌드(iOS/Android, KakaoShareLink 네이티브 모듈 존재 시):
+ *     카카오톡 앱 친구/채팅방 선택 → Vibly 카드 공유
+ * ▸ Dev client / 웹 / 폴백:
+ *     OS 기본 공유 시트 (텍스트)
  */
+
+// 네이티브 모듈 로드 가능 여부 체크 (dev client에서는 false → OS Share 폴백)
+const isKakaoShareAvailable = !!NativeModules.KakaoShareLink;
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────
 export const VIBLY_LOGO_URL =
   'https://vibly-backend-jo12.onrender.com/public/vibly-logo.png';
 
-// 앱스토어 / 플레이스토어 랜딩 (없으면 마케팅 웹페이지 링크로 교체)
 const APP_STORE_URL = 'https://apps.apple.com/kr/app/vibly/id6743178559';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.vibly.app';
 const MARKET_URL = Platform.OS === 'android' ? PLAY_STORE_URL : APP_STORE_URL;
@@ -27,7 +27,7 @@ export interface SharePlaceParams {
   address: string;
   category?: string;
   rating?: number;
-  imageUrl?: string; // 장소 대표 이미지 (없으면 로고 사용)
+  imageUrl?: string;
 }
 
 export async function sharePlaceKakao(params: SharePlaceParams): Promise<void> {
@@ -41,8 +41,11 @@ export async function sharePlaceKakao(params: SharePlaceParams): Promise<void> {
     .filter(Boolean)
     .join('  ·  ');
 
-  if (Platform.OS === 'web') {
-    await Share.share({ message: `${name}\n${description}\n\nVibly 앱에서 확인하세요 🌟` });
+  const fallbackMessage = `${name}\n${description}\n\nVibly 앱에서 확인하세요 🌟\n${MARKET_URL}`;
+
+  // dev client 또는 웹: OS 기본 공유
+  if (!isKakaoShareAvailable || Platform.OS === 'web') {
+    await Share.share({ message: fallbackMessage, title: name });
     return;
   }
 
@@ -74,19 +77,13 @@ export async function sharePlaceKakao(params: SharePlaceParams): Promise<void> {
         },
         {
           title: '앱 다운로드',
-          link: {
-            webUrl: MARKET_URL,
-            mobileWebUrl: MARKET_URL,
-          },
+          link: { webUrl: MARKET_URL, mobileWebUrl: MARKET_URL },
         },
       ],
     });
-  } catch (e: any) {
+  } catch {
     // 카카오톡 미설치 등 → OS 기본 공유로 폴백
-    await Share.share({
-      message: `${name}\n${description}\n\nVibly 앱에서 확인하세요 🌟\n${MARKET_URL}`,
-      title: name,
-    });
+    await Share.share({ message: fallbackMessage, title: name });
   }
 }
 
@@ -114,8 +111,11 @@ export async function shareVibeReportKakao(params: ShareVibeReportParams): Promi
     .filter(Boolean)
     .join('\n');
 
-  if (Platform.OS === 'web') {
-    await Share.share({ message: `📊 ${title}\n${desc}\n\n— Vibly 🌟` });
+  const fallbackMessage = `📊 ${title}\n${desc}\n\n— Vibly 🌟\n${MARKET_URL}`;
+
+  // dev client 또는 웹: OS 기본 공유
+  if (!isKakaoShareAvailable || Platform.OS === 'web') {
+    await Share.share({ message: fallbackMessage });
     return;
   }
 
@@ -128,31 +128,20 @@ export async function shareVibeReportKakao(params: ShareVibeReportParams): Promi
         imageWidth: 800,
         imageHeight: 400,
         description: desc,
-        link: {
-          webUrl: MARKET_URL,
-          mobileWebUrl: MARKET_URL,
-        },
+        link: { webUrl: MARKET_URL, mobileWebUrl: MARKET_URL },
       },
       buttons: [
         {
           title: 'Vibly에서 기록 보기',
-          link: {
-            webUrl: MARKET_URL,
-            mobileWebUrl: MARKET_URL,
-          },
+          link: { webUrl: MARKET_URL, mobileWebUrl: MARKET_URL },
         },
         {
           title: '앱 다운로드',
-          link: {
-            webUrl: MARKET_URL,
-            mobileWebUrl: MARKET_URL,
-          },
+          link: { webUrl: MARKET_URL, mobileWebUrl: MARKET_URL },
         },
       ],
     });
   } catch {
-    await Share.share({
-      message: `📊 ${title}\n${desc}\n\n— Vibly 🌟\n${MARKET_URL}`,
-    });
+    await Share.share({ message: fallbackMessage });
   }
 }

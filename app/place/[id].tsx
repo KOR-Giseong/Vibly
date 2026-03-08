@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Share, Linking, Platform, ActivityIndicator,
+  Image, Linking, Platform, ActivityIndicator,
   Modal, TextInput, KeyboardAvoidingView, useWindowDimensions, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +21,7 @@ import { useAuthStore } from '@stores/auth.store';
 import { useCreditStore } from '@stores/credit.store';
 import ShareIcon from '@assets/Share.svg';
 import ThumsIcon from '@assets/Thums.svg';
+import { sharePlaceKakao } from '@utils/kakaoShare';
 import type { PlaceDetail, PlaceReview } from '@/types';
 
 const IMAGE_HEIGHT = 320;

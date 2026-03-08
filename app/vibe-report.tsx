@@ -16,7 +16,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  Share,
   RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,6 +34,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow 
 import ScreenTransition from '@components/ScreenTransition';
 import { useVibeReport, usePrefetchVibeReport } from '@hooks/useVibeReport';
 import { useCreditStore } from '@stores/credit.store';
+import { shareVibeReportKakao } from '@utils/kakaoShare';
 import type { DailyMoodEntry, VibeInsight } from '@/types';
 
 type Period = 'weekly' | 'monthly';
@@ -146,17 +146,14 @@ export default function VibeReportScreen() {
 
   const handleShare = useCallback(async () => {
     if (!data) return;
-    try {
-      const lines = [
-        `📊 바이브 리포트 (${data.period === 'weekly' ? '주간' : '월간'})`,
-        `📅 ${data.dateRange}`,
-        `✅ 체크인: ${data.checkInCount}회`,
-        `🗺️ 방문 장소: ${data.uniquePlacesCount}곳`,
-        data.vibeScore > 0 ? `⭐ 바이브 스코어: ${data.vibeScore}점` : '',
-        '\n— Vibly로 기록 중 🌟',
-      ].filter(Boolean);
-      await Share.share({ message: lines.join('\n') });
-    } catch { /* 취소 */ }
+    await shareVibeReportKakao({
+      period: data.period as 'weekly' | 'monthly',
+      dateRange: data.dateRange,
+      checkInCount: data.checkInCount,
+      uniquePlacesCount: data.uniquePlacesCount,
+      vibeScore: data.vibeScore > 0 ? data.vibeScore : undefined,
+      topVibe: (data.vibeBreakdown as any)?.[0]?.label ?? undefined,
+    });
   }, [data]);
 
   return (

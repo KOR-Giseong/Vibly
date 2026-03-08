@@ -7,12 +7,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react-native';
 import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow } from '@constants/theme';
 import { useAuth } from '@hooks/useAuth';
 import { useAuthStore } from '@stores/auth.store';
 import { authService } from '@services/auth.service';
 import { useQueryClient } from '@tanstack/react-query';
+import { containsProfanity } from '@utils/profanity';
 
 const VIBE_OPTIONS = [
   { emoji: '☕', label: '아늑한' },
@@ -28,6 +29,7 @@ const VIBE_OPTIONS = [
 ];
 
 const MAX_VIBES = 3;
+type NicknameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'profanity';
 
 export default function ProfileEditScreen() {
   const router = useRouter();
@@ -37,6 +39,7 @@ export default function ProfileEditScreen() {
 
   const [name, setName] = useState(user?.name ?? '');
   const [nickname, setNickname] = useState(user?.nickname ?? '');
+  const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>('idle');
   const [vibes, setVibes] = useState<string[]>(user?.preferredVibes ?? []);
   const [saving, setSaving] = useState(false);
 
@@ -45,8 +48,32 @@ export default function ProfileEditScreen() {
       setName(user.name ?? '');
       setNickname(user.nickname ?? '');
       setVibes(user.preferredVibes ?? []);
+      setNicknameStatus('idle');
     }
   }, [user]);
+
+  const handleNicknameChange = (text: string) => {
+    setNickname(text);
+    setNicknameStatus('idle');
+  };
+
+  const handleCheckNickname = async () => {
+    const trimmed = nickname.trim();
+    if (!trimmed) return;
+    setNicknameStatus('checking');
+    try {
+      const { available, reason } = await authService.checkNickname(trimmed);
+      if (available) {
+        setNicknameStatus('available');
+      } else if (reason === 'profanity') {
+        setNicknameStatus('profanity');
+      } else {
+        setNicknameStatus('taken');
+      }
+    } catch {
+      setNicknameStatus('idle');
+    }
+  };
 
   const toggleVibe = (label: string) => {
     setVibes((prev) =>
@@ -60,6 +87,12 @@ export default function ProfileEditScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) { Alert.alert('이름을 입력해주세요.'); return; }
+    if (containsProfanity(name.trim())) { Alert.alert('이름 오류', '사용할 수 없는 이름이에요.'); return; }
+    const nicknameChanged = nickname.trim() !== (user?.nickname ?? '');
+    if (nicknameChanged) {
+      if (nicknameStatus === 'profanity') { Alert.alert('닉네임 오류', '사용할 수 없는 닉네임이에요.'); return; }
+      if (nicknameStatus !== 'available') { Alert.alert('닉네임 확인', '닉네임 중복확인을 해주세요.'); return; }
+    }
     setSaving(true);
     try {
       const updated = await authService.updateProfile({ name: name.trim(), nickname: nickname.trim(), preferredVibes: vibes });
@@ -107,15 +140,51 @@ export default function ProfileEditScreen() {
             {/* 닉네임 */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>닉네임</Text>
-              <TextInput
-                style={styles.input}
-                value={nickname}
-                onChangeText={setNickname}
-                placeholder="닉네임을 입력하세요 (선택)"
-                placeholderTextColor={Colors.gray[400]}
-                maxLength={30}
-                autoCapitalize="none"
-              />
+              <View style={[
+                styles.nicknameRow,
+                nicknameStatus === 'available' && { borderColor: '#10B981' },
+                (nicknameStatus === 'taken' || nicknameStatus === 'profanity') && { borderColor: '#EF4444' },
+              ]}>
+                <TextInput
+                  style={styles.nicknameInput}
+                  value={nickname}
+                  onChangeText={handleNicknameChange}
+                  placeholder="닉네임을 입력하세요 (선택)"
+                  placeholderTextColor={Colors.gray[400]}
+                  maxLength={30}
+                  autoCapitalize="none"
+                />
+                <Text style={styles.nicknameCount}>{nickname.length}/30</Text>
+                <TouchableOpacity
+                  onPress={handleCheckNickname}
+                  disabled={!nickname.trim() || nicknameStatus === 'checking'}
+                  activeOpacity={0.8}
+                  style={[styles.checkBtn, (!nickname.trim() || nicknameStatus === 'checking') && { opacity: 0.4 }]}
+                >
+                  {nicknameStatus === 'checking'
+                    ? <ActivityIndicator size="small" color="#9810FA" />
+                    : <Text style={styles.checkBtnText}>중복확인</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+              {nicknameStatus === 'available' && (
+                <View style={styles.statusRow}>
+                  <CheckCircle size={14} color="#10B981" />
+                  <Text style={[styles.statusText, { color: '#10B981' }]}>사용 가능한 닉네임이에요.</Text>
+                </View>
+              )}
+              {nicknameStatus === 'taken' && (
+                <View style={styles.statusRow}>
+                  <XCircle size={14} color="#EF4444" />
+                  <Text style={[styles.statusText, { color: '#EF4444' }]}>이미 사용 중인 닉네임이에요.</Text>
+                </View>
+              )}
+              {nicknameStatus === 'profanity' && (
+                <View style={styles.statusRow}>
+                  <XCircle size={14} color="#EF4444" />
+                  <Text style={[styles.statusText, { color: '#EF4444' }]}>사용할 수 없는 닉네임이에요.</Text>
+                </View>
+              )}
             </View>
 
             {/* 선호 바이브 */}
@@ -197,6 +266,32 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md, color: Colors.gray[900],
     borderWidth: 1, borderColor: Colors.gray[200], ...Shadow.sm,
   },
+  nicknameRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
+    borderWidth: 1.5, borderColor: Colors.gray[200],
+    paddingHorizontal: Spacing.lg, ...Shadow.sm,
+  },
+  nicknameInput: {
+    flex: 1, paddingVertical: 14,
+    fontSize: FontSize.md, color: Colors.gray[900],
+  },
+  nicknameCount: {
+    fontSize: FontSize.xs, color: Colors.gray[400], marginRight: Spacing.sm,
+  },
+  checkBtn: {
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md, borderWidth: 1.5, borderColor: '#9810FA',
+    minWidth: 64, alignItems: 'center', justifyContent: 'center',
+  },
+  checkBtnText: {
+    fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: '#9810FA',
+  },
+  statusRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginTop: Spacing.xs, paddingHorizontal: Spacing.xs,
+  },
+  statusText: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   vibeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   vibePill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

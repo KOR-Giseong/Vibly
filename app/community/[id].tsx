@@ -19,6 +19,7 @@ import { POST_CATEGORY_LABEL, REPORT_REASON_LABEL } from '@/types';
 import type { ReportReason } from '@/types';
 import { useAuthStore } from '@stores/auth.store';
 import { formatRelativeTime } from '@utils/format';
+import { containsProfanity } from '@utils/profanity';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function PostDetailScreen() {
@@ -342,7 +343,12 @@ export default function PostDetailScreen() {
                   (!commentText.trim() || commentMut.isPending) && styles.sendBtnDisabled,
                 ]}
                 onPress={() => {
-                  if (commentText.trim()) commentMut.mutate(commentText.trim());
+                  if (!commentText.trim()) return;
+                  if (containsProfanity(commentText.trim())) {
+                    Alert.alert('작성 불가', '부적절한 언어는 사용하실 수 없습니다.');
+                    return;
+                  }
+                  commentMut.mutate(commentText.trim());
                 }}
                 disabled={!commentText.trim() || commentMut.isPending}
               >

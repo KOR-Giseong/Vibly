@@ -15,6 +15,7 @@ import ScreenTransition from '@components/ScreenTransition';
 import { communityApi } from '@services/community.service';
 import type { PostCategory } from '@/types';
 import { POST_CATEGORY_LABEL } from '@/types';
+import { containsProfanity } from '@utils/profanity';
 
 const CATEGORIES: PostCategory[] = ['FREE', 'INFO', 'QUESTION', 'REVIEW'];
 
@@ -42,6 +43,9 @@ export default function WritePostScreen() {
     if (!title.trim()) { Alert.alert('알림', '제목을 입력해주세요.'); return; }
     if (!body.trim()) { Alert.alert('알림', '내용을 입력해주세요.'); return; }
     if (title.trim().length > 100) { Alert.alert('알림', '제목은 100자 이하로 입력해주세요.'); return; }
+    if (containsProfanity(title.trim()) || containsProfanity(body.trim())) {
+      Alert.alert('작성 불가', '부적절한 언어는 사용하실 수 없습니다.'); return;
+    }
     createMut.mutate();
   };
 

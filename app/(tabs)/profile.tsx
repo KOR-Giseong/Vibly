@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Settings, ChevronRight, MapPin, Bookmark,
   Crown, BarChart2, CreditCard, LogOut, Sparkles,
-  Camera, User, Pencil, X, Heart, ShieldCheck,
+  Camera, User, Pencil, X, Heart, ShieldCheck, CheckCircle, XCircle,
 } from 'lucide-react-native';
 import { useCoupleStore } from '@stores/couple.store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,6 +19,7 @@ import { Colors, FontSize, FontWeight, Spacing, BorderRadius, Gradients, Shadow 
 import { useAuth } from '@hooks/useAuth';
 import { useAuthStore } from '@stores/auth.store';
 import { authService } from '@services/auth.service';
+import { containsProfanity } from '@utils/profanity';
 import ScreenTransition from '@components/ScreenTransition';
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
@@ -150,8 +151,11 @@ function EditProfileModal({
   onClose: () => void;
   onSave: (data: { name: string; nickname: string; gender: 'MALE' | 'FEMALE' | 'OTHER' | null; preferredVibes: string[] }) => Promise<void>;
 }) {
+  type NicknameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'profanity';
+
   const [name, setName] = useState(initialName);
   const [nickname, setNickname] = useState(initialNickname);
+  const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>('idle');
   const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER' | null>(initialGender);
   const [vibes, setVibes] = useState<string[]>(initialVibes);
   const [saving, setSaving] = useState(false);
@@ -161,12 +165,36 @@ function EditProfileModal({
     if (visible) {
       setName(initialName);
       setNickname(initialNickname);
+      setNicknameStatus('idle');
       setGender(initialGender);
       setVibes(initialVibes);
     }
   }, [visible]);
 
   const MAX_VIBES = 3;
+
+  const handleNicknameChange = (text: string) => {
+    setNickname(text);
+    setNicknameStatus('idle');
+  };
+
+  const handleCheckNickname = async () => {
+    const trimmed = nickname.trim();
+    if (!trimmed) return;
+    setNicknameStatus('checking');
+    try {
+      const { available, reason } = await authService.checkNickname(trimmed);
+      if (available) {
+        setNicknameStatus('available');
+      } else if (reason === 'profanity') {
+        setNicknameStatus('profanity');
+      } else {
+        setNicknameStatus('taken');
+      }
+    } catch {
+      setNicknameStatus('idle');
+    }
+  };
 
   const toggleVibe = (label: string) => {
     setVibes((prev) =>
@@ -180,6 +208,12 @@ function EditProfileModal({
 
   const handleSave = async () => {
     if (!name.trim()) { Alert.alert('이름을 입력해주세요.'); return; }
+    if (containsProfanity(name.trim())) { Alert.alert('이름 오류', '사용할 수 없는 이름이에요.'); return; }
+    const nicknameChanged = nickname.trim() !== initialNickname;
+    if (nicknameChanged) {
+      if (nicknameStatus === 'profanity') { Alert.alert('닉네임 오류', '사용할 수 없는 닉네임이에요.'); return; }
+      if (nicknameStatus !== 'available') { Alert.alert('닉네임 확인', '닉네임 중복확인을 해주세요.'); return; }
+    }
     setSaving(true);
     try {
       await onSave({ name: name.trim(), nickname: nickname.trim(), gender, preferredVibes: vibes });
@@ -221,15 +255,51 @@ function EditProfileModal({
 
               {/* 닉네임 */}
               <Text style={styles.inputLabel}>닉네임</Text>
-              <TextInput
-                style={styles.input}
-                value={nickname}
-                onChangeText={setNickname}
-                placeholder="닉네임을 입력하세요 (선택)"
-                placeholderTextColor={Colors.gray[400]}
-                maxLength={30}
-                autoCapitalize="none"
-              />
+              <View style={[
+                styles.nicknameRow,
+                nicknameStatus === 'available' && { borderColor: '#10B981' },
+                (nicknameStatus === 'taken' || nicknameStatus === 'profanity') && { borderColor: '#EF4444' },
+              ]}>
+                <TextInput
+                  style={styles.nicknameInput}
+                  value={nickname}
+                  onChangeText={handleNicknameChange}
+                  placeholder="닉네임을 입력하세요 (선택)"
+                  placeholderTextColor={Colors.gray[400]}
+                  maxLength={30}
+                  autoCapitalize="none"
+                />
+                <Text style={styles.nicknameCount}>{nickname.length}/30</Text>
+                <TouchableOpacity
+                  onPress={handleCheckNickname}
+                  disabled={!nickname.trim() || nicknameStatus === 'checking'}
+                  activeOpacity={0.8}
+                  style={[styles.checkBtn, (!nickname.trim() || nicknameStatus === 'checking') && { opacity: 0.4 }]}
+                >
+                  {nicknameStatus === 'checking'
+                    ? <ActivityIndicator size="small" color="#9810FA" />
+                    : <Text style={styles.checkBtnText}>중복확인</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+              {nicknameStatus === 'available' && (
+                <View style={styles.nicknameStatusRow}>
+                  <CheckCircle size={14} color="#10B981" />
+                  <Text style={[styles.nicknameStatusText, { color: '#10B981' }]}>사용 가능한 닉네임이에요.</Text>
+                </View>
+              )}
+              {nicknameStatus === 'taken' && (
+                <View style={styles.nicknameStatusRow}>
+                  <XCircle size={14} color="#EF4444" />
+                  <Text style={[styles.nicknameStatusText, { color: '#EF4444' }]}>이미 사용 중인 닉네임이에요.</Text>
+                </View>
+              )}
+              {nicknameStatus === 'profanity' && (
+                <View style={styles.nicknameStatusRow}>
+                  <XCircle size={14} color="#EF4444" />
+                  <Text style={[styles.nicknameStatusText, { color: '#EF4444' }]}>사용할 수 없는 닉네임이에요.</Text>
+                </View>
+              )}
 
               {/* 성별 */}
               <Text style={styles.inputLabel}>성별</Text>
@@ -849,5 +919,31 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: Spacing['2xl'],
   },
   saveBtnText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.white },
+  nicknameRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.gray[50], borderRadius: BorderRadius.lg,
+    borderWidth: 1, borderColor: Colors.gray[200],
+    paddingHorizontal: Spacing.lg, marginBottom: 4,
+  },
+  nicknameInput: {
+    flex: 1, paddingVertical: 14,
+    fontSize: FontSize.md, color: Colors.gray[900],
+  },
+  nicknameCount: {
+    fontSize: FontSize.xs, color: Colors.gray[400], marginRight: Spacing.sm,
+  },
+  checkBtn: {
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md, borderWidth: 1.5, borderColor: '#9810FA',
+    minWidth: 64, alignItems: 'center', justifyContent: 'center',
+  },
+  checkBtnText: {
+    fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: '#9810FA',
+  },
+  nicknameStatusRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs,
+  },
+  nicknameStatusText: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
 });
 

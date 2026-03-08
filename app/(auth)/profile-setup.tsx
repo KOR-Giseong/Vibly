@@ -26,7 +26,7 @@ const VIBES = [
   { emoji: '🎨', label: '예술적인' },
 ];
 
-type NicknameStatus = 'idle' | 'checking' | 'available' | 'taken';
+type NicknameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'profanity';
 
 export default function ProfileSetupScreen() {
   const insets = useSafeAreaInsets();
@@ -48,8 +48,14 @@ export default function ProfileSetupScreen() {
     if (!trimmed) return;
     setNicknameStatus('checking');
     try {
-      const { available } = await authService.checkNickname(trimmed);
-      setNicknameStatus(available ? 'available' : 'taken');
+      const { available, reason } = await authService.checkNickname(trimmed);
+      if (available) {
+        setNicknameStatus('available');
+      } else if (reason === 'profanity') {
+        setNicknameStatus('profanity');
+      } else {
+        setNicknameStatus('taken');
+      }
     } catch {
       setNicknameStatus('idle');
     }
@@ -96,7 +102,7 @@ export default function ProfileSetupScreen() {
 
   const inputBorderColor =
     nicknameStatus === 'available' ? '#10B981' :
-    nicknameStatus === 'taken' ? '#EF4444' :
+    nicknameStatus === 'taken' || nicknameStatus === 'profanity' ? '#EF4444' :
     Colors.gray[200];
 
   return (
@@ -174,6 +180,12 @@ export default function ProfileSetupScreen() {
               <View style={styles.statusRow}>
                 <XCircle size={14} color="#EF4444" />
                 <Text style={[styles.statusText, { color: '#EF4444' }]}>이미 사용 중인 닉네임이에요.</Text>
+              </View>
+            )}
+            {nicknameStatus === 'profanity' && (
+              <View style={styles.statusRow}>
+                <XCircle size={14} color="#EF4444" />
+                <Text style={[styles.statusText, { color: '#EF4444' }]}>사용할 수 없는 닉네임이에요.</Text>
               </View>
             )}
           </View>

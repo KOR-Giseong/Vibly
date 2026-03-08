@@ -8,7 +8,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, Sparkles, X, MapPin, ChevronDown, CheckSquare } from 'lucide-react-native';
+import { Bell, Sparkles, X, MapPin, ChevronDown, CheckSquare, Crown } from 'lucide-react-native';
 import { notificationApi } from '@services/notification.service';
 import { attendanceApi } from '@services/attendance.service';
 import { AttendanceModal } from '@components/AttendanceModal';
@@ -236,21 +236,24 @@ export default function HomeScreen() {
             <RateLimitBanner />
           </View>
 
-          {/* 실시간 추천 카드 (프리미엄 전용) */}
-          {isPremium && (
-            <Animated.View style={{ opacity: cardOpacity, transform: [{ scale: cardScale }] }}>
-              <TouchableOpacity
-                style={styles.smartRecommendCard}
-                onPress={() => router.push('/smart-recommend')}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={['#7C3AED', '#A855F7']}
-                  style={StyleSheet.absoluteFill}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                />
-                {/* shimmer 레이어 */}
+          {/* 실시간 추천 카드 (항상 표시, 비구독자는 구독 전용 배지) */}
+          <Animated.View style={isPremium ? { opacity: cardOpacity, transform: [{ scale: cardScale }] } : {}}>
+            <TouchableOpacity
+              style={styles.smartRecommendCard}
+              onPress={() => {
+                if (!isPremium) { router.push('/subscription'); return; }
+                router.push('/smart-recommend');
+              }}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={['#7C3AED', '#A855F7']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              {/* shimmer 레이어 (구독자만) */}
+              {isPremium && (
                 <Animated.View
                   pointerEvents="none"
                   style={[
@@ -272,17 +275,24 @@ export default function HomeScreen() {
                     end={{ x: 1, y: 0 }}
                   />
                 </Animated.View>
-                <View style={styles.smartRecommendContent}>
-                  <Text style={styles.smartRecommendEmoji}>🌤</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.smartRecommendTitle}>지금 어디 갈까?</Text>
-                    <Text style={styles.smartRecommendSub}>날씨와 시간대에 맞는 장소를 AI가 추천해드려요</Text>
-                  </View>
-                  <Sparkles size={20} color="rgba(255,255,255,0.8)" />
+              )}
+              {/* 구독 전용 배지 (비구독자) */}
+              {!isPremium && (
+                <View style={styles.premiumOnlyBadge}>
+                  <Crown size={10} color={Colors.white} />
+                  <Text style={styles.premiumOnlyBadgeText}>구독 전용</Text>
                 </View>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
+              )}
+              <View style={styles.smartRecommendContent}>
+                <Text style={styles.smartRecommendEmoji}>🌤</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.smartRecommendTitle}>지금 어디 갈까?</Text>
+                  <Text style={styles.smartRecommendSub}>날씨와 시간대에 맞는 장소를 AI가 추천해드려요</Text>
+                </View>
+                <Sparkles size={20} color="rgba(255,255,255,0.8)" />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
 
           {/* 지역 선택 */}
           <View style={styles.regionRow}>
@@ -713,6 +723,25 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
+  },
+  premiumOnlyBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.30)',
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  premiumOnlyBadgeText: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
   },
 });
 

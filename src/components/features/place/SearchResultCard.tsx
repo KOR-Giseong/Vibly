@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, BorderRadius, FontSize, FontWeight, Spacing, Shadow } from '@constants/theme';
@@ -17,6 +17,7 @@ interface Props {
 // -- List card (Figma match) --------------------------------------------------
 function ListCard({ place, onPress }: Props) {
   const vibe = place.tags?.[0];
+  const [imgError, setImgError] = useState(false);
 
   return (
     <TouchableOpacity
@@ -37,8 +38,8 @@ function ListCard({ place, onPress }: Props) {
 
       <View style={styles.listInner}>
         <View style={styles.listImgWrap}>
-          {place.imageUrl ? (
-            <Image source={{ uri: place.imageUrl }} style={styles.listImg} resizeMode="cover" />
+          {place.imageUrl && !imgError ? (
+            <Image source={{ uri: place.imageUrl }} style={styles.listImg} resizeMode="cover" onError={() => setImgError(true)} />
           ) : (
             <View style={[styles.listImg, styles.imgPlaceholder]} />
           )}
@@ -91,6 +92,7 @@ function ListCard({ place, onPress }: Props) {
 // -- Grid card (Figma match) --------------------------------------------------
 function GridCard({ place, onPress }: Props) {
   const vibe = place.tags?.[0];
+  const [imgError, setImgError] = useState(false);
 
   return (
     <TouchableOpacity
@@ -99,8 +101,8 @@ function GridCard({ place, onPress }: Props) {
       style={styles.gridCard}
     >
       <View style={styles.gridImgWrap}>
-        {place.imageUrl ? (
-          <Image source={{ uri: place.imageUrl }} style={styles.gridImg} resizeMode="cover" />
+        {place.imageUrl && !imgError ? (
+          <Image source={{ uri: place.imageUrl }} style={styles.gridImg} resizeMode="cover" onError={() => setImgError(true)} />
         ) : (
           <View style={[styles.gridImg, styles.imgPlaceholder]} />
         )}

@@ -78,8 +78,8 @@ export const authService = {
     await apiClient.delete('/auth/avatar');
   },
 
-  async checkNickname(nickname: string): Promise<{ available: boolean }> {
-    const { data } = await apiClient.get<{ available: boolean }>('/auth/check-nickname', {
+  async checkNickname(nickname: string): Promise<{ available: boolean; reason?: string }> {
+    const { data } = await apiClient.get<{ available: boolean; reason?: string }>('/auth/check-nickname', {
       params: { nickname },
     });
     return data;

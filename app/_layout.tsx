@@ -13,6 +13,7 @@ import { useAuthStore } from '@stores/auth.store';
 import { useCreditStore } from '@stores/credit.store';
 import { useCoupleStore } from '@stores/couple.store';
 import { authService } from '@services/auth.service';
+import { storage } from '@utils/storage';
 import { notificationApi } from '@services/notification.service';
 import { getAdsInitialized } from '@utils/adsInit';
 import AnimatedSplash from '@components/AnimatedSplash';
@@ -55,6 +56,12 @@ function RootLayoutNav() {
   useEffect(() => {
     (async () => {
       try {
+        // 토큰이 있으면 먼저 인증 상태로 간주 (Render 콜드스타트 대응)
+        const storedToken = await storage.getItem('accessToken');
+        if (storedToken) {
+          setAuthenticated(true);
+        }
+
         const user = await authService.getMe();
         setUser(user);
         setAuthenticated(true);
@@ -67,8 +74,14 @@ function RootLayoutNav() {
         if (user?.status === 'SUSPENDED') {
           router.replace('/suspended');
         }
-      } catch {
-        setAuthenticated(false);
+      } catch (e: any) {
+        const status = e?.response?.status;
+        // 401이면 실제 토큰 만료 → 로그아웃
+        // 네트워크 오류/500/503이면 토큰 유지 (Render 재시작 중일 수 있음)
+        if (status === 401) {
+          setAuthenticated(false);
+        }
+        // 그 외 오류는 storedToken 기반으로 이미 설정된 상태 유지
       } finally {
         setIsLoaded(true);
       }

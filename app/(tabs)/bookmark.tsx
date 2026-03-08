@@ -68,6 +68,12 @@ function GridCard({
         ) : (
           <LinearGradient colors={['#f3e8ff', '#fce7f3']} style={styles.gridImg} />
         )}
+        {/* 이미지 타입 배지 */}
+        <View style={[styles.imgTypeBadge, (place.imageUrl && !imgError) ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
+          <Text style={styles.imgTypeBadgeText}>
+            {(place.imageUrl && !imgError) ? '📷 실제 이미지' : '🖼 기본 이미지'}
+          </Text>
+        </View>
         {/* 하트 버튼: 피그마 - 이미지 우상단에 반투명 원형 배경 */}
         <TouchableOpacity style={styles.heartBtn} onPress={onRemove} activeOpacity={0.8}>
           <Heart size={14} color="#e60076" fill="#e60076" />
@@ -113,6 +119,11 @@ function ListCard({
         ) : (
           <LinearGradient colors={['#f3e8ff', '#fce7f3']} style={styles.listImg} />
         )}
+        <View style={[styles.imgTypeBadge, (place.imageUrl && !imgError) ? styles.imgTypeBadgeReal : styles.imgTypeBadgeDefault]}>
+          <Text style={styles.imgTypeBadgeText}>
+            {(place.imageUrl && !imgError) ? '📷 실제' : '🖼 기본'}
+          </Text>
+        </View>
       </View>
 
       {/* 정보 */}
@@ -431,7 +442,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
-  gridImgWrap: { position: 'relative' },
+  gridImgWrap: { position: 'relative', overflow: 'hidden' },
   gridImg: { width: '100%', height: 140 },
 
   // 피그마: 이미지 우상단, 흰 반투명 원형 bg (32×32)
@@ -463,8 +474,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
-  listImgWrap: { marginRight: 14 },
+  listImgWrap: { marginRight: 14, position: 'relative', overflow: 'hidden', borderRadius: 16 },
   listImg: { width: 72, height: 72, borderRadius: 16 },
+  // 이미지 타입 배지
+  imgTypeBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 2,
+    alignItems: 'center',
+  },
+  imgTypeBadgeText: { color: '#fff', fontSize: 8, fontWeight: '500' as const },
+  imgTypeBadgeReal: { backgroundColor: 'rgba(0,0,0,0.5)' },
+  imgTypeBadgeDefault: { backgroundColor: 'rgba(152,16,250,0.75)' },
   listInfo: { flex: 1 },
   listName: { fontSize: 14, fontWeight: '700', color: '#101828', marginBottom: 2, lineHeight: 20 },
   listCategory: { fontSize: 12, color: '#6a7282', marginBottom: 5 },

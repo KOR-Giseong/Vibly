@@ -404,7 +404,7 @@ export default function AiDateChatScreen() {
 
             <View style={styles.noticeBox}>
               <Text style={styles.noticeText}>
-                💡 최대 {MAX_SESSIONS}개까지 저장돼요. 초과 시 가장 오래된 대화가 자동으로 삭제됩니다.
+                💡 최대 {MAX_SESSIONS}개까지 저장돼요.{'\n'}초과 시 가장 오래된 대화가 자동으로 삭제됩니다.
               </Text>
             </View>
 

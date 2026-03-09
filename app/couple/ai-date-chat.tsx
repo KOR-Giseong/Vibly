@@ -376,7 +376,7 @@ export default function AiDateChatScreen() {
               placeholder="메시지를 입력하세요..."
               placeholderTextColor={Colors.gray[400]}
               multiline
-              maxLength={200}
+              maxLength={500}
               onSubmitEditing={() => sendMessage(input)}
             />
             <TouchableOpacity

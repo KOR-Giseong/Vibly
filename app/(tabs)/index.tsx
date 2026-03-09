@@ -384,6 +384,9 @@ export default function HomeScreen() {
                 <Text style={styles.modalHintText}>
                   💡 예시: "합정동에서 썸녀랑 데이트할 분위기 좋은 레스토랑"
                 </Text>
+                <Text style={styles.modalHintSub}>
+                  📍 홈 화면에서 지역을 먼저 선택하면 더 정확한 결과를 받을 수 있어요!
+                </Text>
               </View>
 
               {/* 입력창 */}
@@ -619,6 +622,12 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: '#7C3AED',
     lineHeight: 18,
+  },
+  modalHintSub: {
+    fontSize: FontSize.xs,
+    color: '#9CA3AF',
+    lineHeight: 18,
+    marginTop: 4,
   },
   modalInput: {
     borderWidth: 1.5,

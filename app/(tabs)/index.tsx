@@ -287,7 +287,7 @@ export default function HomeScreen() {
                 <Text style={styles.smartRecommendEmoji}>🌤</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.smartRecommendTitle}>지금 어디 갈까?</Text>
-                  <Text style={styles.smartRecommendSub}>{'날씨와 시간대에 맞는 장소를 AI가\n추천해드려요'}</Text>
+                  <Text style={styles.smartRecommendSub}>{'날씨와 시간대에 맞는 장소를 AI가\n추천해드려요!'}</Text>
                 </View>
                 <Sparkles size={20} color="rgba(255,255,255,0.8)" />
               </View>

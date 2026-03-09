@@ -6,7 +6,7 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 70000, // Render free tier 깨우는 데 최대 60초 → 70초로 여유 확보
+  timeout: 70000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -25,10 +25,12 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean; _retry503?: boolean };
 
-    // 503: Render 콜드 스타트 등 일시적 서버 불가 → 5초 대기 후 1회 자동 재시도
-    if (error.response?.status === 503 && !original._retry503) {
-      original._retry503 = true;
-      await new Promise((res) => setTimeout(res, 5000));
+    // 502/503: Render 재시작 중 일시적 서버 불가 → 최대 2회 재시도 (각 10초 대기)
+    const isServerDown = error.response?.status === 502 || error.response?.status === 503 || !error.response;
+    const retryCount = (original as any)._retryCount ?? 0;
+    if (isServerDown && retryCount < 2 && !original._retry) {
+      (original as any)._retryCount = retryCount + 1;
+      await new Promise((res) => setTimeout(res, 10000));
       return apiClient(original);
     }
 
@@ -47,7 +49,7 @@ apiClient.interceptors.response.use(
             break;
           } catch (retryErr: any) {
             const status = retryErr?.response?.status;
-            if ((status === 503 || !status) && attempt < 2) {
+            if ((status === 502 || status === 503 || !status) && attempt < 2) {
               // 서버 슬립 중 → 5초 대기 후 재시도
               await new Promise((res) => setTimeout(res, 5000));
               continue;

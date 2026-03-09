@@ -87,11 +87,21 @@ export default function ProfileSetupScreen() {
     setError('');
     setLoading(true);
     try {
-      const updatedUser = await authService.updateProfile({ nickname: nickname.trim(), gender, preferredVibes: selectedVibes });
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 20000),
+      );
+      const updatedUser = await Promise.race([
+        authService.updateProfile({ nickname: nickname.trim(), gender, preferredVibes: selectedVibes }),
+        timeout,
+      ]);
       setUser(updatedUser);
       router.replace('/welcome');
-    } catch {
-      setError('저장에 실패했어요. 다시 시도해주세요.');
+    } catch (e: any) {
+      setError(
+        e?.message === 'timeout'
+          ? '서버 응답이 늦어요. 잠시 후 다시 시도해주세요.'
+          : '저장에 실패했어요. 다시 시도해주세요.',
+      );
     } finally {
       setLoading(false);
     }

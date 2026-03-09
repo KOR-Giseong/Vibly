@@ -376,13 +376,20 @@ export default function HomeScreen() {
 
               <Text style={styles.modalTitle}>AI에게 물어보기</Text>
               <Text style={styles.modalDesc}>
-                지금 기분이나 원하는 분위기를{'\n'}자유롭게 말해보세요
+                동네명, 목적, 분위기를 구체적으로 입력할수록{'\n'}더 정확한 장소를 찾아드려요
               </Text>
+
+              {/* 입력 힌트 */}
+              <View style={styles.modalHint}>
+                <Text style={styles.modalHintText}>
+                  💡 예시: "합정동에서 썸녀랑 데이트할 분위기 좋은 레스토랑"
+                </Text>
+              </View>
 
               {/* 입력창 */}
               <TextInput
                 style={styles.modalInput}
-                placeholder="예) 오늘 너무 지쳐서 조용히 쉬고 싶어요"
+                placeholder="예) 홍대 근처 분위기 좋은 이탈리안 레스토랑"
                 placeholderTextColor={Colors.gray[400]}
                 value={aiQuery}
                 onChangeText={setAiQuery}
@@ -598,6 +605,20 @@ const styles = StyleSheet.create({
     color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 20,
+  },
+  modalHint: {
+    backgroundColor: '#F5F3FF',
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+  },
+  modalHintText: {
+    fontSize: FontSize.xs,
+    color: '#7C3AED',
+    lineHeight: 18,
   },
   modalInput: {
     borderWidth: 1.5,

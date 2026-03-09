@@ -73,6 +73,8 @@ function RootLayoutNav() {
         setCoupleInfo(user?.couple ?? null);
         if (user?.status === 'SUSPENDED') {
           router.replace('/suspended');
+        } else if (user && !user.isProfileComplete) {
+          router.replace('/(auth)/profile-setup');
         }
       } catch (e: any) {
         const status = e?.response?.status;

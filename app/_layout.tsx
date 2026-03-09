@@ -78,12 +78,17 @@ function RootLayoutNav() {
         }
       } catch (e: any) {
         const status = e?.response?.status;
-        // 401이면 실제 토큰 만료 → 로그아웃
-        // 네트워크 오류/500/503이면 토큰 유지 (Render 재시작 중일 수 있음)
         if (status === 401) {
-          setAuthenticated(false);
+          // 인터셉터가 refresh 성공 시 재시도하고, 진짜 만료(refresh도 401)일 때만 토큰 삭제.
+          // 서버 재시작(502/503)으로 refresh 실패한 경우엔 토큰이 스토리지에 남아 있음.
+          const stillHasToken = await storage.getItem('accessToken');
+          if (!stillHasToken) {
+            // 토큰이 이미 삭제됨 = 진짜 만료 → 로그아웃
+            setAuthenticated(false);
+          }
+          // 토큰이 남아 있으면 서버 일시 불가 → 인증 상태 유지
         }
-        // 그 외 오류는 storedToken 기반으로 이미 설정된 상태 유지
+        // 그 외 오류(네트워크, 500, 503)는 storedToken 기반 상태 유지
       } finally {
         setIsLoaded(true);
       }

@@ -29,12 +29,13 @@ import { useCreditStore } from '@stores/credit.store';
 import type { Place } from '@/types';
 
 type ViewMode = 'list' | 'grid';
-type SortType = 'recommended' | 'distance' | 'rating';
+type SortType = 'recommended' | 'distance' | 'rating' | 'googleRating';
 
 const SORT_OPTIONS: { key: SortType; label: string; desc: string }[] = [
-  { key: 'recommended', label: '추천순', desc: '관련도 높은 순서' },
-  { key: 'distance',    label: '거리순', desc: '가까운 장소부터' },
-  { key: 'rating',      label: '평점순', desc: '별점 높은 순서' },
+  { key: 'recommended',  label: '추천순',        desc: '관련도 높은 순서' },
+  { key: 'distance',     label: '거리순',        desc: '가까운 장소부터' },
+  { key: 'rating',       label: 'Vibly 평점순',  desc: 'Vibly 앱 별점 높은 순서' },
+  { key: 'googleRating', label: 'Google 평점순', desc: 'Google 별점 높은 순서' },
 ];
 
 function toMeters(d?: string): number {
@@ -53,6 +54,16 @@ function sortPlaces(places: Place[], sort: SortType): Place[] {
     return arr.sort((a, b) => {
       const ra = a.rating ?? 0;
       const rb = b.rating ?? 0;
+      if (ra === 0 && rb === 0) return 0;
+      if (ra === 0) return 1;
+      if (rb === 0) return -1;
+      return rb - ra;
+    });
+  }
+  if (sort === 'googleRating') {
+    return arr.sort((a, b) => {
+      const ra = a.googleRating ?? 0;
+      const rb = b.googleRating ?? 0;
       if (ra === 0 && rb === 0) return 0;
       if (ra === 0) return 1;
       if (rb === 0) return -1;

@@ -27,6 +27,22 @@ export function NearbyPlaceList({ coords, locationStatus, onSeeAll, regionCoords
   const queryCoords = regionCoords ?? coords ?? SEOUL_COORDS;
   const QUERY_KEY = ['nearby', queryCoords.lat, queryCoords.lng, regionLabel];
 
+  // 내 위치 기준 거리 계산 (Haversine)
+  const calcDistance = (placeLat: number, placeLng: number): string | undefined => {
+    if (!coords) return undefined;
+    const R = 6371000;
+    const dLat = ((placeLat - coords.lat) * Math.PI) / 180;
+    const dLng = ((placeLng - coords.lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((coords.lat * Math.PI) / 180) *
+        Math.cos((placeLat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    if (dist < 1000) return `${Math.round(dist)}m`;
+    return `${(dist / 1000).toFixed(1)}km`;
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: () =>
@@ -91,7 +107,15 @@ export function NearbyPlaceList({ coords, locationStatus, onSeeAll, regionCoords
 
       {/* 장소 목록 */}
       {places.map((place) => (
-        <PlaceCard key={place.id} place={place} onPress={handlePress} />
+        <PlaceCard
+          key={place.id}
+          place={
+            regionCoords && coords
+              ? { ...place, distance: calcDistance(place.lat, place.lng) }
+              : place
+          }
+          onPress={handlePress}
+        />
       ))}
     </View>
   );

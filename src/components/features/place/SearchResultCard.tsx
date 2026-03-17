@@ -78,9 +78,9 @@ function ListCard({ place, onPress }: Props) {
             )}
             {/* Google 평점 우선, 없으면 Vibly 평점 */}
             {(place.googleRating ?? 0) > 0 ? (
-              <Text style={styles.metaText}>{'⭐ '}{place.googleRating!.toFixed(1)}</Text>
+              <Text style={styles.metaText}>{'⭐ '}{Math.round(place.googleRating!)}</Text>
             ) : (place.rating ?? 0) > 0 ? (
-              <Text style={styles.metaText}>{'★ '}{place.rating.toFixed(1)}</Text>
+              <Text style={styles.metaText}>{'★ '}{Math.round(place.rating)}</Text>
             ) : null}
           </View>
         </View>
